@@ -129,4 +129,19 @@ final class CaptureWindowTest extends TestCase
         $this->assertNotSame($order1, $order2, 'sequence is part of what is committed to');
         $this->assertSame($a, ChangeSet::hash([self::change('1')]), 'deterministic');
     }
+
+    public function testALateClaimDropsWhatHooksAlreadyRecordedForThatObject(): void
+    {
+        $window = new CaptureWindow();
+        $window->open('evt', 'corr', false);
+        $window->record(self::change('1'));
+        $window->record(self::change('2'));
+        $window->claim('post', '1');
+        $window->record(self::change('1'));
+        $closed = $window->close();
+
+        $this->assertNotNull($closed);
+        $this->assertCount(1, $closed->changes);
+        $this->assertSame('2', $closed->changes[0]->objectId);
+    }
 }
