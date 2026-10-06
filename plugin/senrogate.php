@@ -239,6 +239,7 @@ add_action('plugins_loaded', static function (): void {
     if (SureCartIntegration::available()) {
         $agsafe_surecart = SureCartIntegration::register($agsafe_catalog);
         $agsafe_elevation_rules = [...$agsafe_elevation_rules, ...$agsafe_surecart['elevationRules']];
+        $agsafe_extra_packs = [...$agsafe_extra_packs, ...$agsafe_surecart['packs']];
         $agsafe_governed_namespaces = array_values(array_unique([...$agsafe_governed_namespaces, ...$agsafe_surecart['governedNamespaces']]));
         $agsafe_state_probes = [...$agsafe_state_probes, ...$agsafe_surecart['stateProbes']];
     }

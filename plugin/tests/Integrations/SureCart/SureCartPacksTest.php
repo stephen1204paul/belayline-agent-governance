@@ -6,9 +6,11 @@ namespace Specflux\AgentSafety\Plugin\Tests\Integrations\SureCart;
 
 use PHPUnit\Framework\TestCase;
 use Specflux\AgentSafety\Packs\Pack;
+use Specflux\AgentSafety\Plugin\Integrations\SureCart\SureCartIntegration;
 use Specflux\AgentSafety\Plugin\Integrations\SureCart\SureCartPacks;
 use Specflux\AgentSafety\Plugin\Integrations\SureCart\SureCartVerbCatalog;
 use Specflux\AgentSafety\Policy\Tier;
+use Specflux\AgentSafety\Policy\VerbCatalog;
 
 final class SureCartPacksTest extends TestCase
 {
@@ -41,5 +43,23 @@ final class SureCartPacksTest extends TestCase
         }
         $this->assertTrue($pack->deniesClass(Tier::SideEffecting));
         $this->assertTrue($pack->deniesClass(Tier::Irreversible));
+    }
+
+    public function testRegisterReturnsThePacksAndTheBootstrapMergesThem(): void
+    {
+        $registered = SureCartIntegration::register(new VerbCatalog());
+
+        $this->assertSame(
+            ['surecart-default-agent', 'surecart-readonly-analyst'],
+            array_map(static fn (Pack $p): string => $p->name, $registered['packs']),
+        );
+
+        // The bootstrap is procedural and not loadable in unit tests, so pin the
+        // wiring itself: it must merge the module's packs like Woo's.
+        $bootstrap = (string) file_get_contents(dirname(__DIR__, 3) . '/senrogate.php');
+        $this->assertStringContainsString(
+            '$agsafe_extra_packs = [...$agsafe_extra_packs, ...$agsafe_surecart[\'packs\']];',
+            $bootstrap,
+        );
     }
 }
