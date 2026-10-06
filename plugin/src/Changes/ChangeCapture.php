@@ -5,7 +5,12 @@ declare(strict_types=1);
 namespace Specflux\AgentSafety\Plugin\Changes;
 
 use Specflux\AgentSafety\Changes\CaptureWindow;
+use Specflux\AgentSafety\Changes\Change;
+use Specflux\AgentSafety\Changes\ChangeAction;
+use Specflux\AgentSafety\Changes\ChangeLedger;
+use Specflux\AgentSafety\Changes\ChangeSnapshotter;
 use Specflux\AgentSafety\Changes\ClosedWindow;
+use Specflux\AgentSafety\Changes\SnapshotRef;
 use Specflux\AgentSafety\Plugin\Support\PackResolver;
 use Specflux\AgentSafety\Plugin\Support\RequestContext;
 use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
@@ -37,7 +42,7 @@ final class ChangeCapture
     private static ?self $current = null;
 
     private readonly CaptureWindow $window;
-    private readonly WpChangeListeners $listeners;
+    private readonly ChangeAdapters $adapters;
 
     /** Ability id of the outermost call that opened the current window. */
     private string $outer = '';
@@ -48,11 +53,22 @@ final class ChangeCapture
     public function __construct(
         private readonly TierClassifier $classifier,
         private readonly PackResolver $packs,
-        private readonly WpdbChangeStore $store,
+        private readonly ChangeLedger $store,
         ?CaptureWindow $window = null,
+        ?ChangeAdapters $adapters = null,
     ) {
         $this->window = $window ?? new CaptureWindow();
-        $this->listeners = new WpChangeListeners($this->window);
+        $this->adapters = $adapters ?? new ChangeAdapters();
+    }
+
+    public function adapters(): ChangeAdapters
+    {
+        return $this->adapters;
+    }
+
+    public function isWindowOpen(): bool
+    {
+        return $this->window->isOpen();
     }
 
     /** The instance the audit writers consult; null when capture is not wired. */
@@ -91,19 +107,126 @@ final class ChangeCapture
             return $execute();
         }
 
-        $opened = $this->window->open(RequestContext::event(), RequestContext::correlation(), $this->packs->resolve()->redactsPii());
+        return $this->execute($ability, RequestContext::event(), RequestContext::correlation(), $execute, $args);
+    }
+
+    /**
+     * Run `$execute` inside a window under a caller-chosen event id, with the
+     * hook adapters attached (no snapshotters: there is no ability). Used by
+     * the undo engine so an undo is recorded like any other change. Collect
+     * the settled event with {@see takeSettled()} under `$label`.
+     *
+     * @param callable():mixed $execute
+     * @return mixed
+     */
+    public function runWindow(string $label, string $eventId, string $correlationId, callable $execute)
+    {
+        return $this->execute($label, $eventId, $correlationId, $execute, null);
+    }
+
+    /**
+     * @param callable():mixed          $execute
+     * @param array<string, mixed>|null $args    Null = no snapshotters.
+     * @return mixed
+     */
+    private function execute(string $label, string $eventId, string $correlationId, callable $execute, ?array $args)
+    {
+        $opened = $this->window->open($eventId, $correlationId, $this->packs->resolve()->redactsPii());
         if ($opened) {
-            $this->outer = $ability;
+            $this->outer = $label;
         }
 
+        /** @var list<array{0: ChangeSnapshotter, 1: SnapshotRef, 2: array<string, mixed>|null}> $snaps */
+        $snaps = [];
         try {
             if ($opened) {
-                $this->listeners->attach();
+                foreach ($this->adapters->capture() as $adapter) {
+                    $adapter->attach($this->window);
+                }
+                if ($args !== null) {
+                    $snaps = $this->snapshotBefore($label, $args);
+                }
             }
 
             return $execute();
         } finally {
+            if ($opened && $snaps !== []) {
+                $this->snapshotAfter($snaps);
+            }
             $this->settle($this->window->close());
+        }
+    }
+
+    /**
+     * Snapshot every ref a matching snapshotter declares, BEFORE the call, and
+     * claim it so hook adapters cannot record it too. A failure is recorded as
+     * a `capture_error` marker and that ref is left to the hook adapters.
+     *
+     * @param array<string, mixed> $args
+     * @return list<array{0: ChangeSnapshotter, 1: SnapshotRef, 2: array<string, mixed>|null}>
+     */
+    private function snapshotBefore(string $ability, array $args): array
+    {
+        $snaps = [];
+        $seen = [];
+        foreach ($this->adapters->snapshotters() as $snapshotter) {
+            try {
+                if (!$snapshotter->handles($ability)) {
+                    continue;
+                }
+                foreach ($snapshotter->refs($ability, $args) as $ref) {
+                    if (isset($seen[$ref->key()])) {
+                        continue;
+                    }
+                    $state = $snapshotter->snapshot($ref);
+                    $seen[$ref->key()] = true;
+                    $this->window->claim($ref->objectType, $ref->objectId);
+                    $snaps[] = [$snapshotter, $ref, $state];
+                }
+            } catch (\Throwable) {
+                $this->snapshotError();
+            }
+        }
+
+        return $snaps;
+    }
+
+    /**
+     * Snapshot again after the call and record a Change for each ref whose
+     * state differs; an unchanged ref records nothing. Never throws.
+     *
+     * @param list<array{0: ChangeSnapshotter, 1: SnapshotRef, 2: array<string, mixed>|null}> $snaps
+     */
+    private function snapshotAfter(array $snaps): void
+    {
+        foreach ($snaps as [$snapshotter, $ref, $before]) {
+            try {
+                $after = $snapshotter->snapshot($ref);
+                if ($before === null && $after === null) {
+                    continue;
+                }
+                $action = match (true) {
+                    $before === null => ChangeAction::Create,
+                    $after === null => ChangeAction::Delete,
+                    default => ChangeAction::Update,
+                };
+                $change = Change::capture($ref->objectType, $ref->objectId, $ref->objectSubtype, $action, $before, $after, $this->window->redactsPii());
+                if ($action === ChangeAction::Update && $change->changedFields === []) {
+                    continue;
+                }
+                $this->window->recordSnapshot($change);
+            } catch (\Throwable) {
+                $this->snapshotError();
+            }
+        }
+    }
+
+    private function snapshotError(): void
+    {
+        try {
+            $this->window->recordSnapshot(Change::capture('window', 'capture_error', 'snapshot', ChangeAction::Irreversible, null, ['listener' => 'snapshot']));
+        } catch (\Throwable) {
+            // Capturing never changes a call's outcome.
         }
     }
 
@@ -185,7 +308,9 @@ final class ChangeCapture
             return; // an inner call joining the outer window, or nothing open
         }
 
-        $this->listeners->detach();
+        foreach ($this->adapters->capture() as $adapter) {
+            $adapter->detach();
+        }
 
         try {
             $this->store->insertWindow($closed, gmdate('Y-m-d H:i:s'));

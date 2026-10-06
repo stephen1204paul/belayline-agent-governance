@@ -148,6 +148,18 @@ final class Change
      */
     private static function same($a, $b): bool
     {
+        return self::valuesEqual($a, $b);
+    }
+
+    /**
+     * The comparison used both to decide a field changed and to decide it
+     * drifted: scalars as strings, structures by their JSON.
+     *
+     * @param mixed $a
+     * @param mixed $b
+     */
+    public static function valuesEqual($a, $b): bool
+    {
         if ((is_scalar($a) || $a === null) && (is_scalar($b) || $b === null)) {
             return (string) $a === (string) $b;
         }
