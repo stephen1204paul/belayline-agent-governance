@@ -52,6 +52,7 @@ final class WooIntegration
         return [
             'elevationRules' => [
                 new OrderFulfillmentElevationRule(),
+                new OrderMoneyShapingElevationRule(),
                 new BulkProductDeleteElevationRule(),
                 new ForceDeleteElevationRule(),
                 new ProductPriceOrPublishElevationRule(),

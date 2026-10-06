@@ -21,6 +21,15 @@ final class CustomerNoteElevationRule implements ElevationRule
             return null;
         }
 
-        return !empty($args['customer_note']) ? Tier::Irreversible : null;
+        // The ability's arg is `customer_note` (OrderAddNote.php:93-94, cast to bool);
+        // `is_customer_note` is the WC_Order::add_order_note() param name, refused too in case a
+        // bridge forwards it.
+        foreach (['customer_note', 'is_customer_note'] as $key) {
+            if (!empty($args[$key])) {
+                return Tier::Irreversible;
+            }
+        }
+
+        return null;
     }
 }
