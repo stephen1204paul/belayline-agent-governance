@@ -62,6 +62,7 @@ use Specflux\AgentSafety\Plugin\Integrations\Core\CoreIntegration;
 use Specflux\AgentSafety\Plugin\Integrations\Self\CheckApprovalAbility;
 use Specflux\AgentSafety\Plugin\Integrations\Self\SelfIntegration;
 use Specflux\AgentSafety\Plugin\Integrations\Woo\VerbMapper;
+use Specflux\AgentSafety\Plugin\Integrations\Woo\Changes\WooChangeAdapters;
 use Specflux\AgentSafety\Plugin\Integrations\Woo\WooIntegration;
 use Specflux\AgentSafety\Plugin\Support\ApprovalNotifier;
 use Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder;
@@ -233,6 +234,8 @@ add_action('plugins_loaded', static function (): void {
         $agsafe_extra_packs = [...$agsafe_extra_packs, ...$agsafe_woo['packs']];
         $agsafe_governed_namespaces = array_values(array_unique([...$agsafe_governed_namespaces, ...$agsafe_woo['governedNamespaces']]));
         $agsafe_state_probes = [...$agsafe_state_probes, ...$agsafe_woo['stateProbes']];
+        // Capture and undo for products, coupons, customers, zones and tax rates.
+        WooChangeAdapters::register();
     }
 
     // Site owners (or other plugins) can widen the governed namespace list
