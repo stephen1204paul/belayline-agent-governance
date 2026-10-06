@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Specflux\AgentSafety\Plugin\Hooks;
 
 use Specflux\AgentSafety\Approval\ApprovalStore;
+use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
 use Specflux\AgentSafety\Plugin\Support\ExecutionResult;
 use Specflux\AgentSafety\Plugin\Verdict\GrantGate;
 use Specflux\AgentSafety\Plugin\Support\PackResolver;
@@ -73,6 +74,7 @@ final class AbilityPermissionGate
         private readonly ?ApprovalStore $approvals = null,
         private readonly array $governedNamespaces = [],
         private readonly ?GrantGate $grants = null,
+        private readonly ?ChangeCapture $capture = null,
     ) {
     }
 
@@ -122,6 +124,22 @@ final class AbilityPermissionGate
         $pipeline = $this->pipeline;
         $packs = $this->packs;
         $self = $this;
+
+        // Change capture: wrap the execution itself so the capture window
+        // closes in a `finally` on EVERY outcome (return, throw, WP_Error).
+        // `wp_after_execute_ability` never fires on failure, so it cannot be
+        // the close. Arguments are passed through verbatim: core calls the
+        // callback with no argument at all for an ability without an input
+        // schema, and that must stay true.
+        $execute = $args['execute_callback'] ?? null;
+        $capture = $this->capture;
+        if ($capture !== null && is_callable($execute)) {
+            $args['execute_callback'] = static function (...$callArgs) use ($execute, $name, $capture) {
+                $input = $callArgs[0] ?? [];
+
+                return $capture->run($name, is_array($input) ? $input : [], static fn () => $execute(...$callArgs));
+            };
+        }
 
         $args['permission_callback'] = static function ($input = null) use ($original, $name, $hints, $pipeline, $packs, $self) {
             // Preserve the ability's own capability check first (least privilege).

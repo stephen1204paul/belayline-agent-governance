@@ -187,6 +187,68 @@ if (!function_exists('add_action')) {
     }
 }
 
+// Hook-removal + object-lookup shims used by the change-capture listener tests.
+// add_action() above only records; these keep the same recording model.
+if (!function_exists('remove_action')) {
+    /** @param mixed $callback */
+    function remove_action(string $hook, $callback, int $priority = 10): bool
+    {
+        $list = $GLOBALS['wpas_test_added_actions'][$hook] ?? [];
+        foreach ($list as $i => $registered) {
+            if ($registered === $callback) {
+                unset($GLOBALS['wpas_test_added_actions'][$hook][$i]);
+            }
+        }
+
+        return true;
+    }
+}
+
+if (!function_exists('remove_filter')) {
+    /** @param mixed $callback */
+    function remove_filter(string $hook, $callback, int $priority = 10): bool
+    {
+        foreach ($GLOBALS['wpas_test_filters'][$hook][$priority] ?? [] as $i => [$registered]) {
+            if ($registered === $callback) {
+                unset($GLOBALS['wpas_test_filters'][$hook][$priority][$i]);
+            }
+        }
+
+        return true;
+    }
+}
+
+if (!function_exists('get_post')) {
+    /** Test control knob: $GLOBALS['wpas_test_posts'][$id] holds the object/array. @param mixed $id @return mixed */
+    function get_post($id)
+    {
+        return $GLOBALS['wpas_test_posts'][(int) $id] ?? null;
+    }
+}
+
+if (!function_exists('get_term')) {
+    /** @param mixed $id @return mixed */
+    function get_term($id, string $taxonomy = '')
+    {
+        return $GLOBALS['wpas_test_terms'][(int) $id] ?? null;
+    }
+}
+
+if (!function_exists('metadata_exists')) {
+    function metadata_exists(string $type, int $id, string $key): bool
+    {
+        return array_key_exists($key, $GLOBALS['wpas_test_meta'][$id] ?? []);
+    }
+}
+
+if (!function_exists('get_post_meta')) {
+    /** @return mixed */
+    function get_post_meta(int $id, string $key = '', bool $single = false)
+    {
+        return $GLOBALS['wpas_test_meta'][$id][$key] ?? '';
+    }
+}
+
 if (!function_exists('is_multisite')) {
     /** Toggle shim: tests set $GLOBALS['wpas_test_multisite']. */
     function is_multisite(): bool

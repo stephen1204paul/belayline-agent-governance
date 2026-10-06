@@ -7,6 +7,7 @@ namespace Specflux\AgentSafety\Plugin\Hooks;
 use Specflux\AgentSafety\Audit\AuditRecord;
 use Specflux\AgentSafety\Audit\AuditSink;
 use Specflux\AgentSafety\Audit\Redactor;
+use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
 use Specflux\AgentSafety\Policy\TierClassifier;
 use Specflux\AgentSafety\Plugin\Support\ExecutionResult;
 use Specflux\AgentSafety\Plugin\Support\PackResolver;
@@ -103,6 +104,7 @@ final class AbilityAuditLog
         private readonly TierClassifier $classifier,
         private readonly PackResolver $packs,
         private readonly array $governedNamespaces = [],
+        private readonly ?ChangeCapture $capture = null,
     ) {
     }
 
@@ -154,6 +156,10 @@ final class AbilityAuditLog
     /** Shutdown handler: everything left in-flight failed to complete. */
     public function flushFailures(): void
     {
+        // A fatal skipped the capture window's `finally`: settle it first so
+        // the failure record below can carry its event id and change hash.
+        $this->capture?->closeAll();
+
         foreach ($this->inFlight as $name => $stack) {
             foreach ($stack as $input) {
                 $this->write($name, $input, 'failure');
@@ -196,8 +202,12 @@ final class AbilityAuditLog
         $pack = $this->packs->resolve();
         $tier = $this->classifier->classify($name, $args)?->value;
 
+        // The capture window (if this call had one) allocated the event id its
+        // change rows are stored under; the record must reuse it to join them.
+        $settled = $this->capture?->takeSettled($name);
+
         $this->sink->append(AuditRecord::execution(
-            id: RequestContext::event(),
+            id: $settled['event_id'] ?? RequestContext::event(),
             ts: RequestContext::nowUtc(),
             correlationId: RequestContext::correlation(),
             pack: $pack->name,
@@ -208,6 +218,7 @@ final class AbilityAuditLog
             result: $result,
             externalEffects: self::effectsFor($tier),
             ip: RequestContext::ip(),
+            changesSha256: $settled['changes_sha256'] ?? null,
         ));
     }
 

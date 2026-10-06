@@ -9,6 +9,7 @@ use Specflux\AgentSafety\Audit\AuditRecord;
 use Specflux\AgentSafety\Audit\AuditSink;
 use Specflux\AgentSafety\Audit\Redactor;
 use Specflux\AgentSafety\Policy\TierClassifier;
+use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
 use Specflux\AgentSafety\Plugin\Support\PackResolver;
 use Specflux\AgentSafety\Plugin\Support\RequestContext;
 use WP\MCP\Infrastructure\Observability\Contracts\McpObservabilityHandlerInterface;
@@ -233,8 +234,10 @@ final class McpRequestAuditHandler implements McpObservabilityHandlerInterface
         $failureReason = is_string($tags['failure_reason'] ?? null) ? $tags['failure_reason'] : null;
 
         if ($status === 'success') {
+            $settled = ChangeCapture::current()?->takeSettled($abilityName);
+
             self::$sink->append(AuditRecord::execution(
-                id: RequestContext::event(),
+                id: $settled['event_id'] ?? RequestContext::event(),
                 ts: RequestContext::nowUtc(),
                 correlationId: RequestContext::correlation(),
                 pack: $pack->name,
@@ -244,6 +247,7 @@ final class McpRequestAuditHandler implements McpObservabilityHandlerInterface
                 input: $input,
                 result: 'success',
                 ip: RequestContext::ip(),
+                changesSha256: $settled['changes_sha256'] ?? null,
             ));
 
             return;
@@ -271,8 +275,10 @@ final class McpRequestAuditHandler implements McpObservabilityHandlerInterface
             return;
         }
 
+        $settled = ChangeCapture::current()?->takeSettled($abilityName);
+
         self::$sink->append(AuditRecord::execution(
-            id: RequestContext::event(),
+            id: $settled['event_id'] ?? RequestContext::event(),
             ts: RequestContext::nowUtc(),
             correlationId: RequestContext::correlation(),
             pack: $pack->name,
@@ -282,6 +288,7 @@ final class McpRequestAuditHandler implements McpObservabilityHandlerInterface
             input: $input,
             result: $failureReason !== null ? ('error: ' . $failureReason) : 'error',
             ip: RequestContext::ip(),
+            changesSha256: $settled['changes_sha256'] ?? null,
         ));
     }
 

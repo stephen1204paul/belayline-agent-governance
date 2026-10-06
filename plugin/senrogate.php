@@ -45,6 +45,7 @@ use Specflux\AgentSafety\Plugin\Approval\WpdbGrantStore;
 use Specflux\AgentSafety\Plugin\Audit\AuditReader;
 use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
 use Specflux\AgentSafety\Plugin\Audit\WpdbAuditSink;
+use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
 use Specflux\AgentSafety\Plugin\Changes\WpdbChangeStore;
 use Specflux\AgentSafety\Plugin\Hooks\AbilityAuditLog;
 use Specflux\AgentSafety\Plugin\Hooks\AbilityPermissionGate;
@@ -376,7 +377,16 @@ add_action('plugins_loaded', static function (): void {
     // reserved. Inert no-op for any ability outside $agsafe_governed_namespaces.
     // Also owns releasing a pre-approval grant's reservation whenever it rolls
     // the approval back, so a grant's count is only spent on an action that ran.
-    (new AbilityPermissionGate($agsafe_pipeline, $agsafe_packs, $agsafe_approvals, $agsafe_governed_namespaces, $agsafe_grant_gate))->register();
+    //
+    // Change capture (0.5): a window around each governed call at Tier >= 1
+    // that records what the call wrote (posts, meta, terms, options). The gate
+    // wraps each ability's execute_callback with it; the audit writers pick up
+    // its event id and change hash. Null only on the no-database path.
+    $agsafe_capture = isset($wpdb) ? new ChangeCapture($agsafe_classifier, $agsafe_packs, new WpdbChangeStore($wpdb)) : null;
+    ChangeCapture::configure($agsafe_capture);
+    $agsafe_capture?->register();
+
+    (new AbilityPermissionGate($agsafe_pipeline, $agsafe_packs, $agsafe_approvals, $agsafe_governed_namespaces, $agsafe_grant_gate, $agsafe_capture))->register();
 
     // Forward-compat seam: fires only if a mcp-adapter >= 0.5.0 is the loaded copy.
     // Shares the same PackResolver + DecisionRecorder as the live seam so both honour
@@ -398,7 +408,7 @@ add_action('plugins_loaded', static function (): void {
 
     // Audit every ability that actually executes — successes and failures.
     if ($agsafe_sink !== null) {
-        (new AbilityAuditLog($agsafe_sink, $agsafe_classifier, $agsafe_packs, $agsafe_governed_namespaces))->register();
+        (new AbilityAuditLog($agsafe_sink, $agsafe_classifier, $agsafe_packs, $agsafe_governed_namespaces, $agsafe_capture))->register();
 
         // wp-admin viewer + CSV export (Tools → Agent Audit Log).
         (new AuditLogPage(new AuditReader($wpdb), $agsafe_shadow))->register();

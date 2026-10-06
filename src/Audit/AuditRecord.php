@@ -36,6 +36,7 @@ final class AuditRecord
         public readonly ?string $result,
         public readonly array $externalEffects,
         public readonly ?string $ip,
+        public readonly ?string $changesSha256 = null,
     ) {
     }
 
@@ -103,6 +104,10 @@ final class AuditRecord
      * @param array{token_id: ?string, wp_user: ?int} $actor
      * @param array<string, mixed>                     $input
      * @param list<string>                             $externalEffects
+     * @param ?string                                  $changesSha256    Hash of the change set recorded while the call
+     *                                                                   ran ({@see \Specflux\AgentSafety\Changes\ChangeSet}).
+     *                                                                   Null = no capture window ran; a hash of an empty
+     *                                                                   set = a window ran and saw no changes.
      */
     public static function execution(
         string $id,
@@ -116,6 +121,7 @@ final class AuditRecord
         string $result,
         array $externalEffects = [],
         ?string $ip = null,
+        ?string $changesSha256 = null,
     ): self {
         return new self(
             $id,
@@ -133,6 +139,7 @@ final class AuditRecord
             $result,
             $externalEffects,
             $ip,
+            $changesSha256,
         );
     }
 
@@ -144,7 +151,7 @@ final class AuditRecord
      */
     public function toArray(): array
     {
-        return [
+        $record = [
             'id' => $this->id,
             'ts' => $this->ts,
             'correlation_id' => $this->correlationId,
@@ -161,6 +168,14 @@ final class AuditRecord
             'external_effects' => $this->externalEffects,
             'ip' => $this->ip,
         ];
+
+        // Appended only when present, so every record without a capture window
+        // keeps the exact canonical bytes it always had.
+        if ($this->changesSha256 !== null) {
+            $record['changes_sha256'] = $this->changesSha256;
+        }
+
+        return $record;
     }
 
     /** Canonical JSON used as the hash-chain payload. */

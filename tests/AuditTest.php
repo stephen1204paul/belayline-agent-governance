@@ -159,6 +159,42 @@ final class AuditTest extends TestCase
         $this->assertFalse(HashChain::verify($entries));
     }
 
+    private function execution(?string $changesSha256): AuditRecord
+    {
+        return AuditRecord::execution(
+            id: 'evt_1',
+            ts: '2026-06-25T10:00:00Z',
+            correlationId: 'sess_test',
+            pack: 'default-agent',
+            actor: ['token_id' => 'ck_abc', 'wp_user' => 7],
+            ability: 'core/update-post',
+            tier: 1,
+            input: [],
+            result: 'success',
+            changesSha256: $changesSha256,
+        );
+    }
+
+    public function testChangesHashIsPartOfTheCanonicalRecordOnlyWhenPresent(): void
+    {
+        $without = $this->execution(null);
+        $with = $this->execution(str_repeat('a', 64));
+
+        $this->assertArrayNotHasKey('changes_sha256', $without->toArray());
+        $this->assertSame(str_repeat('a', 64), $with->toArray()['changes_sha256']);
+        $this->assertNotSame($without->canonicalJson(), $with->canonicalJson());
+    }
+
+    public function testTamperingWithTheChangesHashBreaksTheChain(): void
+    {
+        $entries = $this->chainFrom($this->execution(str_repeat('a', 64)));
+        $this->assertTrue(HashChain::verify($entries));
+
+        $entries[0]['canonical_json'] = str_replace(str_repeat('a', 64), str_repeat('b', 64), $entries[0]['canonical_json']);
+
+        $this->assertFalse(HashChain::verify($entries));
+    }
+
     public function testRedactorMasksPiiWhenEnabled(): void
     {
         $input = [
