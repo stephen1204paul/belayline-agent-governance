@@ -68,6 +68,17 @@
         <exclude-pattern>plugin/tests/Fakes/InMemoryAuditRowsWpdb.php</exclude-pattern>
         <exclude-pattern>plugin/tests/Fakes/CounterTableWpdb.php</exclude-pattern>
     </rule>
+    <!--
+        The WooCommerce CRUD stand-ins (one file, many global classes, WC_Tax's
+        real underscore-prefixed method names) mirror the upstream shapes the
+        Woo change adapters call.
+    -->
+    <rule ref="PSR1.Classes.ClassDeclaration.MultipleClasses">
+        <exclude-pattern>plugin/tests/stubs/woocommerce-crud.php</exclude-pattern>
+    </rule>
+    <rule ref="PSR2.Methods.MethodDeclaration.Underscore">
+        <exclude-pattern>plugin/tests/stubs/woocommerce-crud.php</exclude-pattern>
+    </rule>
     <rule ref="PSR1.Methods.CamelCapsMethodName">
         <exclude-pattern>plugin/tests/stubs/*</exclude-pattern>
         <!--

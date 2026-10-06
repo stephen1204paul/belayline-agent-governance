@@ -12,6 +12,7 @@ use Specflux\AgentSafety\Plugin\Integrations\Woo\BulkProductDeleteElevationRule;
 use Specflux\AgentSafety\Plugin\Integrations\Woo\CustomerNoteElevationRule;
 use Specflux\AgentSafety\Plugin\Integrations\Woo\ForceDeleteElevationRule;
 use Specflux\AgentSafety\Plugin\Integrations\Woo\OrderFulfillmentElevationRule;
+use Specflux\AgentSafety\Plugin\Integrations\Woo\OrderMoneyShapingElevationRule;
 use Specflux\AgentSafety\Plugin\Integrations\Woo\ProductPriceOrPublishElevationRule;
 use Specflux\AgentSafety\Plugin\Integrations\Woo\WooIntegration;
 
@@ -56,6 +57,7 @@ final class WooIntegrationTest extends TestCase
         $this->assertSame(
             [
                 OrderFulfillmentElevationRule::class,
+                OrderMoneyShapingElevationRule::class,
                 BulkProductDeleteElevationRule::class,
                 ForceDeleteElevationRule::class,
                 ProductPriceOrPublishElevationRule::class,
