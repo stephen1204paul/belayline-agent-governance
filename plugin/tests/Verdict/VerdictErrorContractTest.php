@@ -45,6 +45,25 @@ final class VerdictErrorContractTest extends TestCase
         $this->assertSame($case['data'], $error->get_error_data(), 'key presence and order are part of the contract');
     }
 
+    /** @return iterable<string, array{string}> */
+    public static function reasons(): iterable
+    {
+        foreach (['site_paused', 'rate_limited_calls_per_minute', 'ip_not_allowed'] as $reason) {
+            yield $reason => [$reason];
+        }
+    }
+
+    /** @dataProvider reasons */
+    public function testDenyDataCarriesTheMachineReasonAndTheMessageIsUnchanged(string $reason): void
+    {
+        $verdict = new Verdict('woocommerce/orders-list', new Pack(name: 'support', allow: ['woocommerce/*']), Decision::deny($reason));
+        $error = $verdict->error();
+
+        $this->assertNotNull($error);
+        $this->assertSame($reason, $error->get_error_data()['reason']);
+        $this->assertSame('Blocked by SenroGate (support): ' . $reason, $error->get_error_message());
+    }
+
     public function testAnAllowedVerdictHasNoError(): void
     {
         $verdict = new Verdict('woocommerce/orders-list', new Pack(name: 'support', allow: ['woocommerce/*']), Decision::allow(Tier::Reversible));

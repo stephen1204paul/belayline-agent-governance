@@ -71,10 +71,11 @@ final class Verdict
      *
      * Contract (frozen — see docs/adr/0001-single-verdict-pipeline.md and
      * plugin/tests/Fixtures/VerdictErrorFixture.php):
-     *   - deny:              code `agent_safety_denied`, data {status: 403, verb, tier}
+     *   - deny:              code `agent_safety_denied`, data {status: 403, verb, tier, reason}
      *   - approval required: code `approval_required`, data {status: 202, verb, tier, approval_id}
      * On the approval-required error null-valued data keys are dropped, so `tier` and
-     * `approval_id` may be absent; the deny error always carries all three keys.
+     * `approval_id` may be absent; the deny error always carries all four keys (`reason` is the machine reason string,
+     * e.g. site_paused, rate_limited_calls_per_minute, ip_not_allowed).
      */
     public function error(): ?WP_Error
     {
@@ -86,7 +87,7 @@ final class Verdict
             return new WP_Error(
                 'agent_safety_denied',
                 sprintf('Blocked by SenroGate (%s): %s', $this->pack->name, $this->decision->reason),
-                ['status' => 403, 'verb' => $this->verb, 'tier' => $this->decision->tier?->value]
+                ['status' => 403, 'verb' => $this->verb, 'tier' => $this->decision->tier?->value, 'reason' => $this->decision->reason]
             );
         }
 

@@ -25,7 +25,7 @@ final class VerdictErrorFixture
     /**
      * Every distinct error shape the pipeline can produce, keyed by a stable
      * scenario name. `data` is the exact array `WP_Error::get_error_data()`
-     * returns — key PRESENCE matters: the deny error always carries all three
+     * returns — key PRESENCE matters: the deny error always carries all four
      * keys (tier may be null), the approval error drops null-valued keys.
      *
      * @return array<string, array{code: string, verb: string, tier: ?int, approval_id: ?string, data: array<string, mixed>}>
@@ -38,14 +38,14 @@ final class VerdictErrorFixture
                 'verb' => 'woocommerce/orders-update',
                 'tier' => 1,
                 'approval_id' => null,
-                'data' => ['status' => 403, 'verb' => 'woocommerce/orders-update', 'tier' => 1],
+                'data' => ['status' => 403, 'verb' => 'woocommerce/orders-update', 'tier' => 1, 'reason' => 'not_in_pack'],
             ],
             'deny without tier' => [
                 'code' => self::DENY_CODE,
                 'verb' => 'woocommerce/unknown-verb',
                 'tier' => null,
                 'approval_id' => null,
-                'data' => ['status' => 403, 'verb' => 'woocommerce/unknown-verb', 'tier' => null],
+                'data' => ['status' => 403, 'verb' => 'woocommerce/unknown-verb', 'tier' => null, 'reason' => 'not_in_pack'],
             ],
             'approval required with id' => [
                 'code' => self::APPROVAL_CODE,
