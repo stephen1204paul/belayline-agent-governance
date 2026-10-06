@@ -62,6 +62,7 @@ require_once __DIR__ . '/Fakes/FakeMcpTool.php';
 require_once __DIR__ . '/Fakes/AdapterBundle.php';
 require_once __DIR__ . '/Fakes/InMemoryChangeLedger.php';
 require_once __DIR__ . '/Fakes/FakeStoreSnapshotter.php';
+require_once __DIR__ . '/Fakes/FakeCreatingSnapshotter.php';
 require_once __DIR__ . '/Fakes/WidgetAdapter.php';
 require_once __DIR__ . '/Fakes/ChainingSink.php';
 require_once __DIR__ . '/Fakes/InMemoryAuditRowsWpdb.php';

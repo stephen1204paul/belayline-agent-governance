@@ -72,10 +72,17 @@ final class CaptureWindow
     /**
      * A snapshotter owns this object for the window: changes the hook
      * adapters record for it are dropped, so it is never recorded twice.
+     * A claim made after the call (a result-aware snapshotter naming a
+     * created object) also drops what hooks already recorded for it.
      */
     public function claim(string $objectType, string $objectId): void
     {
-        $this->claimed[$objectType . "\0" . $objectId] = true;
+        $key = $objectType . "\0" . $objectId;
+        $this->claimed[$key] = true;
+        $this->changes = array_values(array_filter(
+            $this->changes,
+            static fn (Change $c): bool => $c->objectType . "\0" . $c->objectId !== $key,
+        ));
     }
 
     /** Record a hook-observed change into the open window; ignored when none is open or a snapshotter claimed the object. */

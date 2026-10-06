@@ -10,6 +10,7 @@ use Specflux\AgentSafety\Changes\ChangeAction;
 use Specflux\AgentSafety\Changes\ChangeLedger;
 use Specflux\AgentSafety\Changes\ChangeSnapshotter;
 use Specflux\AgentSafety\Changes\ClosedWindow;
+use Specflux\AgentSafety\Changes\ResultAwareSnapshotter;
 use Specflux\AgentSafety\Changes\SnapshotRef;
 use Specflux\AgentSafety\Plugin\Support\PackResolver;
 use Specflux\AgentSafety\Plugin\Support\RequestContext;
@@ -138,20 +139,29 @@ final class ChangeCapture
 
         /** @var list<array{0: ChangeSnapshotter, 1: SnapshotRef, 2: array<string, mixed>|null}> $snaps */
         $snaps = [];
+        $declared = [];
+        $result = null;
+        $returned = false;
         try {
             if ($opened) {
                 foreach ($this->adapters->capture() as $adapter) {
                     $adapter->attach($this->window);
                 }
                 if ($args !== null) {
-                    $snaps = $this->snapshotBefore($label, $args);
+                    $snaps = $this->snapshotBefore($label, $args, $declared);
                 }
             }
 
-            return $execute();
+            $result = $execute();
+            $returned = true;
+
+            return $result;
         } finally {
             if ($opened && $snaps !== []) {
                 $this->snapshotAfter($snaps);
+            }
+            if ($opened && $returned && $args !== null) {
+                $this->snapshotCreated($label, $args, $result, $declared);
             }
             $this->settle($this->window->close());
         }
@@ -163,12 +173,12 @@ final class ChangeCapture
      * a `capture_error` marker and that ref is left to the hook adapters.
      *
      * @param array<string, mixed> $args
+     * @param array<string, true> $seen Out: keys of every ref declared up front.
      * @return list<array{0: ChangeSnapshotter, 1: SnapshotRef, 2: array<string, mixed>|null}>
      */
-    private function snapshotBefore(string $ability, array $args): array
+    private function snapshotBefore(string $ability, array $args, array &$seen): array
     {
         $snaps = [];
-        $seen = [];
         foreach ($this->adapters->snapshotters() as $snapshotter) {
             try {
                 if (!$snapshotter->handles($ability)) {
@@ -178,8 +188,8 @@ final class ChangeCapture
                     if (isset($seen[$ref->key()])) {
                         continue;
                     }
-                    $state = $snapshotter->snapshot($ref);
                     $seen[$ref->key()] = true;
+                    $state = $snapshotter->snapshot($ref);
                     $this->window->claim($ref->objectType, $ref->objectId);
                     $snaps[] = [$snapshotter, $ref, $state];
                 }
@@ -215,6 +225,46 @@ final class ChangeCapture
                     continue;
                 }
                 $this->window->recordSnapshot($change);
+            } catch (\Throwable) {
+                $this->snapshotError();
+            }
+        }
+    }
+
+    /**
+     * Objects only the result reveals (creates): recorded as before = absent,
+     * after = a fresh snapshot, and claimed. A WP_Error or Throwable result
+     * yields none; a refs-from-result or snapshot failure is a marker.
+     *
+     * @param array<string, mixed> $args
+     * @param array<string, true>  $declared
+     */
+    private function snapshotCreated(string $ability, array $args, mixed $result, array $declared): void
+    {
+        if ($result instanceof \Throwable || $result instanceof \WP_Error) {
+            return;
+        }
+
+        foreach ($this->adapters->snapshotters() as $snapshotter) {
+            if (!$snapshotter instanceof ResultAwareSnapshotter) {
+                continue;
+            }
+            try {
+                if (!$snapshotter->handles($ability)) {
+                    continue;
+                }
+                foreach ($snapshotter->refsFromResult($ability, $args, $result) as $ref) {
+                    if (isset($declared[$ref->key()])) {
+                        continue;
+                    }
+                    $declared[$ref->key()] = true;
+                    $this->window->claim($ref->objectType, $ref->objectId);
+                    $after = $snapshotter->snapshot($ref);
+                    if ($after === null) {
+                        continue;
+                    }
+                    $this->window->recordSnapshot(Change::capture($ref->objectType, $ref->objectId, $ref->objectSubtype, ChangeAction::Create, null, $after, $this->window->redactsPii()));
+                }
             } catch (\Throwable) {
                 $this->snapshotError();
             }
