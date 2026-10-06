@@ -59,6 +59,11 @@ require_once __DIR__ . '/Fakes/FakeGrantStore.php';
 require_once __DIR__ . '/Fakes/FakeIdentityProvider.php';
 require_once __DIR__ . '/Fakes/FakeToolAnnotations.php';
 require_once __DIR__ . '/Fakes/FakeMcpTool.php';
+require_once __DIR__ . '/Fakes/AdapterBundle.php';
+require_once __DIR__ . '/Fakes/InMemoryChangeLedger.php';
+require_once __DIR__ . '/Fakes/FakeStoreSnapshotter.php';
+require_once __DIR__ . '/Fakes/WidgetAdapter.php';
+require_once __DIR__ . '/Fakes/ChainingSink.php';
 require_once __DIR__ . '/Fakes/InMemoryAuditRowsWpdb.php';
 require_once __DIR__ . '/Fakes/CounterTableWpdb.php';
 require_once __DIR__ . '/Fixtures/VerdictErrorFixture.php';
@@ -933,5 +938,132 @@ if (!function_exists('wp_register_ability_category')) {
         $GLOBALS['wpas_test_ability_categories'][$slug] = $args;
 
         return $args;
+    }
+}
+
+// --- Write shims for the undo engine ---------------------------------------
+// Minimal WordPress write behaviour over the same $GLOBALS stores get_post() /
+// get_term() / get_post_meta() read, DISPATCHING the hooks the capture adapters
+// listen on (the add_action shim records callbacks, so we invoke them here).
+
+if (!function_exists('wpas_test_fire')) {
+    /** @param mixed ...$args */
+    function wpas_test_fire(string $hook, ...$args): void
+    {
+        foreach ($GLOBALS['wpas_test_added_actions'][$hook] ?? [] as $callback) {
+            if (is_callable($callback)) {
+                $callback(...$args);
+            }
+        }
+    }
+}
+
+if (!function_exists('wp_slash')) {
+    /**
+     * @param mixed $value
+     * @return mixed
+     */
+    function wp_slash($value)
+    {
+        if (is_array($value)) {
+            return array_map('wp_slash', $value);
+        }
+
+        return is_string($value) ? addslashes($value) : $value;
+    }
+}
+
+if (!function_exists('wp_update_post')) {
+    /**
+     * @param array<string, mixed> $data slashed
+     * @return int|\WP_Error
+     */
+    function wp_update_post(array $data, bool $wp_error = false)
+    {
+        $data = wp_unslash($data);
+        $id = (int) ($data['ID'] ?? 0);
+        $old = $GLOBALS['wpas_test_posts'][$id] ?? null;
+        if ($old === null) {
+            return 0;
+        }
+        $oldArr = (array) $old;
+        $newArr = array_merge($oldArr, $data, ['post_modified' => gmdate('Y-m-d H:i:s', 1000000000 + (int) ($GLOBALS['wpas_test_clock'] = ($GLOBALS['wpas_test_clock'] ?? 0) + 1))]);
+        $GLOBALS['wpas_test_posts'][$id] = (object) $newArr;
+        wpas_test_fire('post_updated', $id, (object) $newArr, (object) $oldArr);
+
+        return $id;
+    }
+}
+
+if (!function_exists('wp_trash_post')) {
+    /** @return mixed */
+    function wp_trash_post(int $id)
+    {
+        $post = $GLOBALS['wpas_test_posts'][$id] ?? null;
+        if ($post === null || ($post->post_status ?? '') === 'trash') {
+            return false;
+        }
+        wpas_test_fire('wp_trash_post', $id, (string) $post->post_status);
+        wp_update_post(wp_slash(['ID' => $id, 'post_status' => 'trash']));
+        $GLOBALS['wpas_test_trash_status'][$id] = (string) $post->post_status;
+
+        return $GLOBALS['wpas_test_posts'][$id];
+    }
+}
+
+if (!function_exists('wp_untrash_post')) {
+    /** @return mixed */
+    function wp_untrash_post(int $id)
+    {
+        // Like core >= 5.6: back to draft unless a filter says otherwise.
+        wp_update_post(wp_slash(['ID' => $id, 'post_status' => 'draft']));
+
+        return $GLOBALS['wpas_test_posts'][$id] ?? false;
+    }
+}
+
+if (!function_exists('update_post_meta')) {
+    /**
+     * @param mixed $value slashed
+     * @return mixed
+     */
+    function update_post_meta(int $id, string $key, $value)
+    {
+        $value = wp_unslash($value);
+        $check = apply_filters('update_post_metadata', null, $id, $key, $value, '');
+        if ($check !== null) {
+            return (bool) $check;
+        }
+        $GLOBALS['wpas_test_meta'][$id][$key] = $value;
+
+        return true;
+    }
+}
+
+if (!function_exists('delete_post_meta')) {
+    function delete_post_meta(int $id, string $key): bool
+    {
+        unset($GLOBALS['wpas_test_meta'][$id][$key]);
+
+        return true;
+    }
+}
+
+if (!function_exists('wp_update_term')) {
+    /**
+     * @param array<string, mixed> $args slashed
+     * @return mixed
+     */
+    function wp_update_term(int $id, string $taxonomy, array $args)
+    {
+        $old = $GLOBALS['wpas_test_terms'][$id] ?? null;
+        if ($old === null) {
+            return new \WP_Error('invalid_term', 'missing');
+        }
+        wpas_test_fire('edit_terms', $id, $taxonomy);
+        $GLOBALS['wpas_test_terms'][$id] = (object) array_merge((array) $old, wp_unslash($args));
+        wpas_test_fire('edited_terms', $id, $taxonomy);
+
+        return ['term_id' => $id];
     }
 }

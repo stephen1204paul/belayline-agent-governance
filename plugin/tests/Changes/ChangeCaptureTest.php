@@ -12,12 +12,12 @@ use Specflux\AgentSafety\Changes\Change;
 use Specflux\AgentSafety\Changes\ChangeAction;
 use Specflux\AgentSafety\Changes\ChangeSet;
 use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
-use Specflux\AgentSafety\Plugin\Changes\WpChangeListeners;
 use Specflux\AgentSafety\Plugin\Changes\WpdbChangeStore;
 use Specflux\AgentSafety\Plugin\Hooks\AbilityAuditLog;
 use Specflux\AgentSafety\Plugin\Hooks\AbilityPermissionGate;
 use Specflux\AgentSafety\Plugin\Support\PackResolver;
 use Specflux\AgentSafety\Plugin\Support\RequestContext;
+use Specflux\AgentSafety\Plugin\Tests\Fakes\AdapterBundle;
 use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
 use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
 use Specflux\AgentSafety\Policy\Tier;
@@ -80,12 +80,9 @@ final class ChangeCaptureTest extends TestCase
         return ['ID' => 7, 'post_title' => $title, 'post_type' => 'post', 'post_status' => 'publish', 'post_password' => ''];
     }
 
-    private function listenersOf(ChangeCapture $capture): WpChangeListeners
+    private function listenersOf(ChangeCapture $capture): AdapterBundle
     {
-        /** @var WpChangeListeners $listeners */
-        $listeners = (new ReflectionProperty($capture, 'listeners'))->getValue($capture);
-
-        return $listeners;
+        return new AdapterBundle($capture->adapters()->capture());
     }
 
     private function windowOf(ChangeCapture $capture): CaptureWindow
@@ -248,7 +245,9 @@ final class ChangeCaptureTest extends TestCase
         $window = $this->windowOf($capture);
         $window->open('evt-left-open', 'corr', false);
         (new ReflectionProperty($capture, 'outer'))->setValue($capture, 't/write');
-        $this->listenersOf($capture)->attach();
+        foreach ($capture->adapters()->capture() as $adapter) {
+            $adapter->attach($window);
+        }
 
         $capture->closeAll();
 
