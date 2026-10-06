@@ -339,4 +339,58 @@ final class ChangeCaptureTest extends TestCase
 
         $this->assertSame($execute, $args['execute_callback']);
     }
+
+    private function settleWindow(ChangeCapture $capture, string $ability): void
+    {
+        $catalog = new VerbCatalog();
+        $catalog->register([$ability => Tier::SideEffecting]);
+        $c = new ChangeCapture(new TierClassifier($catalog), new PackResolver(), new WpdbChangeStore($this->db));
+        $c->run($ability, [], static fn () => null);
+        $settled = (new ReflectionProperty($c, 'settled'))->getValue($c);
+        $existing = (new ReflectionProperty($capture, 'settled'))->getValue($capture);
+        (new ReflectionProperty($capture, 'settled'))->setValue($capture, $existing + $settled);
+    }
+
+    public function testTheMcpToolNameFormAttachesTheSameEventId(): void
+    {
+        $capture = $this->capture();
+        $this->settleWindow($capture, 'my-plugin/update-thing');
+        $eventId = (new ReflectionProperty($capture, 'settled'))->getValue($capture)['my-plugin/update-thing'][0]['event_id'];
+
+        $settled = $capture->takeSettled('my-plugin-update-thing');
+
+        $this->assertSame($eventId, $settled['event_id'] ?? null);
+        $this->assertNull($capture->takeSettled('my-plugin-update-thing'), 'consumed once');
+    }
+
+    public function testCollidingToolNamesAttachNothing(): void
+    {
+        $capture = $this->capture();
+        $this->settleWindow($capture, 'a-b/c');
+        $this->settleWindow($capture, 'a/b-c');
+
+        $this->assertNull($capture->takeSettled('a-b-c'), 'two abilities map to one tool name: never guess');
+        $this->assertNotNull($capture->takeSettled('a-b/c'), 'the exact id still resolves');
+    }
+
+    public function testExactIdIsPreferredOverAToolNameMatch(): void
+    {
+        $capture = $this->capture();
+        $this->settleWindow($capture, 'x/y');
+        $this->settleWindow($capture, 'x-y');
+        $ids = (new ReflectionProperty($capture, 'settled'))->getValue($capture);
+
+        $settled = $capture->takeSettled('x-y');
+
+        $this->assertSame($ids['x-y'][0]['event_id'], $settled['event_id'] ?? null);
+    }
+
+    public function testAToolNameForADifferentAbilityAttachesNothing(): void
+    {
+        $capture = $this->capture();
+        $this->settleWindow($capture, 'x/y');
+
+        $this->assertNull($capture->takeSettled('x-z'));
+        $this->assertNotNull($capture->takeSettled('x/y'));
+    }
 }

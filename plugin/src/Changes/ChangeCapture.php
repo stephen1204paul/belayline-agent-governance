@@ -122,16 +122,61 @@ final class ChangeCapture
      */
     public function takeSettled(string $ability): ?array
     {
-        if (empty($this->settled[$ability])) {
+        $key = $this->settledKey($ability);
+        if ($key === null) {
             return null;
         }
 
-        $entry = array_pop($this->settled[$ability]);
-        if (empty($this->settled[$ability])) {
-            unset($this->settled[$ability]);
+        $entry = array_pop($this->settled[$key]);
+        if (empty($this->settled[$key])) {
+            unset($this->settled[$key]);
         }
 
         return $entry;
+    }
+
+    /**
+     * Which settled ability a name refers to: the exact ability id first; else
+     * the mcp-adapter tool-name form of a settled id, and only when exactly one
+     * matches. mcp.request carries only `tool_name`, so the MCP audit writer
+     * asks by that form. Ambiguous or unmatched means no match: a window is
+     * never attached to a call it might not belong to.
+     */
+    private function settledKey(string $name): ?string
+    {
+        if (!empty($this->settled[$name])) {
+            return $name;
+        }
+
+        $matches = [];
+        foreach ($this->settled as $id => $entries) {
+            if ($entries !== [] && self::toolName((string) $id) === $name) {
+                $matches[] = (string) $id;
+            }
+        }
+
+        return count($matches) === 1 ? $matches[0] : null;
+    }
+
+    /**
+     * The tool name mcp-adapter derives from an ability id (McpNameSanitizer::
+     * sanitize_name(), includes/Domain/Utils/McpNameSanitizer.php:73-91 at
+     * upstream HEAD 07c9912): `/` becomes `-`; a name still containing
+     * characters outside [a-zA-Z0-9_.-] has them replaced by `-`, runs of `-`
+     * collapsed and edge `-`/`_` trimmed. Over-length names (hash-suffixed
+     * upstream) are not reproduced: they simply never match, which is safe.
+     */
+    private static function toolName(string $ability): string
+    {
+        $name = str_replace('/', '-', trim($ability));
+        if (preg_match('/^[a-zA-Z0-9_.-]+$/', $name) === 1) {
+            return $name;
+        }
+
+        $name = (string) preg_replace('/[^a-zA-Z0-9_.-]/', '-', $name);
+        $name = (string) preg_replace('/-+/', '-', $name);
+
+        return trim($name, '-_');
     }
 
     private function settle(?ClosedWindow $closed): void
