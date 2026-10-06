@@ -88,6 +88,12 @@ final class UninstallManifestCoverageTest extends TestCase
         $unresolved = [];
 
         foreach ($files as $file) {
+            // The undo adapters read and write options named by RECORDED DATA (whatever option an
+            // agent changed): site-owned, not plugin-owned, so never uninstall's to delete.
+            if (str_contains($file, '/Changes/Adapters/')) {
+                continue;
+            }
+
             $content = $fileContents[$file];
             $currentClass = $fileClass[$file] ?? null;
 

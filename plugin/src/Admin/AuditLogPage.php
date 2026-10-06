@@ -188,6 +188,8 @@ final class AuditLogPage
             // A human changed the plugin's configuration: shadow toggles and
             // binding changes, again told apart by the reason column.
             'admin'    => '#50575e',
+            // A human undid recorded changes (0.5 undo engine).
+            'restored' => '#8c5cb0',
         ];
         $color = $colors[$decision] ?? '#888';
 
