@@ -1,0 +1,838 @@
+{
+    "surecart/archive-product": {
+        "annotations": {
+            "readonly": false,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/cancel-subscription": {
+        "annotations": {
+            "readonly": false,
+            "destructive": true,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id",
+            "cancel_behavior"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/create-coupon": {
+        "annotations": {
+            "readonly": false,
+            "destructive": false,
+            "idempotent": false
+        },
+        "input_keys": [
+            "name",
+            "percent_off",
+            "amount_off",
+            "currency",
+            "duration",
+            "duration_in_months",
+            "max_redemptions",
+            "max_redemptions_per_customer",
+            "min_subtotal_amount",
+            "max_subtotal_amount",
+            "product_ids",
+            "redeem_by"
+        ],
+        "required": [
+            "name"
+        ]
+    },
+    "surecart/create-customer": {
+        "annotations": {
+            "readonly": false,
+            "destructive": false,
+            "idempotent": false
+        },
+        "input_keys": [
+            "email",
+            "first_name",
+            "last_name",
+            "name",
+            "phone",
+            "live_mode",
+            "tax_enabled",
+            "shipping_address_city",
+            "shipping_address_country",
+            "shipping_address_line_1",
+            "shipping_address_line_2",
+            "shipping_address_postal_code",
+            "shipping_address_state",
+            "billing_matches_shipping"
+        ],
+        "required": [
+            "email"
+        ]
+    },
+    "surecart/create-fulfillment": {
+        "annotations": {
+            "readonly": false,
+            "destructive": false,
+            "idempotent": false
+        },
+        "input_keys": [
+            "order_id",
+            "shipment_status",
+            "notifications_enabled",
+            "trackings",
+            "fulfillment_items",
+            "metadata"
+        ],
+        "required": [
+            "order_id",
+            "shipment_status",
+            "fulfillment_items"
+        ]
+    },
+    "surecart/create-invoice": {
+        "annotations": {
+            "readonly": false,
+            "destructive": false,
+            "idempotent": false
+        },
+        "input_keys": [
+            "customer_id",
+            "price_id",
+            "variant_id",
+            "due_date",
+            "ad_hoc_amount",
+            "quantity",
+            "description",
+            "notifications_enabled"
+        ],
+        "required": [
+            "customer_id",
+            "price_id",
+            "due_date"
+        ]
+    },
+    "surecart/create-price": {
+        "annotations": {
+            "readonly": false,
+            "destructive": false,
+            "idempotent": false
+        },
+        "input_keys": [
+            "product",
+            "amount",
+            "currency",
+            "ad_hoc",
+            "ad_hoc_min_amount",
+            "ad_hoc_max_amount",
+            "recurring_interval",
+            "recurring_interval_count",
+            "name"
+        ],
+        "required": [
+            "product",
+            "currency"
+        ]
+    },
+    "surecart/create-product": {
+        "annotations": {
+            "readonly": false,
+            "destructive": false,
+            "idempotent": false
+        },
+        "input_keys": [
+            "name",
+            "description",
+            "price",
+            "currency",
+            "recurring"
+        ],
+        "required": [
+            "name"
+        ]
+    },
+    "surecart/create-promotion": {
+        "annotations": {
+            "readonly": false,
+            "destructive": false,
+            "idempotent": false
+        },
+        "input_keys": [
+            "code",
+            "coupon",
+            "customer"
+        ],
+        "required": [
+            "coupon"
+        ]
+    },
+    "surecart/create-refund": {
+        "annotations": {
+            "readonly": false,
+            "destructive": true,
+            "idempotent": false
+        },
+        "input_keys": [
+            "charge",
+            "amount",
+            "reason",
+            "return_request",
+            "refund_items"
+        ],
+        "required": [
+            "charge",
+            "amount",
+            "reason"
+        ]
+    },
+    "surecart/delete-coupon": {
+        "annotations": {
+            "readonly": false,
+            "destructive": true,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id",
+            "confirm"
+        ],
+        "required": [
+            "id",
+            "confirm"
+        ]
+    },
+    "surecart/delete-customer": {
+        "annotations": {
+            "readonly": false,
+            "destructive": true,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id",
+            "confirm"
+        ],
+        "required": [
+            "id",
+            "confirm"
+        ]
+    },
+    "surecart/delete-fulfillment": {
+        "annotations": {
+            "readonly": false,
+            "destructive": true,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id",
+            "confirm"
+        ],
+        "required": [
+            "id",
+            "confirm"
+        ]
+    },
+    "surecart/delete-promotion": {
+        "annotations": {
+            "readonly": false,
+            "destructive": true,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id",
+            "confirm"
+        ],
+        "required": [
+            "id",
+            "confirm"
+        ]
+    },
+    "surecart/duplicate-product": {
+        "annotations": {
+            "readonly": false,
+            "destructive": false,
+            "idempotent": false
+        },
+        "input_keys": [
+            "id"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/filter-customers": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "filter",
+            "page",
+            "per_page"
+        ],
+        "required": [
+            "filter"
+        ]
+    },
+    "surecart/filter-orders": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "filter",
+            "page",
+            "per_page"
+        ],
+        "required": [
+            "filter"
+        ]
+    },
+    "surecart/filter-subscriptions": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "filter",
+            "page",
+            "per_page"
+        ],
+        "required": [
+            "filter"
+        ]
+    },
+    "surecart/get-abandoned-checkout": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/get-coupon": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/get-customer": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/get-customers-filter-schema": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [],
+        "required": []
+    },
+    "surecart/get-fulfillment": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/get-fulfillment-item": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/get-license": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/get-order": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/get-order-statistics": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "start_date",
+            "end_date",
+            "interval"
+        ],
+        "required": []
+    },
+    "surecart/get-orders-filter-schema": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [],
+        "required": []
+    },
+    "surecart/get-product": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/get-promotion": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/get-refund": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/get-store-dashboard": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "period",
+            "test_mode"
+        ],
+        "required": []
+    },
+    "surecart/get-store-info": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [],
+        "required": []
+    },
+    "surecart/get-subscription": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/get-subscriptions-filter-schema": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [],
+        "required": []
+    },
+    "surecart/list-abandoned-checkouts": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "notification_status",
+            "customer_id",
+            "live_mode",
+            "page",
+            "per_page"
+        ],
+        "required": []
+    },
+    "surecart/list-coupons": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "query",
+            "archived",
+            "ids",
+            "page",
+            "per_page"
+        ],
+        "required": []
+    },
+    "surecart/list-customers": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "query",
+            "live_mode",
+            "page",
+            "per_page"
+        ],
+        "required": []
+    },
+    "surecart/list-fulfillments": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "order_ids",
+            "shipment_status",
+            "page",
+            "per_page"
+        ],
+        "required": []
+    },
+    "surecart/list-licenses": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "customer_id",
+            "product_id",
+            "purchase_id",
+            "revoked",
+            "query",
+            "page",
+            "per_page"
+        ],
+        "required": []
+    },
+    "surecart/list-orders": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "status",
+            "customer_id",
+            "page",
+            "per_page"
+        ],
+        "required": []
+    },
+    "surecart/list-prices": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "product_ids",
+            "archived",
+            "page",
+            "per_page"
+        ],
+        "required": []
+    },
+    "surecart/list-products": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "query",
+            "archived",
+            "page",
+            "per_page"
+        ],
+        "required": []
+    },
+    "surecart/list-promotions": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "archived",
+            "coupon_ids",
+            "customer_ids",
+            "ids",
+            "page",
+            "per_page"
+        ],
+        "required": []
+    },
+    "surecart/list-refunds": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "page",
+            "per_page",
+            "charge_ids",
+            "customer_ids",
+            "return_request_ids"
+        ],
+        "required": []
+    },
+    "surecart/list-subscriptions": {
+        "annotations": {
+            "readonly": true,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "status",
+            "customer_id",
+            "page",
+            "per_page"
+        ],
+        "required": []
+    },
+    "surecart/update-coupon": {
+        "annotations": {
+            "readonly": false,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id",
+            "name",
+            "percent_off",
+            "amount_off",
+            "duration",
+            "duration_in_months",
+            "max_redemptions",
+            "max_redemptions_per_customer",
+            "min_subtotal_amount",
+            "max_subtotal_amount",
+            "product_ids",
+            "redeem_by",
+            "archived"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/update-customer": {
+        "annotations": {
+            "readonly": false,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "name",
+            "phone",
+            "tax_enabled",
+            "unsubscribed",
+            "shipping_address_city",
+            "shipping_address_country",
+            "shipping_address_line_1",
+            "shipping_address_line_2",
+            "shipping_address_postal_code",
+            "shipping_address_state",
+            "billing_matches_shipping",
+            "billing_address_city",
+            "billing_address_country",
+            "billing_address_line_1",
+            "billing_address_line_2",
+            "billing_address_postal_code",
+            "billing_address_state"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/update-fulfillment": {
+        "annotations": {
+            "readonly": false,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id",
+            "shipment_status",
+            "notifications_enabled",
+            "trackings",
+            "fulfillment_items",
+            "metadata"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/update-invoice": {
+        "annotations": {
+            "readonly": false,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id",
+            "due_date",
+            "issue_date",
+            "memo",
+            "footer",
+            "notifications_enabled",
+            "status"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/update-price": {
+        "annotations": {
+            "readonly": false,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id",
+            "amount",
+            "name",
+            "archived"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/update-product": {
+        "annotations": {
+            "readonly": false,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id",
+            "name",
+            "description",
+            "metadata"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/update-promotion": {
+        "annotations": {
+            "readonly": false,
+            "destructive": false,
+            "idempotent": true
+        },
+        "input_keys": [
+            "id",
+            "code",
+            "coupon",
+            "customer"
+        ],
+        "required": [
+            "id"
+        ]
+    },
+    "surecart/update-subscription-renewal-date": {
+        "annotations": {
+            "readonly": false,
+            "destructive": false,
+            "idempotent": false
+        },
+        "input_keys": [
+            "subscription_id",
+            "days_to_add",
+            "custom_renewal_date",
+            "confirm"
+        ],
+        "required": [
+            "subscription_id",
+            "confirm"
+        ]
+    }
+}

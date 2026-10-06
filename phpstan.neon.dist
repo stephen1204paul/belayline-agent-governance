@@ -73,3 +73,11 @@ parameters:
             message: '#^Function wc_get_order not found\.$#'
             path: plugin/src/Integrations/Woo/WooOrderStateProbe.php
             count: 1
+        -
+            # SureCart is not a dependency of this repo; its `SureCart` facade
+            # class (with plugin()->version()) exists only at runtime. The
+            # method_exists() guard is the real runtime check, and this is
+            # its sole call site.
+            message: "#^Call to function method_exists\\(\\) with 'SureCart' and 'plugin' will always evaluate to false\\.$#"
+            path: plugin/src/Integrations/SureCart/SureCartIntegration.php
+            count: 1

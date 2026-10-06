@@ -61,6 +61,7 @@ use Specflux\AgentSafety\Plugin\Identity\UserRoleIdentity;
 use Specflux\AgentSafety\Plugin\Integrations\Core\CoreIntegration;
 use Specflux\AgentSafety\Plugin\Integrations\Self\CheckApprovalAbility;
 use Specflux\AgentSafety\Plugin\Integrations\Self\SelfIntegration;
+use Specflux\AgentSafety\Plugin\Integrations\SureCart\SureCartIntegration;
 use Specflux\AgentSafety\Plugin\Integrations\Woo\VerbMapper;
 use Specflux\AgentSafety\Plugin\Integrations\Woo\WooIntegration;
 use Specflux\AgentSafety\Plugin\Support\ApprovalNotifier;
@@ -235,6 +236,13 @@ add_action('plugins_loaded', static function (): void {
         $agsafe_state_probes = [...$agsafe_state_probes, ...$agsafe_woo['stateProbes']];
     }
 
+    if (SureCartIntegration::available()) {
+        $agsafe_surecart = SureCartIntegration::register($agsafe_catalog);
+        $agsafe_elevation_rules = [...$agsafe_elevation_rules, ...$agsafe_surecart['elevationRules']];
+        $agsafe_governed_namespaces = array_values(array_unique([...$agsafe_governed_namespaces, ...$agsafe_surecart['governedNamespaces']]));
+        $agsafe_state_probes = [...$agsafe_state_probes, ...$agsafe_surecart['stateProbes']];
+    }
+
     // Site owners (or other plugins) can widen the governed namespace list
     // without an integration module of their own.
     $agsafe_governed_namespaces = function_exists('apply_filters')
@@ -393,7 +401,7 @@ add_action('plugins_loaded', static function (): void {
     // identical bindings and record decisions identically. The verb mapper assumes
     // WooCommerce's "namespace-resource-action" tool-naming convention, so this seam
     // is only meaningful (and only wired up) when WooCommerce is the active integration.
-    if (WooIntegration::available()) {
+    if (WooIntegration::available() || SureCartIntegration::available()) {
         (new PreToolCallGate($agsafe_pipeline, new VerbMapper(), $agsafe_packs, $agsafe_governed_namespaces))->register();
     }
 
