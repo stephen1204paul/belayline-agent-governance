@@ -11,6 +11,7 @@ use Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder;
 use Specflux\AgentSafety\Plugin\Support\EnvironmentGuard;
 use Specflux\AgentSafety\Plugin\Support\PackResolver;
 use Specflux\AgentSafety\Plugin\Support\PauseSwitch;
+use Specflux\AgentSafety\Plugin\Support\IpAllowlist;
 use Specflux\AgentSafety\Plugin\Support\ShadowMode;
 
 /**
@@ -49,6 +50,7 @@ final class CapabilityPacksPage
     private const RESUME = 'agsafe_resume';
     private const REBIND = 'agsafe_rebind_environment';
     private const RENEW_SHADOW = 'agsafe_renew_shadow_pack';
+    private const IP = 'agsafe_save_ip_allowlist';
 
     /** Observation windows offered on the shadow form, in days; the last is the default. */
     private const SHADOW_DAYS = [1, 3, 7];
@@ -60,6 +62,7 @@ final class CapabilityPacksPage
         private readonly AdminChangeRecorder $changes = new AdminChangeRecorder(),
         private readonly PauseSwitch $pause = new PauseSwitch(),
         private readonly ?EnvironmentGuard $environment = null,
+        private readonly IpAllowlist $ip = new IpAllowlist(),
     ) {
     }
 
@@ -72,6 +75,7 @@ final class CapabilityPacksPage
         add_action('admin_post_' . self::RESUME, [$this, 'resumeAction']);
         add_action('admin_post_' . self::REBIND, [$this, 'rebindAction']);
         add_action('admin_post_' . self::RENEW_SHADOW, [$this, 'renewShadowAction']);
+        add_action('admin_post_' . self::IP, [$this, 'ipAllowlistAction']);
         add_action('admin_notices', [$this, 'pausedNotice']);
     }
 
@@ -104,6 +108,7 @@ final class CapabilityPacksPage
 
         $this->renderEmergencyStop();
         $this->renderEnvironment();
+        $this->renderIpAllowlist();
         $this->renderCatalog($registry->names());
         $this->renderBindings($registry->names(), $registry->defaultPack(), $registry->bindings());
 
@@ -200,6 +205,75 @@ final class CapabilityPacksPage
 
         wp_safe_redirect(add_query_arg(['page' => self::SLUG], admin_url('tools.php')));
         exit;
+    }
+
+    /**
+     * The IP allowlist for application-password and WooCommerce API-key calls.
+     * The saving administrator's own browser session is never IP-checked, so a
+     * list that excludes their address is warned about, not blocked.
+     */
+    private function renderIpAllowlist(): void
+    {
+        $flash = isset($_GET['agsafe_ip']) && is_scalar($_GET['agsafe_ip']) ? sanitize_key((string) wp_unslash($_GET['agsafe_ip'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only flash.
+        if ($flash === 'saved') {
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('IP allowlist saved.', 'senrogate') . '</p></div>';
+        } elseif ($flash === 'warn') {
+            echo '<div class="notice notice-warning"><p>' . esc_html__('IP allowlist saved, but it does not include the address you are using right now. Your browser session is not IP-checked, so you are not locked out; agents calling from that address would be refused.', 'senrogate') . '</p></div>';
+        } elseif ($flash === 'invalid') {
+            echo '<div class="notice notice-error"><p>' . esc_html__('Nothing was saved: every line must be an IPv4 or IPv6 address, or a CIDR range such as 203.0.113.0/24.', 'senrogate') . '</p></div>';
+        }
+
+        echo '<h2>' . esc_html__('IP allowlist', 'senrogate') . '</h2>';
+        echo '<p>' . esc_html__('When set, application-password and WooCommerce API-key calls are refused (ip_not_allowed, audited) unless they come from a listed address. Logged-in browser sessions are never checked. Leave empty to allow every address.', 'senrogate') . '</p>';
+        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+        echo '<input type="hidden" name="action" value="' . esc_attr(self::IP) . '">';
+        echo wp_nonce_field(self::IP, '_wpnonce', true, false); // phpcs:ignore WordPress.Security.EscapeOutput -- core-built hidden fields.
+        echo '<p><label>' . esc_html__('Allowed addresses and ranges, one per line', 'senrogate') . '<br>';
+        echo '<textarea name="ip_allowlist" rows="5" class="large-text code">' . esc_textarea(implode("\n", $this->ip->entries())) . '</textarea></label></p>';
+        echo '<p><label>' . esc_html__('Trusted proxies, one per line (only then is X-Forwarded-For read)', 'senrogate') . '<br>';
+        echo '<textarea name="trusted_proxies" rows="3" class="large-text code">' . esc_textarea(implode("\n", $this->ip->trustedProxies())) . '</textarea></label></p>';
+        $current = $this->ip->clientIp();
+        echo '<p><small>' . esc_html(sprintf(
+            /* translators: %s: the administrator's current IP address */
+            __('Your current address: %s', 'senrogate'),
+            $current ?? __('unknown', 'senrogate')
+        )) . '</small></p>';
+        echo '<p><button type="submit" class="button">' . esc_html__('Save IP allowlist', 'senrogate') . '</button></p>';
+        echo '</form>';
+    }
+
+    public function ipAllowlistAction(): void
+    {
+        if (!current_user_can(self::CAP)) {
+            wp_die(esc_html__('Insufficient permissions.', 'senrogate'));
+        }
+        check_admin_referer(self::IP);
+
+        $result = $this->applyIpAllowlist(
+            self::postedText($_POST['ip_allowlist'] ?? null),
+            self::postedText($_POST['trusted_proxies'] ?? null),
+        );
+
+        $flash = !$result['saved'] ? 'invalid' : ($result['excludesCurrentIp'] ? 'warn' : 'saved');
+        wp_safe_redirect(add_query_arg(['page' => self::SLUG, 'agsafe_ip' => $flash], admin_url('tools.php')));
+        exit;
+    }
+
+    /**
+     * Save as the logged-in user; split from {@see ipAllowlistAction()} like
+     * {@see applyPause()} so it is exercisable without a nonce, redirect or exit.
+     *
+     * @return array{saved: bool, invalid: list<string>, excludesCurrentIp: bool}
+     */
+    public function applyIpAllowlist(string $allowlistText, string $proxiesText): array
+    {
+        return $this->ip->save($allowlistText, $proxiesText, get_current_user_id());
+    }
+
+    /** A posted multi-line value, unslashed; a non-scalar (malformed request) is ''. */
+    private static function postedText(mixed $raw): string
+    {
+        return is_scalar($raw) ? sanitize_textarea_field((string) wp_unslash($raw)) : '';
     }
 
     /** AS-7 §3.4 item 9: the production "Renew for 24h" re-confirmation — no typed name needed, unlike first enabling it. */
