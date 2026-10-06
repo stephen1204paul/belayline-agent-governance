@@ -46,6 +46,7 @@ use Specflux\AgentSafety\Plugin\Approval\WpdbGrantStore;
 use Specflux\AgentSafety\Plugin\Audit\AuditReader;
 use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
 use Specflux\AgentSafety\Plugin\Audit\WpdbAuditSink;
+use Specflux\AgentSafety\Plugin\Api\Changes as ChangesApi;
 use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
 use Specflux\AgentSafety\Plugin\Changes\UndoService;
 use Specflux\AgentSafety\Plugin\Changes\WpdbChangeStore;
@@ -500,6 +501,7 @@ add_action('plugins_loaded', static function (): void {
         $agsafe_api_approvals ?? null,
         $agsafe_grant_store !== null ? new Grants($agsafe_grant_store, new GrantRecorder($agsafe_sink)) : null,
         $agsafe_pause,
+        $agsafe_undo !== null && $agsafe_change_store !== null ? new ChangesApi($agsafe_change_store, $agsafe_undo) : null,
     );
 
     // Capability-pack admin (Tools → Agent Capability Packs): the emergency

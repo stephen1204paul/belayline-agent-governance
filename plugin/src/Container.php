@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Specflux\AgentSafety\Plugin;
 
 use Specflux\AgentSafety\Plugin\Api\Approvals;
+use Specflux\AgentSafety\Plugin\Api\Changes;
 use Specflux\AgentSafety\Plugin\Api\Grants;
 use Specflux\AgentSafety\Plugin\Support\PauseSwitch;
 
@@ -26,13 +27,14 @@ final class Container
         private readonly ?Approvals $approvals,
         private readonly ?Grants $grants = null,
         private readonly ?PauseSwitch $pause = null,
+        private readonly ?Changes $changes = null,
     ) {
     }
 
     /** Called once by the plugin bootstrap on plugins_loaded. Later calls overwrite. */
-    public static function init(?Approvals $approvals, ?Grants $grants = null, ?PauseSwitch $pause = null): void
+    public static function init(?Approvals $approvals, ?Grants $grants = null, ?PauseSwitch $pause = null, ?Changes $changes = null): void
     {
-        self::$instance = new self($approvals, $grants, $pause);
+        self::$instance = new self($approvals, $grants, $pause, $changes);
     }
 
     /**
@@ -81,6 +83,21 @@ final class Container
     public function pause(): ?PauseSwitch
     {
         return $this->pause;
+    }
+
+    /**
+     * Change history and undo (0.5): list what an event or run changed,
+     * preview an undo, and undo as the signed-in human. Null only on the
+     * no-database path; feature-detect like the other services. Undo is
+     * enforced inside the service (capability, no agent contexts, no force);
+     * the nonce check belongs to the caller.
+     *
+     *   agent_safety()?->changes()?->forCorrelation($id);
+     *   agent_safety()?->changes()?->undo($set->scope(), get_current_user_id());
+     */
+    public function changes(): ?Changes
+    {
+        return $this->changes;
     }
 
     /** @internal tests only. */

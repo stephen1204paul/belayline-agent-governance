@@ -13,6 +13,20 @@
  *       && ($approvals = $container->approvals()) !== null) {
  *       $approvals->approve($approvalId, get_current_user_id());
  *   }
+ *
+ * Change history and undo (0.5, absent before it; feature-detect `changes()`):
+ *
+ *   $changes = agent_safety()?->changes();
+ *   $run     = $changes?->forCorrelation($correlation_id);  // RecordedChanges
+ *   foreach ($run ?? [] as $c) { $c->objectType(); $c->objectId(); $c->action(); $c->fieldDiff(); $c->restorable(); $c->reason(); }
+ *   $items   = $changes?->preview($run->scope());           // list<UndoItem>, writes nothing
+ *   $result  = $changes?->undo($run->scope(), get_current_user_id()); // UndoResult
+ *
+ * undo() is for a human click on the caller's own screen: verify a nonce and
+ * capability there. The API enforces its own rules as well and returns a
+ * `forbidden` result, writing nothing, when the user is not the signed-in one,
+ * lacks a capability the scope needs, or the request is an agent credential
+ * or inside a governed call. There is no force: drifted objects are refused.
  */
 
 declare(strict_types=1);
