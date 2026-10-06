@@ -77,6 +77,7 @@ final class AuditRecord
         ?string $ip = null,
         bool $dryRun = false,
         ?string $reason = null,
+        ?string $changesSha256 = null,
     ): self {
         return new self(
             $id,
@@ -94,6 +95,7 @@ final class AuditRecord
             null,
             $externalEffects,
             $ip,
+            $changesSha256,
         );
     }
 

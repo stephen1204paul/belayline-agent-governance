@@ -7,13 +7,17 @@ namespace Specflux\AgentSafety\Plugin\Tests\Changes;
 use PHPUnit\Framework\TestCase;
 use Specflux\AgentSafety\Changes\CaptureWindow;
 use Specflux\AgentSafety\Changes\ClosedWindow;
-use Specflux\AgentSafety\Plugin\Changes\WpChangeListeners;
+use Specflux\AgentSafety\Plugin\Changes\Adapters\OptionAdapter;
+use Specflux\AgentSafety\Plugin\Changes\Adapters\PostAdapter;
+use Specflux\AgentSafety\Plugin\Changes\Adapters\PostMetaAdapter;
+use Specflux\AgentSafety\Plugin\Changes\Adapters\TermAdapter;
+use Specflux\AgentSafety\Plugin\Tests\Fakes\AdapterBundle;
 
 /** One test per listener, each driven the way WordPress would call it. */
 final class WpChangeListenersTest extends TestCase
 {
     private CaptureWindow $window;
-    private WpChangeListeners $listeners;
+    private AdapterBundle $listeners;
 
     protected function setUp(): void
     {
@@ -21,7 +25,11 @@ final class WpChangeListenersTest extends TestCase
         $GLOBALS['wpas_test_terms'] = [];
         $GLOBALS['wpas_test_meta'] = [];
         $this->window = new CaptureWindow();
-        $this->listeners = new WpChangeListeners($this->window);
+        $adapters = [new PostAdapter(), new PostMetaAdapter(), new TermAdapter(), new OptionAdapter()];
+        foreach ($adapters as $adapter) {
+            $adapter->attach($this->window);
+        }
+        $this->listeners = new AdapterBundle($adapters);
         $this->window->open('evt-1', 'corr-1', false);
     }
 

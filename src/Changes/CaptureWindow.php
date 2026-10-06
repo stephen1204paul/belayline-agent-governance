@@ -25,6 +25,9 @@ final class CaptureWindow
     private bool $redactPii = false;
     private bool $overflowed = false;
 
+    /** @var array<string, true> Object keys a snapshotter owns; hook-recorded changes for them are dropped. */
+    private array $claimed = [];
+
     /** @var list<Change> */
     private array $changes = [];
 
@@ -46,6 +49,7 @@ final class CaptureWindow
         $this->redactPii = $redactPii;
         $this->overflowed = false;
         $this->changes = [];
+        $this->claimed = [];
 
         return true;
     }
@@ -65,8 +69,27 @@ final class CaptureWindow
         return $this->redactPii;
     }
 
-    /** Record a change into the open window; ignored when none is open. */
+    /**
+     * A snapshotter owns this object for the window: changes the hook
+     * adapters record for it are dropped, so it is never recorded twice.
+     */
+    public function claim(string $objectType, string $objectId): void
+    {
+        $this->claimed[$objectType . "\0" . $objectId] = true;
+    }
+
+    /** Record a hook-observed change into the open window; ignored when none is open or a snapshotter claimed the object. */
     public function record(Change $change): void
+    {
+        if (isset($this->claimed[$change->objectType . "\0" . $change->objectId])) {
+            return;
+        }
+
+        $this->recordSnapshot($change);
+    }
+
+    /** Record a snapshot-derived change (ignores claims: the snapshotter is the owner). */
+    public function recordSnapshot(Change $change): void
     {
         if ($this->depth === 0) {
             return;
@@ -119,6 +142,7 @@ final class CaptureWindow
     {
         $closed = new ClosedWindow($this->eventId, $this->correlationId, $this->changes);
         $this->changes = [];
+        $this->claimed = [];
         $this->eventId = '';
 
         return $closed;
