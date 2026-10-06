@@ -108,7 +108,7 @@ final class FluentCartCatalogTest extends TestCase
         $contrib = FluentCartIntegration::register($catalog, null);
 
         $this->assertSame(['fluent-cart/'], $contrib['governedNamespaces']);
-        $this->assertSame([], $contrib['packs']);
+        $this->assertSame(['fluentcart-default-agent', 'fluentcart-readonly-analyst'], array_map(static fn ($p): string => $p->name, $contrib['packs']));
         $this->assertSame([], $contrib['stateProbes'], 'no $wpdb, no probes');
         $this->assertNull($catalog->baseTier('woocommerce/orders-get'));
     }

@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace Specflux\AgentSafety\Plugin\Integrations\FluentCart;
 
+use Specflux\AgentSafety\Packs\Pack;
 use Specflux\AgentSafety\Plugin\Approval\StateProbe;
 use Specflux\AgentSafety\Policy\ElevationRule;
 use Specflux\AgentSafety\Policy\VerbCatalog;
 use wpdb;
 
 /**
- * The one place all FluentCart coupling lives (governance only: no capture or
- * restore adapters yet, SPEC-COMMERCE-INTEGRATIONS.md section 6 C2b). Wired from
- * the plugin bootstrap ONLY when {@see available()}. Contributes no packs and no
+ * The one place all FluentCart coupling lives (governance, starter packs, and capture/restore
+ * adapters, SPEC-COMMERCE-INTEGRATIONS.md sections 4 and 6 C2b). Wired from
+ * the plugin bootstrap ONLY when {@see available()}. Contributes starter packs ({@see FluentCartPacks}) and no
  * identity provider: FluentCart abilities are reached by the existing
  * application-password / user-role identities, and bind through admin-created packs.
  *
@@ -67,7 +68,7 @@ final class FluentCartIntegration
     }
 
     /**
-     * @return array{elevationRules: list<ElevationRule>, packs: list<never>, governedNamespaces: list<string>, stateProbes: array<string, StateProbe>}
+     * @return array{elevationRules: list<ElevationRule>, packs: list<Pack>, governedNamespaces: list<string>, stateProbes: array<string, StateProbe>}
      */
     public static function register(VerbCatalog $catalog, ?wpdb $db): array
     {
@@ -91,13 +92,24 @@ final class FluentCartIntegration
             ];
         }
 
+        if ($db !== null) {
+            // Capture (args-based snapshots) and restore for the writes that
+            // have no WordPress hook. Resolved lazily by ChangeAdapters.
+            $snapshotter = new FluentCartSnapshotter($db);
+            $restore = new FluentCartRestoreAdapter($snapshotter, new FluentCartModelStore());
+            add_filter(
+                'agent_safety_change_adapters',
+                static fn ($adapters): array => [...(is_array($adapters) ? $adapters : []), $snapshotter, $restore],
+            );
+        }
+
         return [
             'elevationRules' => [
                 new CustomerVisibleNoteElevationRule(),
                 new CouponActivationElevationRule($couponStatus),
                 new CustomerEmailChangeElevationRule(),
             ],
-            'packs' => [],
+            'packs' => FluentCartPacks::all(),
             'governedNamespaces' => ['fluent-cart/'],
             // add-order-note and apply-labels append/toggle with no meaningful
             // prior state to go stale, and every read/query verb is unprobed.
