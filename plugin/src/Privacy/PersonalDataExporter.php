@@ -17,8 +17,10 @@ final class PersonalDataExporter
 {
     private const PAGE_SIZE = 200;
 
-    public function __construct(private readonly PrivacyAuditReader $reader)
-    {
+    public function __construct(
+        private readonly PrivacyAuditReader $reader,
+        private readonly ?PrivacyChangeReader $changes = null,
+    ) {
     }
 
     /**
@@ -42,7 +44,36 @@ final class PersonalDataExporter
             $data[] = self::group($row);
         }
 
+        if ($this->changes !== null) {
+            foreach ($this->changes->forEvents(PrivacyChangeReader::eventIds($rows)) as $change) {
+                $data[] = self::changeGroup($change);
+            }
+        }
+
         return ['data' => $data, 'done' => count($rows) < self::PAGE_SIZE];
+    }
+
+    /**
+     * One export group per recorded change.
+     *
+     * @param array<string, mixed> $row
+     * @return array{group_id: string, group_label: string, item_id: string, data: list<array{name: string, value: string}>}
+     */
+    private static function changeGroup(array $row): array
+    {
+        return [
+            'group_id' => 'agent-safety-changes',
+            'group_label' => __('SenroGate Change History', 'senrogate'),
+            'item_id' => 'agent-safety-changes-' . (string) ($row['id'] ?? ''),
+            'data' => [
+                ['name' => __('Time', 'senrogate'), 'value' => (string) ($row['ts'] ?? '')],
+                ['name' => __('Event', 'senrogate'), 'value' => (string) ($row['event_id'] ?? '')],
+                ['name' => __('Object', 'senrogate'), 'value' => (string) ($row['object_type'] ?? '') . ' ' . (string) ($row['object_id'] ?? '')],
+                ['name' => __('Action', 'senrogate'), 'value' => (string) ($row['action'] ?? '')],
+                ['name' => __('Before', 'senrogate'), 'value' => (string) ($row['before_json'] ?? '')],
+                ['name' => __('After', 'senrogate'), 'value' => (string) ($row['after_json'] ?? '')],
+            ],
+        ];
     }
 
     /**

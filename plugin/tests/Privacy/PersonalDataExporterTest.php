@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use Specflux\AgentSafety\Audit\HashChain;
 use Specflux\AgentSafety\Plugin\Privacy\PersonalDataExporter;
 use Specflux\AgentSafety\Plugin\Privacy\PrivacyAuditReader;
+use Specflux\AgentSafety\Plugin\Privacy\PrivacyChangeReader;
 
 /**
  * §3.6 item 2 / §4 row 9: the exporter must resolve the requested email to a
@@ -83,6 +84,26 @@ final class PersonalDataExporterTest extends TestCase
         $this->assertSame('agent-safety-audit-log-201', $page2['data'][0]['item_id']);
     }
 
+    public function testExportsTheUsersChangeRowsAsTheirOwnGroup(): void
+    {
+        $db = new InMemoryAuditRowsWpdb();
+        $db->seed(self::chain([
+            ['wp_user' => 5, 'ability' => 'core/update-post', 'input' => []],
+            ['wp_user' => 6, 'ability' => 'core/update-post', 'input' => []],
+        ]));
+        $db->seedChanges([
+            ['id' => 10, 'event_id' => 'evt-1', 'ts' => '2026-09-01 00:00:00', 'object_type' => 'post', 'object_id' => '7', 'action' => 'update', 'before_json' => '{"a":1}', 'after_json' => '{"a":2}'],
+            ['id' => 11, 'event_id' => 'evt-2', 'ts' => '2026-09-01 00:00:00', 'object_type' => 'post', 'object_id' => '8', 'action' => 'update', 'before_json' => '{}', 'after_json' => '{}'],
+        ]);
+        $GLOBALS['wpas_test_users_by_email']['alice@example.com'] = 5;
+
+        $result = (new PersonalDataExporter(new PrivacyAuditReader($db), new PrivacyChangeReader($db)))->export('alice@example.com');
+
+        $this->assertCount(2, $result['data'], 'one audit group plus one change group, nothing of user 6');
+        $this->assertSame('agent-safety-changes', $result['data'][1]['group_id']);
+        $this->assertSame('agent-safety-changes-10', $result['data'][1]['item_id']);
+    }
+
     /**
      * Builds a valid hash chain of audit-log rows from short specs.
      *
@@ -118,6 +139,7 @@ final class PersonalDataExporterTest extends TestCase
 
             $rows[] = [
                 'id' => $id,
+                'event_id' => 'evt-' . $id,
                 'wp_user' => $spec['wp_user'],
                 'record_json' => $json,
                 'prev_hash' => $prev,

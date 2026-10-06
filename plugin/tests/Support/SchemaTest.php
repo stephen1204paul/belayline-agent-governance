@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Specflux\AgentSafety\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
+use Specflux\AgentSafety\Plugin\Support\ChangePurge;
 use Specflux\AgentSafety\Plugin\Support\EnvironmentGuard;
 use Specflux\AgentSafety\Plugin\Support\Schema;
 use Specflux\AgentSafety\Plugin\Support\ShadowMode;
@@ -72,11 +73,54 @@ final class SchemaTest extends TestCase
     {
         Schema::install(new wpdb());
 
-        $this->assertCount(4, $GLOBALS['wpas_test_dbdelta_queries']);
+        $this->assertCount(5, $GLOBALS['wpas_test_dbdelta_queries']);
         $this->assertStringContainsString('wp_agsafe_audit_log', $GLOBALS['wpas_test_dbdelta_queries'][0]);
         $this->assertStringContainsString('wp_agsafe_approvals', $GLOBALS['wpas_test_dbdelta_queries'][1]);
         $this->assertStringContainsString('wp_agsafe_grants', $GLOBALS['wpas_test_dbdelta_queries'][2]);
         $this->assertStringContainsString('wp_agsafe_counters', $GLOBALS['wpas_test_dbdelta_queries'][3]);
+        $this->assertStringContainsString('wp_agsafe_changes', $GLOBALS['wpas_test_dbdelta_queries'][4]);
+    }
+
+    // --- version 6: change history table ----------------------------------------
+
+    public function testTheChangesTableCarriesEveryDocumentedColumnAndIsUniquePerEventSeq(): void
+    {
+        Schema::install(new wpdb());
+
+        $changes = $GLOBALS['wpas_test_dbdelta_queries'][4];
+        $fragments = [
+            'event_id VARCHAR(64) NOT NULL',
+            'correlation_id VARCHAR(64) NOT NULL',
+            'seq INT UNSIGNED NOT NULL',
+            'object_type VARCHAR(40) NOT NULL',
+            'object_id VARCHAR(191) NOT NULL',
+            'object_subtype VARCHAR(191) NULL',
+            'action VARCHAR(20) NOT NULL',
+            'before_json LONGTEXT NULL',
+            'after_json LONGTEXT NULL',
+            'changed_fields TEXT NULL',
+            'restorable TINYINT(1) NOT NULL DEFAULT 0',
+            'restorable_reason VARCHAR(40) NULL',
+            'restored_by_event VARCHAR(64) NULL',
+            'ts DATETIME NOT NULL',
+            'UNIQUE KEY event_seq (event_id, seq)',
+        ];
+        foreach ($fragments as $fragment) {
+            $this->assertStringContainsString($fragment, $changes);
+        }
+    }
+
+    public function testUpgradingFromVersionFiveCreatesTheChangesTableAndSchedulesThePurge(): void
+    {
+        $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION] = '5';
+        $GLOBALS['wpas_test_cron'] = [];
+
+        Schema::maybeUpgrade(new wpdb());
+
+        $this->assertSame('6', Schema::VERSION);
+        $this->assertSame('6', $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
+        $this->assertStringContainsString('wp_agsafe_changes', implode("\n", $GLOBALS['wpas_test_dbdelta_queries']));
+        $this->assertArrayHasKey(ChangePurge::HOOK, $GLOBALS['wpas_test_cron'], 'an upgrade never re-activates, so install() must schedule the purge');
     }
 
     public function testTheCountersTableKeysByCounterKeyAndIndexesExpiry(): void
@@ -125,7 +169,7 @@ final class SchemaTest extends TestCase
 
         Schema::maybeUpgrade(new wpdb());
 
-        $this->assertCount(4, $GLOBALS['wpas_test_dbdelta_queries']);
+        $this->assertCount(5, $GLOBALS['wpas_test_dbdelta_queries']);
         $this->assertSame(Schema::VERSION, $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
     }
 

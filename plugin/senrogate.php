@@ -45,6 +45,7 @@ use Specflux\AgentSafety\Plugin\Approval\WpdbGrantStore;
 use Specflux\AgentSafety\Plugin\Audit\AuditReader;
 use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
 use Specflux\AgentSafety\Plugin\Audit\WpdbAuditSink;
+use Specflux\AgentSafety\Plugin\Changes\WpdbChangeStore;
 use Specflux\AgentSafety\Plugin\Hooks\AbilityAuditLog;
 use Specflux\AgentSafety\Plugin\Hooks\AbilityPermissionGate;
 use Specflux\AgentSafety\Plugin\Hooks\McpRequestAuditHandler;
@@ -65,6 +66,7 @@ use Specflux\AgentSafety\Plugin\Support\ApprovalNotifier;
 use Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder;
 use Specflux\AgentSafety\Plugin\Support\ApprovalSweep;
 use Specflux\AgentSafety\Plugin\Support\ArgumentCapGate;
+use Specflux\AgentSafety\Plugin\Support\ChangePurge;
 use Specflux\AgentSafety\Plugin\Support\DecisionRecorder;
 use Specflux\AgentSafety\Plugin\Support\ElevationRules;
 use Specflux\AgentSafety\Plugin\Support\EnvironmentGuard;
@@ -140,6 +142,7 @@ function activate_agent_safety(): void
     }
 
     ApprovalSweep::activate();
+    ChangePurge::activate();
 }
 
 /** Stop the approval sweep. Table data is intentionally kept — see uninstall.php. */
@@ -147,6 +150,9 @@ function deactivate_agent_safety(): void
 {
     if (class_exists(ApprovalSweep::class)) {
         ApprovalSweep::deactivate();
+    }
+    if (class_exists(ChangePurge::class)) {
+        ChangePurge::deactivate();
     }
 }
 
@@ -445,6 +451,11 @@ add_action('plugins_loaded', static function (): void {
         ): void {
             ApprovalSweep::run($agsafe_approvals, $agsafe_grant_store);
             $agsafe_shadow->sweep($agsafe_changes);
+        });
+
+        // Daily retention purge of the change history (see ChangePurge).
+        add_action(ChangePurge::HOOK, static function () use ($wpdb): void {
+            ChangePurge::run(new WpdbChangeStore($wpdb));
         });
 
         // Route each NEW pending approval to the humans who must clear it:

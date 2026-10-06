@@ -7,21 +7,29 @@ namespace Specflux\AgentSafety\Plugin\Privacy;
 use WP_User;
 
 /**
- * `wp_privacy_personal_data_erasers` callback (§3.6 item 2): erases NOTHING.
- * The audit log is an append-only hash chain — {@see
+ * `wp_privacy_personal_data_erasers` callback (§3.6 item 2): never touches the
+ * audit log. The audit log is an append-only hash chain — {@see
  * \Specflux\AgentSafety\Audit\HashChain} links each row's `entry_hash` from
  * the one before it, so rewriting or dropping a row to satisfy an erasure
  * request would break that chain for every row recorded after it. A matching
  * user's rows are instead reported `items_retained`, with the reason stated
  * back to the requester, per the same paging contract as {@see
  * PersonalDataExporter}.
+ *
+ * The change history ({@see PrivacyChangeReader}) IS erased: its snapshot
+ * bodies can hold customer data, and they sit outside the chain — each audit
+ * row commits only to their `changes_sha256`, which survives the deletion.
+ * Each page deletes the change rows of that page's audit events; the audit
+ * rows themselves are never removed, so offset paging stays stable.
  */
 final class PersonalDataEraser
 {
     private const PAGE_SIZE = 200;
 
-    public function __construct(private readonly PrivacyAuditReader $reader)
-    {
+    public function __construct(
+        private readonly PrivacyAuditReader $reader,
+        private readonly ?PrivacyChangeReader $changes = null,
+    ) {
     }
 
     /**
@@ -41,15 +49,25 @@ final class PersonalDataEraser
             return ['items_removed' => false, 'items_retained' => false, 'messages' => [], 'done' => true];
         }
 
+        $removed = $this->changes?->deleteForEvents(PrivacyChangeReader::eventIds($rows)) ?? 0;
+
+        $messages = [
+            __(
+                'SenroGate audit records for this user are kept as a tamper-evident security record: each entry is chained to the one before it by hash, so altering or removing one would break that chain for every entry recorded after it.',
+                'senrogate'
+            ),
+        ];
+        if ($removed > 0) {
+            $messages[] = __(
+                'SenroGate change history (the before and after snapshots recorded for this user\'s calls) was deleted. The audit records keep only a hash of each change set.',
+                'senrogate'
+            );
+        }
+
         return [
-            'items_removed' => false,
+            'items_removed' => $removed > 0,
             'items_retained' => true,
-            'messages' => [
-                __(
-                    'SenroGate audit records for this user are kept as a tamper-evident security record: each entry is chained to the one before it by hash, so altering or removing one would break that chain for every entry recorded after it.',
-                    'senrogate'
-                ),
-            ],
+            'messages' => $messages,
             'done' => count($rows) < self::PAGE_SIZE,
         ];
     }

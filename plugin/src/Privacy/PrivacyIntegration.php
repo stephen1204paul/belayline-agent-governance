@@ -8,7 +8,7 @@ use wpdb;
 
 /**
  * Wires the WP core privacy-tools seams (§3.6 item 2) onto the audit log: the
- * personal-data exporter and eraser filters, plus the suggested
+ * personal-data exporter and eraser filters (audit log + change history), plus the suggested
  * privacy-policy text. Uninstall (§3.6 item 3) is a separate concern, wired
  * elsewhere.
  */
@@ -21,8 +21,9 @@ final class PrivacyIntegration
     public function register(): void
     {
         $reader = new PrivacyAuditReader($this->db);
-        $exporter = new PersonalDataExporter($reader);
-        $eraser = new PersonalDataEraser($reader);
+        $changes = new PrivacyChangeReader($this->db);
+        $exporter = new PersonalDataExporter($reader, $changes);
+        $eraser = new PersonalDataEraser($reader, $changes);
 
         add_filter('wp_privacy_personal_data_exporters', static function (array $exporters) use ($exporter): array {
             $exporters['agent-safety-audit-log'] = [

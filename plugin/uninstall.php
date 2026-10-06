@@ -46,14 +46,14 @@ if (is_readable($agsafeUninstallAutoload)) {
     $agsafeManifestLoaded = class_exists(\Specflux\AgentSafety\Plugin\Support\UninstallManifest::class);
 }
 
-// Tables: three current, plus the pre-v4 grants table name a crashed v4
+// Tables: five current, plus the pre-v4 grants table name a crashed v4
 // upgrade can leave behind (Schema::renameLegacyGrantsTable() never deletes
 // it, only renames-or-leaves it -- see Schema.php). %i is the WP 6.2+
 // identifier placeholder; each table name here is this plugin's own trusted,
 // hard-coded constant, never request input.
 $agsafeTableBasenames = $agsafeManifestLoaded
     ? \Specflux\AgentSafety\Plugin\Support\UninstallManifest::TABLE_BASENAMES
-    : ['agsafe_audit_log', 'agsafe_approvals', 'agsafe_grants', 'agent_safety_grants'];
+    : ['agsafe_audit_log', 'agsafe_approvals', 'agsafe_grants', 'agsafe_counters', 'agsafe_changes', 'agent_safety_grants'];
 
 foreach ($agsafeTableBasenames as $agsafeTableBasename) {
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.DirectDatabaseQuery.NoCaching -- opt-in uninstall dropping a table this plugin owns exclusively; %i is the WP 6.2+ identifier placeholder, the name is a hard-coded constant, never request input; nothing to cache for a table being dropped.

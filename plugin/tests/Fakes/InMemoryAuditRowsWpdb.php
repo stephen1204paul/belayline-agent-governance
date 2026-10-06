@@ -18,10 +18,59 @@ final class InMemoryAuditRowsWpdb extends wpdb
     /** @var list<array<string, mixed>> */
     private array $rows = [];
 
+    /** @var list<array<string, mixed>> */
+    private array $changeRows = [];
+
+    /** @param list<array<string, mixed>> $rows Row shape: id, event_id, ts, ... (the `agsafe_changes` columns). */
+    public function seedChanges(array $rows): void
+    {
+        $this->changeRows = $rows;
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function changeRows(): array
+    {
+        return $this->changeRows;
+    }
+
     /** @param list<array<string, mixed>> $rows Row shape: id, wp_user, prev_hash, record_json, entry_hash, ... */
     public function seed(array $rows): void
     {
         $this->rows = $rows;
+    }
+
+    public function query(string $query): int|bool
+    {
+        if (preg_match('/^DELETE FROM wp_agsafe_changes WHERE event_id IN \((.*)\)$/s', $query, $m) === 1) {
+            $ids = self::quotedList($m[1]);
+            $before = count($this->changeRows);
+            $this->changeRows = array_values(array_filter(
+                $this->changeRows,
+                static fn (array $r): bool => !in_array($r['event_id'], $ids, true)
+            ));
+
+            return $before - count($this->changeRows);
+        }
+
+        if (preg_match("/^DELETE FROM wp_agsafe_changes WHERE ts < '([^']*)'$/", $query, $m) === 1) {
+            $before = count($this->changeRows);
+            $this->changeRows = array_values(array_filter(
+                $this->changeRows,
+                static fn (array $r): bool => (string) $r['ts'] >= $m[1]
+            ));
+
+            return $before - count($this->changeRows);
+        }
+
+        return parent::query($query);
+    }
+
+    /** @return list<string> */
+    private static function quotedList(string $sql): array
+    {
+        preg_match_all("/'([^']*)'/", $sql, $m);
+
+        return $m[1];
     }
 
     public function get_var(?string $query = null): mixed
@@ -38,6 +87,15 @@ final class InMemoryAuditRowsWpdb extends wpdb
     /** @return list<array<string, mixed>> */
     public function get_results(?string $query = null, string $output = 'ARRAY_A'): array
     {
+        if ($query !== null && preg_match('/FROM wp_agsafe_changes WHERE event_id IN \((.*)\) ORDER BY id$/s', $query, $m) === 1) {
+            $ids = self::quotedList($m[1]);
+
+            return array_values(array_filter(
+                $this->changeRows,
+                static fn (array $r): bool => in_array($r['event_id'], $ids, true)
+            ));
+        }
+
         if ($query !== null && preg_match('/WHERE wp_user = (\d+).*LIMIT (\d+) OFFSET (\d+)/s', $query, $m) === 1) {
             $userId = (int) $m[1];
             $limit = (int) $m[2];

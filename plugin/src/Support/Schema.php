@@ -8,7 +8,7 @@ use Specflux\AgentSafety\Plugin\Audit\WpdbAuditSink;
 use wpdb;
 
 /**
- * Single source of truth for the plugin's four custom tables
+ * Single source of truth for the plugin's five custom tables
  * ({@see \Specflux\AgentSafety\Plugin\Audit\WpdbAuditSink},
  * {@see \Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore} and
  * {@see \Specflux\AgentSafety\Plugin\Approval\WpdbGrantStore}) and their
@@ -47,8 +47,11 @@ final class Schema
      * 5: new `agsafe_counters` table ({@see countersTable()}) backing the
      *    atomic rate/quota/tripwire counters ({@see AtomicCounterStore}),
      *    replacing their non-atomic transients.
+     * 6: new `agsafe_changes` table ({@see changesTable()}) holding the
+     *    per-call change history (before/after snapshots) captured while a
+     *    governed call runs ({@see \Specflux\AgentSafety\Plugin\Changes\ChangeCapture}).
      */
-    public const VERSION = '5';
+    public const VERSION = '6';
 
     public const VERSION_OPTION = 'agsafe_schema_version';
 
@@ -80,6 +83,7 @@ final class Schema
     public const APPROVALS_TABLE = 'agsafe_approvals';
     public const GRANTS_TABLE = 'agsafe_grants';
     public const COUNTERS_TABLE = 'agsafe_counters';
+    public const CHANGES_TABLE = 'agsafe_changes';
 
     public static function auditLogTable(wpdb $db): string
     {
@@ -109,6 +113,18 @@ final class Schema
     public static function countersTable(wpdb $db): string
     {
         return $db->prefix . self::COUNTERS_TABLE;
+    }
+
+    /**
+     * Change history: one row per recorded change, joined to its audit row by
+     * `event_id`. A SEPARATE table from the audit log on purpose: the audit
+     * row's hash chain covers `changes_sha256`, while these snapshot bodies
+     * stay outside the chain so retention and the privacy eraser can delete
+     * them without breaking it.
+     */
+    public static function changesTable(wpdb $db): string
+    {
+        return $db->prefix . self::CHANGES_TABLE;
     }
 
     /** Column/key body (no surrounding `CREATE TABLE ... ( )`) for the audit log table. */
@@ -221,6 +237,38 @@ final class Schema
     }
 
     /**
+     * Column/key body (no surrounding `CREATE TABLE ... ( )`) for the change
+     * history table. `restorable` is a bool plus a reason code
+     * (`restorable_reason`: NULL when restorable, else why not — `truncated`,
+     * `secret`, `redacted`, `irreversible`, `unencodable`). `ts` is UTC and
+     * drives the retention purge. `restored_by_event` is stamped by the undo
+     * engine (a later stage); NULL until then. `(event_id, seq)` is unique so
+     * a change is never recorded twice for one event.
+     */
+    public static function changesColumns(): string
+    {
+        return "id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                event_id VARCHAR(64) NOT NULL,
+                correlation_id VARCHAR(64) NOT NULL,
+                seq INT UNSIGNED NOT NULL,
+                object_type VARCHAR(40) NOT NULL,
+                object_id VARCHAR(191) NOT NULL,
+                object_subtype VARCHAR(191) NULL,
+                action VARCHAR(20) NOT NULL,
+                before_json LONGTEXT NULL,
+                after_json LONGTEXT NULL,
+                changed_fields TEXT NULL,
+                restorable TINYINT(1) NOT NULL DEFAULT 0,
+                restorable_reason VARCHAR(40) NULL,
+                restored_by_event VARCHAR(64) NULL,
+                ts DATETIME NOT NULL,
+                PRIMARY KEY  (id),
+                UNIQUE KEY event_seq (event_id, seq),
+                KEY correlation_id (correlation_id),
+                KEY ts (ts)";
+    }
+
+    /**
      * Create/upgrade the tables via `dbDelta()` and record the version that
      * was just installed. Safe to call repeatedly (dbDelta only issues the
      * ALTERs a diff actually needs).
@@ -240,12 +288,18 @@ final class Schema
             'CREATE TABLE ' . self::approvalsTable($db) . " (\n" . self::approvalsColumns() . "\n) {$charset};",
             'CREATE TABLE ' . self::grantsTable($db) . " (\n" . self::grantsColumns() . "\n) {$charset};",
             'CREATE TABLE ' . self::countersTable($db) . " (\n" . self::countersColumns() . "\n) {$charset};",
+            'CREATE TABLE ' . self::changesTable($db) . " (\n" . self::changesColumns() . "\n) {$charset};",
         ]);
 
         // Option migrations ride the same version gate as the tables. Each is
         // a no-op once its shape is current, so rerunning on activation is
         // safe.
         (new ShadowMode())->migrateLegacy();
+
+        // v6: the retention purge cron. Scheduled here (idempotent) rather
+        // than only on activation, because an upgrade from 0.4.x never
+        // re-activates the plugin.
+        ChangePurge::activate();
 
         // §3.4 item 3: first site bind, idempotent and shape-gated (already
         // bound is a no-op) rather than version-gated, exactly like the
