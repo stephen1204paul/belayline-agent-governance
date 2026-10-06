@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Specflux\AgentSafety\Plugin\Support;
 
 use Specflux\AgentSafety\Plugin\Admin\ChangesPage;
+use Specflux\AgentSafety\Plugin\Api\AbilityReviews;
 use Specflux\AgentSafety\Plugin\Admin\PendingActionsPage;
 
 /**
@@ -50,6 +51,7 @@ final class UninstallManifest
         ApprovalNotifier::EMAIL_OPTION,
         ApprovalNotifier::WEBHOOK_OPTION,
         ChangePurge::RETENTION_OPTION,
+        AbilityReviews::OPTION,
     ];
 
     /**

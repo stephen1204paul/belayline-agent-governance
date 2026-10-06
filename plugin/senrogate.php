@@ -37,6 +37,7 @@ use Specflux\AgentSafety\Policy\Tier;
 use Specflux\AgentSafety\Policy\TierClassifier;
 use Specflux\AgentSafety\Policy\VerbCatalog;
 use Specflux\AgentSafety\Plugin\Admin\AuditLogPage;
+use Specflux\AgentSafety\Plugin\Admin\AbilitiesPage;
 use Specflux\AgentSafety\Plugin\Admin\ChangesPage;
 use Specflux\AgentSafety\Plugin\Admin\CapabilityPacksPage;
 use Specflux\AgentSafety\Plugin\Admin\PendingActionsPage;
@@ -46,7 +47,9 @@ use Specflux\AgentSafety\Plugin\Approval\WpdbGrantStore;
 use Specflux\AgentSafety\Plugin\Audit\AuditReader;
 use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
 use Specflux\AgentSafety\Plugin\Audit\WpdbAuditSink;
+use Specflux\AgentSafety\Plugin\Api\AbilityReviews;
 use Specflux\AgentSafety\Plugin\Api\Changes as ChangesApi;
+use Specflux\AgentSafety\Plugin\Reviews\ReviewedAbilitiesPack;
 use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
 use Specflux\AgentSafety\Plugin\Changes\UndoService;
 use Specflux\AgentSafety\Plugin\Changes\WpdbChangeStore;
@@ -237,6 +240,18 @@ add_action('plugins_loaded', static function (): void {
         $agsafe_governed_namespaces = array_values(array_unique([...$agsafe_governed_namespaces, ...$agsafe_woo['governedNamespaces']]));
         $agsafe_state_probes = [...$agsafe_state_probes, ...$agsafe_woo['stateProbes']];
     }
+
+    // Ability review (0.5): abilities an administrator reviewed on Tools, Agent
+    // Abilities. Their namespaces join the governed list (so the unreviewed
+    // siblings fail closed), their verbs are mapped into the catalog at
+    // registration while the input schema still matches, and one generic pack
+    // admits them. The pre-review list is kept for the screen, which must not
+    // offer abilities an integration already governs.
+    $agsafe_integration_namespaces = $agsafe_governed_namespaces;
+    $agsafe_reviews = new AbilityReviews($agsafe_catalog);
+    $agsafe_reviews->register();
+    $agsafe_governed_namespaces = array_values(array_unique([...$agsafe_governed_namespaces, ...$agsafe_reviews->namespaces()]));
+    $agsafe_extra_packs[] = ReviewedAbilitiesPack::build($agsafe_reviews);
 
     // Site owners (or other plugins) can widen the governed namespace list
     // without an integration module of their own.
@@ -502,7 +517,11 @@ add_action('plugins_loaded', static function (): void {
         $agsafe_grant_store !== null ? new Grants($agsafe_grant_store, new GrantRecorder($agsafe_sink)) : null,
         $agsafe_pause,
         $agsafe_undo !== null && $agsafe_change_store !== null ? new ChangesApi($agsafe_change_store, $agsafe_undo) : null,
+        $agsafe_reviews,
     );
+
+    // Ability review screen (Tools → Agent Abilities, slug agent-safety-abilities).
+    (new AbilitiesPage($agsafe_reviews, $agsafe_integration_namespaces, $agsafe_changes))->register();
 
     // Capability-pack admin (Tools → Agent Capability Packs): the emergency
     // stop, then bind each identity the configured providers expose to a pack

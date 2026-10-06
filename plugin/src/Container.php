@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Specflux\AgentSafety\Plugin;
 
+use Specflux\AgentSafety\Plugin\Api\AbilityReviews;
 use Specflux\AgentSafety\Plugin\Api\Approvals;
 use Specflux\AgentSafety\Plugin\Api\Changes;
 use Specflux\AgentSafety\Plugin\Api\Grants;
@@ -28,13 +29,14 @@ final class Container
         private readonly ?Grants $grants = null,
         private readonly ?PauseSwitch $pause = null,
         private readonly ?Changes $changes = null,
+        private readonly ?AbilityReviews $abilityReviews = null,
     ) {
     }
 
     /** Called once by the plugin bootstrap on plugins_loaded. Later calls overwrite. */
-    public static function init(?Approvals $approvals, ?Grants $grants = null, ?PauseSwitch $pause = null, ?Changes $changes = null): void
+    public static function init(?Approvals $approvals, ?Grants $grants = null, ?PauseSwitch $pause = null, ?Changes $changes = null, ?AbilityReviews $abilityReviews = null): void
     {
-        self::$instance = new self($approvals, $grants, $pause, $changes);
+        self::$instance = new self($approvals, $grants, $pause, $changes, $abilityReviews);
     }
 
     /**
@@ -98,6 +100,19 @@ final class Container
     public function changes(): ?Changes
     {
         return $this->changes;
+    }
+
+    /**
+     * Ability review (0.5): what an administrator decided about a third-party
+     * ability. Never null, since it needs no database; feature-detect the
+     * METHOD on older copies:
+     *
+     *   function_exists('agent_safety') && method_exists(agent_safety(), 'abilityReviews')
+     *   agent_safety()->abilityReviews()->status('acme/export'); // 'reviewed' | 'unreviewed' | 'blocked'
+     */
+    public function abilityReviews(): AbilityReviews
+    {
+        return $this->abilityReviews ?? new AbilityReviews();
     }
 
     /** @internal tests only. */

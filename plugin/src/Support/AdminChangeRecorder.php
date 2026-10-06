@@ -7,6 +7,7 @@ namespace Specflux\AgentSafety\Plugin\Support;
 use Specflux\AgentSafety\Audit\AuditDecision;
 use Specflux\AgentSafety\Audit\AuditRecord;
 use Specflux\AgentSafety\Audit\AuditSink;
+use Specflux\AgentSafety\Plugin\Api\AbilityReviews;
 
 /**
  * Audit emission for changes to the plugin's own enforcement state: a pack
@@ -43,6 +44,7 @@ final class AdminChangeRecorder
     public const EVENT_ENVIRONMENT_REBOUND = 'environment.rebound';
     public const EVENT_APPROVAL_VOID_ENVIRONMENT = 'approval.void_environment';
     public const EVENT_GRANTS_VOID_ENVIRONMENT = 'grants.void_environment';
+    public const EVENT_ABILITY_REVIEWED = 'ability.reviewed';
 
     /**
      * Synthetic pack name for configuration events: no call is in flight, so
@@ -159,6 +161,16 @@ final class AdminChangeRecorder
     public function grantsVoidedEnvironment(int $count): void
     {
         $this->append(self::EVENT_GRANTS_VOID_ENVIRONMENT, 'grants', ['count' => $count]);
+    }
+
+    /** A human set (or cleared, when $to is null) the review tier of a third-party ability. */
+    public function abilityReviewed(string $ability, ?string $from, ?string $to): void
+    {
+        $this->append(
+            self::EVENT_ABILITY_REVIEWED,
+            AbilityReviews::OPTION,
+            ['ability' => $ability, 'from' => $from, 'to' => $to],
+        );
     }
 
     /**
