@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Specflux\AgentSafety\Plugin\Support;
 
+use Specflux\AgentSafety\Plugin\Admin\ChangesPage;
 use Specflux\AgentSafety\Plugin\Admin\PendingActionsPage;
 
 /**
@@ -76,6 +77,7 @@ final class UninstallManifest
     public const TRANSIENT_PREFIXES = [
         PendingActionsPage::FLASH,
         PendingActionsPage::STALE_FLASH,
+        ChangesPage::RESULT,
         Tripwires::LOCKOUT_PREFIX,
     ];
 

@@ -94,6 +94,17 @@ final class WpdbChangeStore implements ChangeLedger
         );
     }
 
+    public function recentCorrelations(int $limit, int $offset = 0): array
+    {
+        $table = $this->table();
+        $rows = $this->db->get_col(
+            // phpcs:ignore WordPress.DB.PreparedSQL -- trusted internal table name.
+            $this->db->prepare("SELECT correlation_id FROM {$table} GROUP BY correlation_id ORDER BY MAX(id) DESC LIMIT %d OFFSET %d", $limit, $offset)
+        );
+
+        return is_array($rows) ? array_values(array_map('strval', $rows)) : [];
+    }
+
     public function find(int $id): ?StoredChange
     {
         $table = $this->table();
@@ -156,6 +167,7 @@ final class WpdbChangeStore implements ChangeLedger
             $restorable,
             isset($row['restorable_reason']) ? (string) $row['restorable_reason'] : ($restorable ? null : 'unencodable'),
             isset($row['restored_by_event']) && $row['restored_by_event'] !== '' ? (string) $row['restored_by_event'] : null,
+            isset($row['ts']) ? (string) $row['ts'] : null,
         );
     }
 

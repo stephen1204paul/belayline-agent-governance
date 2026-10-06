@@ -30,6 +30,7 @@ final class StoredChange
         public readonly bool $restorable,
         public readonly ?string $reason,
         public readonly ?string $restoredByEvent,
+        public readonly ?string $ts = null,
     ) {
     }
 

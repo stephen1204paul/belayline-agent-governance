@@ -603,6 +603,31 @@ if (!function_exists('admin_url')) {
     }
 }
 
+if (!function_exists('wp_create_nonce')) {
+    function wp_create_nonce(string $action = '-1'): string
+    {
+        return 'test-nonce';
+    }
+}
+
+if (!function_exists('add_query_arg')) {
+    /** @param array<string, mixed> $args */
+    function add_query_arg(array $args, string $url = ''): string
+    {
+        return $url . (str_contains($url, '?') ? '&' : '?') . http_build_query($args);
+    }
+}
+
+if (!function_exists('add_management_page')) {
+    /** @param mixed $callback */
+    function add_management_page(string $title, string $menu, string $cap, string $slug, $callback = ''): string
+    {
+        $GLOBALS['wpas_test_management_pages'][$slug] = $cap;
+
+        return $slug;
+    }
+}
+
 if (!function_exists('wp_die')) {
     /**
      * Throws instead of exiting, so a test can assert that an admin_post

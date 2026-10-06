@@ -23,6 +23,7 @@ final class InMemoryChangeLedger implements ChangeLedger
             $row['event_id'] = $window->eventId;
             $row['correlation_id'] = $window->correlationId;
             $row['restored_by_event'] = null;
+            $row['ts'] = $ts;
             $this->rows[] = $row;
         }
     }
@@ -35,6 +36,17 @@ final class InMemoryChangeLedger implements ChangeLedger
     public function forCorrelation(string $correlationId): array
     {
         return $this->select(static fn (array $r): bool => $r['correlation_id'] === $correlationId);
+    }
+
+    public function recentCorrelations(int $limit, int $offset = 0): array
+    {
+        $latest = [];
+        foreach ($this->rows as $r) {
+            $latest[(string) $r['correlation_id']] = $r['id'];
+        }
+        arsort($latest);
+
+        return array_slice(array_map('strval', array_keys($latest)), $offset, $limit);
     }
 
     public function find(int $id): ?StoredChange
@@ -74,6 +86,7 @@ final class InMemoryChangeLedger implements ChangeLedger
                 $r['restorable'] === 1,
                 $r['restorable_reason'],
                 $r['restored_by_event'],
+                $r['ts'] ?? null,
             );
         }
 

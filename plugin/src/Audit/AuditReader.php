@@ -47,6 +47,34 @@ final class AuditReader
     }
 
     /**
+     * Audit rows for the given event ids (the Changes screen labels each event
+     * with its actor and ability), keyed by event id.
+     *
+     * @param list<string> $eventIds
+     * @return array<string, array<string, mixed>>
+     */
+    public function forEvents(array $eventIds): array
+    {
+        if ($eventIds === []) {
+            return [];
+        }
+        $table = $this->table();
+        $placeholders = implode(',', array_fill(0, count($eventIds), '%s'));
+        $rows = $this->db->get_results(
+            // phpcs:ignore WordPress.DB.PreparedSQL, WordPress.DB.PreparedSQLPlaceholders -- trusted table name; placeholder list built from a count.
+            $this->db->prepare("SELECT * FROM {$table} WHERE event_id IN ({$placeholders})", $eventIds),
+            ARRAY_A
+        );
+
+        $byEvent = [];
+        foreach (is_array($rows) ? $rows : [] as $row) {
+            $byEvent[(string) ($row['event_id'] ?? '')] = $row;
+        }
+
+        return $byEvent;
+    }
+
+    /**
      * All rows oldest-first, for export.
      *
      * @return list<array<string, mixed>>

@@ -37,6 +37,7 @@ use Specflux\AgentSafety\Policy\Tier;
 use Specflux\AgentSafety\Policy\TierClassifier;
 use Specflux\AgentSafety\Policy\VerbCatalog;
 use Specflux\AgentSafety\Plugin\Admin\AuditLogPage;
+use Specflux\AgentSafety\Plugin\Admin\ChangesPage;
 use Specflux\AgentSafety\Plugin\Admin\CapabilityPacksPage;
 use Specflux\AgentSafety\Plugin\Admin\PendingActionsPage;
 use Specflux\AgentSafety\Plugin\Api\Approvals;
@@ -46,6 +47,7 @@ use Specflux\AgentSafety\Plugin\Audit\AuditReader;
 use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
 use Specflux\AgentSafety\Plugin\Audit\WpdbAuditSink;
 use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
+use Specflux\AgentSafety\Plugin\Changes\UndoService;
 use Specflux\AgentSafety\Plugin\Changes\WpdbChangeStore;
 use Specflux\AgentSafety\Plugin\Hooks\AbilityAuditLog;
 use Specflux\AgentSafety\Plugin\Hooks\AbilityPermissionGate;
@@ -386,6 +388,13 @@ add_action('plugins_loaded', static function (): void {
     ChangeCapture::configure($agsafe_capture);
     $agsafe_capture?->register();
 
+    // Change history + undo (0.5): one undo engine behind the Changes screen
+    // and the public agent_safety()->changes() API.
+    $agsafe_change_store = isset($wpdb) ? new WpdbChangeStore($wpdb) : null;
+    $agsafe_undo = $agsafe_capture !== null && $agsafe_change_store !== null
+        ? new UndoService($agsafe_change_store, $agsafe_capture->adapters(), $agsafe_capture, $agsafe_sink)
+        : null;
+
     (new AbilityPermissionGate($agsafe_pipeline, $agsafe_packs, $agsafe_approvals, $agsafe_governed_namespaces, $agsafe_grant_gate, $agsafe_capture))->register();
 
     // Forward-compat seam: fires only if a mcp-adapter >= 0.5.0 is the loaded copy.
@@ -412,6 +421,11 @@ add_action('plugins_loaded', static function (): void {
 
         // wp-admin viewer + CSV export (Tools → Agent Audit Log).
         (new AuditLogPage(new AuditReader($wpdb), $agsafe_shadow))->register();
+
+        // wp-admin change history + human-only undo (Tools → Agent Changes).
+        if ($agsafe_undo !== null && $agsafe_change_store !== null) {
+            (new ChangesPage($agsafe_change_store, $agsafe_undo, new AuditReader($wpdb), $agsafe_shadow))->register();
+        }
 
         // Privacy tools (§3.6 item 2): personal-data export/erase for Tools →
         // Export/Erase Personal Data, plus suggested privacy-policy text.

@@ -55,6 +55,9 @@ if (!class_exists('wpdb', false)) {
         /** @var list<array<string, mixed>> Canned return for the next get_results() call. */
         public array $resultsReturn = [];
 
+        /** Canned return for get_col(). @var list<mixed> */
+        public array $colReturn = [];
+
         /** @var array{table: string, data: array<string, mixed>}|null Captured payload from the last insert(). */
         public ?array $lastInsert = null;
 
@@ -132,6 +135,16 @@ if (!class_exists('wpdb', false)) {
             }
 
             return $this->resultsReturn;
+        }
+
+        /** @return list<mixed> */
+        public function get_col(?string $query = null): array
+        {
+            if ($query !== null) {
+                $this->queries[] = $query;
+            }
+
+            return $this->colReturn;
         }
 
         /**
