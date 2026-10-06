@@ -65,6 +65,7 @@ use Specflux\AgentSafety\Plugin\Privacy\PrivacyIntegration;
 use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
 use Specflux\AgentSafety\Plugin\Identity\UserRoleIdentity;
 use Specflux\AgentSafety\Plugin\Integrations\Core\CoreIntegration;
+use Specflux\AgentSafety\Plugin\Integrations\FluentCart\FluentCartIntegration;
 use Specflux\AgentSafety\Plugin\Integrations\Self\CheckApprovalAbility;
 use Specflux\AgentSafety\Plugin\Integrations\Self\SelfIntegration;
 use Specflux\AgentSafety\Plugin\Integrations\Woo\VerbMapper;
@@ -242,6 +243,16 @@ add_action('plugins_loaded', static function (): void {
         $agsafe_state_probes = [...$agsafe_state_probes, ...$agsafe_woo['stateProbes']];
         // Capture and undo for products, coupons, customers, zones and tax rates.
         WooChangeAdapters::register();
+    }
+
+    if (FluentCartIntegration::available()) {
+        $agsafe_fluentcart = FluentCartIntegration::register($agsafe_catalog, isset($wpdb) ? $wpdb : null);
+        $agsafe_elevation_rules = [...$agsafe_elevation_rules, ...$agsafe_fluentcart['elevationRules']];
+        $agsafe_extra_packs = [...$agsafe_extra_packs, ...$agsafe_fluentcart['packs']];
+        $agsafe_governed_namespaces = array_values(array_unique([...$agsafe_governed_namespaces, ...$agsafe_fluentcart['governedNamespaces']]));
+        $agsafe_state_probes = [...$agsafe_state_probes, ...$agsafe_fluentcart['stateProbes']];
+        // Refund and subscription cancel never run on a standing Grant.
+        add_filter('agent_safety_grant_eligible', [FluentCartIntegration::class, 'grantEligible'], PHP_INT_MAX, 4);
     }
 
     // Ability review (0.5): abilities an administrator reviewed on Tools, Agent

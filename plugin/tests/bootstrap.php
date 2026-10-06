@@ -67,6 +67,7 @@ require_once __DIR__ . '/Fakes/WidgetAdapter.php';
 require_once __DIR__ . '/Fakes/ChainingSink.php';
 require_once __DIR__ . '/Fakes/InMemoryAuditRowsWpdb.php';
 require_once __DIR__ . '/Fakes/CounterTableWpdb.php';
+require_once __DIR__ . '/Fakes/FakeFluentCartDb.php';
 require_once __DIR__ . '/Fixtures/VerdictErrorFixture.php';
 
 // --- Minimal WP function shims -------------------------------------------
@@ -885,6 +886,16 @@ if (!function_exists('esc_textarea')) {
     function esc_textarea(string $text): string
     {
         return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+}
+
+if (!function_exists('sanitize_email')) {
+    /** Enough for the FluentCart snapshotter tests: trim and lowercase-agnostic, empty when not an address. */
+    function sanitize_email(string $email): string
+    {
+        $email = trim($email);
+
+        return filter_var($email, FILTER_VALIDATE_EMAIL) !== false ? $email : '';
     }
 }
 
