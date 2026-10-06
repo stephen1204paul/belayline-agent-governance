@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Specflux\AgentSafety\Plugin\Integrations\SureCart;
 
+use Specflux\AgentSafety\Packs\Pack;
 use Specflux\AgentSafety\Plugin\Approval\StateProbe;
+use Specflux\AgentSafety\Plugin\Changes\ChangeAdapters;
 use Specflux\AgentSafety\Policy\ElevationRule;
 use Specflux\AgentSafety\Policy\VerbCatalog;
 
 /**
- * The one place SureCart coupling lives (governance only: no capture/restore).
+ * The one place SureCart coupling lives (governance, starter packs, and remote change capture/restore).
  * Wired from the plugin bootstrap ONLY when {@see available()}.
  */
 final class SureCartIntegration
@@ -60,9 +62,9 @@ final class SureCartIntegration
 
     /**
      * @param (callable(string, string): (array<string, mixed>|null))|null $fetcher Test seam for the probe's remote GET.
-     * @return array{elevationRules: list<ElevationRule>, governedNamespaces: list<string>, stateProbes: array<string, StateProbe>}
+     * @return array{elevationRules: list<ElevationRule>, packs: list<Pack>, governedNamespaces: list<string>, stateProbes: array<string, StateProbe>}
      */
-    public static function register(VerbCatalog $catalog, ?callable $fetcher = null): array
+    public static function register(VerbCatalog $catalog, ?callable $fetcher = null, ?SureCartChangeAdapter $changes = null): array
     {
         $catalog->register(SureCartVerbCatalog::MAP);
 
@@ -71,6 +73,14 @@ final class SureCartIntegration
         // eligibility callback can re-allow them.
         if (function_exists('add_filter')) {
             add_filter('agent_safety_grant_eligible', [self::class, 'denyUngrantable'], PHP_INT_MAX, 3);
+        }
+
+        // Change capture/restore for SureCart's remote objects joins the adapter registry.
+        $adapter = $changes ?? new SureCartChangeAdapter();
+        if (function_exists('add_filter')) {
+            add_filter(ChangeAdapters::FILTER, static function ($adapters) use ($adapter) {
+                return is_array($adapters) ? [...$adapters, $adapter] : $adapters;
+            });
         }
 
         $probe = new SureCartStateProbe($fetcher);
@@ -85,6 +95,7 @@ final class SureCartIntegration
                 new FulfillmentNotificationElevationRule(),
                 new DiscountElevationRule(),
             ],
+            'packs' => SureCartPacks::all(),
             'governedNamespaces' => [self::NAMESPACE_PREFIX],
             'stateProbes' => $probes,
         ];

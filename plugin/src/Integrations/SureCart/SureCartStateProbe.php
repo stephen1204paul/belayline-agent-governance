@@ -120,20 +120,10 @@ final class SureCartStateProbe implements StateProbe
      */
     private static function liveFetch(string $model, string $id): ?array
     {
-        $class = 'SureCart\\Models\\' . $model;
-        if (!class_exists($class)) {
+        try {
+            return SureCartRemote::get($model, $id);
+        } catch (Throwable) {
             return null;
         }
-
-        /** @var mixed $found */
-        $found = $class::where(['cached' => false])->find($id);
-        if (!is_object($found) || (function_exists('is_wp_error') && is_wp_error($found)) || !method_exists($found, 'toArray')) {
-            return null;
-        }
-
-        /** @var mixed $attrs */
-        $attrs = $found->toArray();
-
-        return is_array($attrs) ? $attrs : null;
     }
 }
