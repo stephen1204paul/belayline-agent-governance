@@ -35,6 +35,8 @@ final class ReasonLabels
                 return __('Approval required', 'senrogate');
             case 'site_paused':
                 return __('Site paused (emergency stop)', 'senrogate');
+            case 'ip_not_allowed':
+                return __('IP address not allowed', 'senrogate');
             case 'denial_lockout':
                 return __('Denial lockout', 'senrogate');
             case 'repeat_call':

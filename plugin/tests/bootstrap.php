@@ -867,6 +867,27 @@ if (!function_exists('sanitize_text_field')) {
     }
 }
 
+if (!function_exists('sanitize_textarea_field')) {
+    function sanitize_textarea_field(string $str): string
+    {
+        return trim(strip_tags($str));
+    }
+}
+
+if (!function_exists('sanitize_key')) {
+    function sanitize_key(string $key): string
+    {
+        return preg_replace('/[^a-z0-9_\-]/', '', strtolower($key)) ?? '';
+    }
+}
+
+if (!function_exists('esc_textarea')) {
+    function esc_textarea(string $text): string
+    {
+        return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+}
+
 if (!function_exists('checked')) {
     /** @param mixed $checked @param mixed $current */
     function checked($checked, $current = true, bool $display = true): string

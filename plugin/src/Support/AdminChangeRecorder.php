@@ -20,7 +20,7 @@ use Specflux\AgentSafety\Plugin\Api\AbilityReviews;
  *
  * Same record shape as {@see GrantRecorder}: the event name rides in `reason`
  * (`shadow.enabled` / `shadow.disabled` / `shadow.expired` /
- * `binding.changed` / `pause.enabled` / `pause.disabled` / `tripwire.locked`),
+ * `binding.changed` / `ip_allowlist.changed` / `pause.enabled` / `pause.disabled` / `tripwire.locked`),
  * the option or subject that changed rides in `ability`, the details in
  * `input`, and `decision` is the single {@see AuditDecision::Admin} value.
  * The actor is the request's own ({@see RequestContext::actor()}): inside
@@ -38,6 +38,7 @@ final class AdminChangeRecorder
     public const EVENT_BINDING_CHANGED = 'binding.changed';
     public const EVENT_PAUSE_ENABLED = 'pause.enabled';
     public const EVENT_PAUSE_DISABLED = 'pause.disabled';
+    public const EVENT_IP_ALLOWLIST_CHANGED = 'ip_allowlist.changed';
     public const EVENT_TRIPWIRE_LOCKED = 'tripwire.locked';
     public const EVENT_ENVIRONMENT_BOUND = 'environment.bound';
     public const EVENT_ENVIRONMENT_MISMATCH = 'environment.mismatch';
@@ -110,6 +111,25 @@ final class AdminChangeRecorder
     public function pauseDisabled(int $byUserId): void
     {
         $this->append(self::EVENT_PAUSE_DISABLED, PauseSwitch::OPTION, ['by' => $byUserId]);
+    }
+
+    /**
+     * $byUserId changed the IP allowlist or the trusted-proxies list; each
+     * side shows the full list before and after (addresses are site
+     * configuration, not personal data about an agent's principal).
+     *
+     * @param list<string> $fromAllow
+     * @param list<string> $toAllow
+     * @param list<string> $fromProxies
+     * @param list<string> $toProxies
+     */
+    public function ipAllowlistChanged(int $byUserId, array $fromAllow, array $toAllow, array $fromProxies, array $toProxies): void
+    {
+        $this->append(self::EVENT_IP_ALLOWLIST_CHANGED, IpAllowlist::OPTION, [
+            'by' => $byUserId,
+            'allowlist' => ['from' => $fromAllow, 'to' => $toAllow],
+            'trusted_proxies' => ['from' => $fromProxies, 'to' => $toProxies],
+        ]);
     }
 
     /** $token reached $denials denials within a minute and is locked out for $lockoutSeconds. */

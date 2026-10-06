@@ -44,6 +44,8 @@ final class UninstallManifest
         Schema::GRANTS_RENAME_CONFLICT_OPTION,
         PackResolver::BINDINGS_OPTION,
         PauseSwitch::OPTION,
+        IpAllowlist::OPTION,
+        IpAllowlist::PROXIES_OPTION,
         ShadowMode::OPTION,
         EnvironmentGuard::OPTION,
         EnvironmentGuard::LOCK_OPTION,

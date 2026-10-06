@@ -16,6 +16,7 @@ use Specflux\AgentSafety\Plugin\Approval\StateProbe;
 use Specflux\AgentSafety\Plugin\Support\ArgumentCapGate;
 use Specflux\AgentSafety\Plugin\Support\DecisionRecorder;
 use Specflux\AgentSafety\Plugin\Support\EnvironmentGuard;
+use Specflux\AgentSafety\Plugin\Support\IpAllowlist;
 use Specflux\AgentSafety\Plugin\Support\PauseSwitch;
 use Specflux\AgentSafety\Plugin\Support\RateLimitGate;
 use Specflux\AgentSafety\Plugin\Support\RequestContext;
@@ -37,7 +38,9 @@ use Specflux\AgentSafety\Policy\Tier;
  *      mode allows (peek: a non-mutating lookup; claim: none yet).
  *   2. A self-reported destructive hint may only TIGHTEN the decision.
  *   2b. The stops ({@see PauseSwitch}, {@see Tripwires}): a paused site denies
- *      everything, a locked-out token denies everything, and a denial the
+ *      everything, a locked-out token denies everything, a call from an address
+ *      outside the IP allowlist ({@see IpAllowlist}, remote credentials only)
+ *      is denied, and a denial the
  *      gate just produced is counted towards that lockout. Ahead of the claim
  *      because a stop must hold even for a call a human already approved.
  *   3. Claim mode only: if approval is now the SOLE blocker, reserve a human
@@ -54,8 +57,9 @@ use Specflux\AgentSafety\Policy\Tier;
  *      itself consume budget.
  *   5. Shadow mode: a pack in log-only observation audits the would-be verdict
  *      as a dry run and lets the call proceed; no pending approval is minted for
- *      an action that already ran. The pause is the one denial shadow does not
- *      loosen: a stopped site runs nothing, dry or otherwise.
+ *      an action that already ran. The pause and the IP refusal are the denials shadow does not
+ *      loosen: a stopped site runs nothing, dry or otherwise, and a call from
+ *      a refused address is not one to observe.
  *   6. A call that will NOT execute persists its pending approval (when
  *      required) and is audited HERE, because the execution seam never runs
  *      for it. Allowed calls are audited at execution time by AbilityAuditLog.
@@ -95,6 +99,7 @@ final class VerdictPipeline
         private readonly Tripwires $tripwires = new Tripwires(),
         private readonly array $stateProbes = [],
         private readonly ?EnvironmentGuard $environment = null,
+        private readonly IpAllowlist $ipAllowlist = new IpAllowlist(),
     ) {
     }
 
@@ -184,7 +189,7 @@ final class VerdictPipeline
 
         // A shadowed pack's would-be denial proceeds as a dry run — except the
         // pause. The stop is absolute, or it is not a stop.
-        if (PauseSwitch::REASON !== $decision->reason && $isShadowed) {
+        if (PauseSwitch::REASON !== $decision->reason && IpAllowlist::REASON !== $decision->reason && $isShadowed) {
             $this->recorder->auditDecision($eventId, $verb, $args, $pack, $decision, null, true);
 
             return new Verdict($verb, $pack, $decision, null, $reservedId, $claimed, true, $eventId, null, $variant);
@@ -360,7 +365,8 @@ final class VerdictPipeline
     /**
      * Step 2b: the emergency stop and the denial lockout, on every decision
      * alike. The pause wins outright and the tripwires are not consulted at
-     * all while it holds — there is nothing left to protect. Otherwise a
+     * all while it holds — there is nothing left to protect. The IP refusal
+     * sits next to it and, like it, never feeds the tripwire count. Otherwise a
      * locked-out token is denied whatever the gate said, and a decision the
      * gate denied is counted towards that lockout. Neither of the two stop
      * reasons feeds the count, and an approval park is not a denial.
@@ -371,6 +377,10 @@ final class VerdictPipeline
     {
         if ($this->pause->isPaused()) {
             return Decision::deny(PauseSwitch::REASON, $decision->tier);
+        }
+
+        if ($this->ipAllowlist->refuses()) {
+            return Decision::deny(IpAllowlist::REASON, $decision->tier);
         }
 
         $token = RequestContext::tokenId();
