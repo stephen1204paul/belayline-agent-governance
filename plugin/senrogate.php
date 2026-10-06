@@ -68,6 +68,7 @@ use Specflux\AgentSafety\Plugin\Integrations\Core\CoreIntegration;
 use Specflux\AgentSafety\Plugin\Integrations\FluentCart\FluentCartIntegration;
 use Specflux\AgentSafety\Plugin\Integrations\Self\CheckApprovalAbility;
 use Specflux\AgentSafety\Plugin\Integrations\Self\SelfIntegration;
+use Specflux\AgentSafety\Plugin\Integrations\SureCart\SureCartIntegration;
 use Specflux\AgentSafety\Plugin\Integrations\Woo\VerbMapper;
 use Specflux\AgentSafety\Plugin\Integrations\Woo\Changes\WooChangeAdapters;
 use Specflux\AgentSafety\Plugin\Integrations\Woo\WooIntegration;
@@ -255,6 +256,14 @@ add_action('plugins_loaded', static function (): void {
         add_filter('agent_safety_grant_eligible', [FluentCartIntegration::class, 'grantEligible'], PHP_INT_MAX, 4);
     }
 
+    if (SureCartIntegration::available()) {
+        $agsafe_surecart = SureCartIntegration::register($agsafe_catalog);
+        $agsafe_elevation_rules = [...$agsafe_elevation_rules, ...$agsafe_surecart['elevationRules']];
+        $agsafe_extra_packs = [...$agsafe_extra_packs, ...$agsafe_surecart['packs']];
+        $agsafe_governed_namespaces = array_values(array_unique([...$agsafe_governed_namespaces, ...$agsafe_surecart['governedNamespaces']]));
+        $agsafe_state_probes = [...$agsafe_state_probes, ...$agsafe_surecart['stateProbes']];
+    }
+
     // Ability review (0.5): abilities an administrator reviewed on Tools, Agent
     // Abilities. Their namespaces join the governed list (so the unreviewed
     // siblings fail closed), their verbs are mapped into the catalog at
@@ -432,7 +441,7 @@ add_action('plugins_loaded', static function (): void {
     // identical bindings and record decisions identically. The verb mapper assumes
     // WooCommerce's "namespace-resource-action" tool-naming convention, so this seam
     // is only meaningful (and only wired up) when WooCommerce is the active integration.
-    if (WooIntegration::available()) {
+    if (WooIntegration::available() || SureCartIntegration::available()) {
         (new PreToolCallGate($agsafe_pipeline, new VerbMapper(), $agsafe_packs, $agsafe_governed_namespaces))->register();
     }
 
