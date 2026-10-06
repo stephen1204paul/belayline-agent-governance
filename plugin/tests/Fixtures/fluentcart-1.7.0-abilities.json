@@ -1,0 +1,238 @@
+{
+  "plugin": "fluent-cart",
+  "version": "1.7.0",
+  "source_path": "app/Modules/MCP/Tools/*.php (definitions() keys + annotations)",
+  "abilities": [
+    {
+      "ability": "fluent-cart/add-order-note",
+      "source": "OrderTools.php",
+      "readonly": false,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/apply-labels",
+      "source": "LabelTools.php",
+      "readonly": false,
+      "destructive": false,
+      "idempotent": true
+    },
+    {
+      "ability": "fluent-cart/change-order-status",
+      "source": "OrderTools.php",
+      "readonly": false,
+      "destructive": false,
+      "idempotent": true
+    },
+    {
+      "ability": "fluent-cart/change-subscription-status",
+      "source": "SubscriptionTools.php",
+      "readonly": false,
+      "destructive": true,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/get-customer",
+      "source": "CustomerTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/get-inventory",
+      "source": "ProductTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/get-order",
+      "source": "OrderTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/get-order-activity",
+      "source": "OrderTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/get-product",
+      "source": "ProductTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/get-product-financials",
+      "source": "ProductFinancialsTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/get-refund-report",
+      "source": "ReportTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/get-sales-report",
+      "source": "ReportTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/get-sales-trend",
+      "source": "ReportTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/get-search-schema",
+      "source": "SearchTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/get-store-context",
+      "source": "ContextTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/get-subscription",
+      "source": "SubscriptionTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/get-top-products",
+      "source": "ReportTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/get-upcoming-payments",
+      "source": "PaymentScheduleTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/list-coupons",
+      "source": "CouponTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/list-customers",
+      "source": "CustomerTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/list-orders",
+      "source": "OrderTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/list-products",
+      "source": "ProductTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/list-reference-data",
+      "source": "ContextTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/list-subscriptions",
+      "source": "SubscriptionTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/list-transactions",
+      "source": "TransactionTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/manage-coupon",
+      "source": "CouponTools.php",
+      "readonly": false,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/query-customers",
+      "source": "ReportTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/query-orders",
+      "source": "ReportTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/query-products",
+      "source": "ReportTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/query-sources",
+      "source": "ReportTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/query-subscriptions",
+      "source": "ReportTools.php",
+      "readonly": true,
+      "destructive": false,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/refund-order",
+      "source": "OrderTools.php",
+      "readonly": false,
+      "destructive": true,
+      "idempotent": false
+    },
+    {
+      "ability": "fluent-cart/upsert-customer",
+      "source": "CustomerTools.php",
+      "readonly": false,
+      "destructive": false,
+      "idempotent": true
+    }
+  ]
+}
