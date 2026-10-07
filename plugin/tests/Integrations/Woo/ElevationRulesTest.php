@@ -55,6 +55,49 @@ final class ElevationRulesTest extends TestCase
         }
     }
 
+    public function testWcPrefixedAndMixedCaseStatusesElevateExactlyLikeUnprefixedOnes(): void
+    {
+        $rule = new OrderFulfillmentElevationRule();
+        $forms = [
+            'wc-completed' => Tier::Irreversible,
+            'WC-Processing' => Tier::Irreversible,
+            ' wc-cancelled ' => Tier::Irreversible,
+            "wc-refunded\n" => Tier::Irreversible,
+            'wc-shipped' => Tier::Irreversible,
+            // sanitize_key() strips inner whitespace/punctuation, so WooCommerce accepts these.
+            'wc-comp leted' => Tier::Irreversible,
+            'completed!' => Tier::Irreversible,
+            'wc-on-hold' => Tier::Irreversible,
+            'WC-On-Hold' => Tier::Irreversible,
+            ' wc-on-hold ' => Tier::Irreversible,
+            'wc-pending' => Tier::Irreversible,
+            // Unknown status: Woo rejects it (woocommerce_order_status_invalid), so no elevation.
+            'wc-unknown' => null,
+            // Only ONE prefix is stripped, as in OrderUtil::remove_status_prefix().
+            'wc-wc-completed' => null,
+        ];
+
+        foreach ([self::ORDER_UPDATE, self::ORDER_UPDATE_STATUS, 'woocommerce/orders-create'] as $verb) {
+            foreach ($forms as $status => $expected) {
+                $this->assertSame(
+                    $expected,
+                    $rule->apply($verb, ['id' => 42, 'status' => (string) $status], Tier::SideEffecting),
+                    sprintf('%s status "%s"', $verb, $status),
+                );
+            }
+        }
+    }
+
+    public function testProductPublishStatusIsSanitizedLikeWooDoes(): void
+    {
+        $rule = new ProductPriceOrPublishElevationRule();
+
+        foreach (['PUBLISH', ' Future ', 'pub lish', 'publish!'] as $status) {
+            $this->assertSame(Tier::Irreversible, $rule->apply(self::PRODUCT_UPDATE, ['status' => $status], Tier::SideEffecting), $status);
+        }
+        $this->assertNull($rule->apply(self::PRODUCT_UPDATE, ['status' => 'wc-publish'], Tier::SideEffecting));
+    }
+
     public function testStatusRuleIgnoresOtherVerbs(): void
     {
         $rule = new OrderFulfillmentElevationRule();

@@ -38,7 +38,7 @@ final class OrderFulfillmentElevationRule implements ElevationRule
             return Tier::Irreversible;
         }
 
-        $status = is_string($args['status'] ?? null) ? strtolower(trim($args['status'])) : null;
+        $status = OrderStatus::normalize($args['status'] ?? null);
 
         return $status !== null && in_array($status, self::IRREVERSIBLE_STATUSES, true)
             ? Tier::Irreversible
