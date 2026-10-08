@@ -645,6 +645,19 @@ if (!function_exists('wp_die')) {
     }
 }
 
+if (!function_exists('rest_get_authenticated_app_password')) {
+    /**
+     * Core returns the UUID of the application password that authenticated the
+     * current request, or null; tests set `$GLOBALS['wpas_test_app_password']`.
+     */
+    function rest_get_authenticated_app_password(): ?string
+    {
+        $uuid = $GLOBALS['wpas_test_app_password'] ?? null;
+
+        return is_string($uuid) ? $uuid : null;
+    }
+}
+
 if (!function_exists('check_admin_referer')) {
     /**
      * Accepts exactly the value the wp_nonce_field shim above emits, read from
