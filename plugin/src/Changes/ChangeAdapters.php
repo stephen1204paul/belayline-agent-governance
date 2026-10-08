@@ -66,7 +66,7 @@ final class ChangeAdapters
     {
         if ($this->resolved === null) {
             $builtins = $this->builtins ?? [new PostAdapter(), new PostMetaAdapter(), new TermAdapter(), new OptionAdapter()];
-            $filtered = apply_filters(self::FILTER, $builtins);
+            $filtered = apply_filters('agent_safety_change_adapters', $builtins);
             $this->resolved = [];
             foreach (is_array($filtered) ? $filtered : $builtins as $adapter) {
                 if (is_object($adapter) && ($adapter instanceof ChangeCaptureAdapter || $adapter instanceof ChangeSnapshotter || $adapter instanceof ChangeRestoreAdapter)) {

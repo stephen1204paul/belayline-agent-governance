@@ -26,7 +26,7 @@ final class SureCartRemote
     {
         $class = 'SureCart\\Models\\' . $model;
         if (!class_exists($class)) {
-            throw new RuntimeException('SureCart model unavailable: ' . $model);
+            throw new RuntimeException('SureCart model unavailable: ' . esc_html($model));
         }
 
         /** @var mixed $found */
@@ -35,7 +35,7 @@ final class SureCartRemote
             if (self::isNotFound($found)) {
                 return null;
             }
-            throw new RuntimeException('SureCart GET failed: ' . self::message($found));
+            throw new RuntimeException('SureCart GET failed: ' . esc_html(self::message($found)));
         }
         if (!is_object($found) || !method_exists($found, 'toArray')) {
             throw new RuntimeException('SureCart GET returned no object');
@@ -60,13 +60,13 @@ final class SureCartRemote
     {
         $class = 'SureCart\\Models\\' . $model;
         if (!class_exists($class)) {
-            throw new RuntimeException('SureCart model unavailable: ' . $model);
+            throw new RuntimeException('SureCart model unavailable: ' . esc_html($model));
         }
 
         /** @var mixed $updated */
         $updated = $class::update(['id' => $id] + $fields);
         if (self::isError($updated)) {
-            throw new RuntimeException('SureCart PATCH failed: ' . self::message($updated));
+            throw new RuntimeException('SureCart PATCH failed: ' . esc_html(self::message($updated)));
         }
     }
 

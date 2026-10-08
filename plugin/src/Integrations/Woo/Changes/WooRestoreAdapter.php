@@ -216,7 +216,7 @@ final class WooRestoreAdapter implements ChangeRestoreAdapter
 
         $result = WooObjects::call($object, 'set_props', $props);
         if (is_wp_error($result)) {
-            throw new \RuntimeException($result->get_error_message());
+            throw new \RuntimeException(esc_html($result->get_error_message()));
         }
         foreach ($blank as $field) {
             self::set($object, $field, '');

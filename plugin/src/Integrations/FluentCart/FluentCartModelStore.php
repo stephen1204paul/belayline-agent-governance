@@ -60,7 +60,7 @@ final class FluentCartModelStore implements FluentCartStore
         $this->need($class);
         $row = $class::query()->find($id);
         if (!is_object($row) || !is_callable([$row, 'update'])) {
-            throw new \RuntimeException($model . ' ' . $id . ' no longer exists.');
+            throw new \RuntimeException(esc_html($model . ' ' . $id) . ' no longer exists.');
         }
         $row->update($fields);
     }
@@ -68,7 +68,7 @@ final class FluentCartModelStore implements FluentCartStore
     private function need(string $class): void
     {
         if (!class_exists($class)) {
-            throw new \RuntimeException($class . ' is unavailable.');
+            throw new \RuntimeException(esc_html($class) . ' is unavailable.');
         }
     }
 }

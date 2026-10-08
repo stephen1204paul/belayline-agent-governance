@@ -45,7 +45,7 @@ final class DiscountElevationRule implements ElevationRule
     public static function amountThreshold(): int
     {
         $value = function_exists('apply_filters')
-            ? apply_filters(self::AMOUNT_THRESHOLD_FILTER, self::DEFAULT_AMOUNT_THRESHOLD)
+            ? apply_filters('agent_safety_surecart_discount_amount_threshold', self::DEFAULT_AMOUNT_THRESHOLD)
             : self::DEFAULT_AMOUNT_THRESHOLD;
 
         // A broken filter must not disable the rule: fall back to the default.

@@ -287,8 +287,8 @@ final class CapabilityPacksPage
         check_admin_referer(self::IP);
 
         $result = $this->applyIpAllowlist(
-            self::postedText($_POST['ip_allowlist'] ?? null),
-            self::postedText($_POST['trusted_proxies'] ?? null),
+            self::postedText($_POST['ip_allowlist'] ?? null), // phpcs:ignore WordPress.Security.ValidatedSanitizedInput,WordPress.Security.NonceVerification -- unslashed and sanitized inside postedText(); nonce checked above.
+            self::postedText($_POST['trusted_proxies'] ?? null), // phpcs:ignore WordPress.Security.ValidatedSanitizedInput,WordPress.Security.NonceVerification -- unslashed and sanitized inside postedText(); nonce checked above.
         );
 
         $flash = !$result['saved'] ? 'invalid' : ($result['excludesCurrentIp'] ? 'warn' : 'saved');

@@ -219,10 +219,11 @@ final class ChangesPage
                 echo self::threeWay($item->drift); // phpcs:ignore WordPress.Security.EscapeOutput -- threeWay() escapes every value.
             } elseif ($item->status === UndoItem::RESTORABLE && isset($changes[$item->changeId])) {
                 // Restoring writes the recorded "before" back over "after".
-                echo self::diffTable(array_map(
+                $rows = array_map(
                     static fn (array $d): array => ['field' => $d['field'], 'before' => $d['after'], 'after' => $d['before']],
                     FieldDiff::for($changes[$item->changeId])
-                )); // phpcs:ignore WordPress.Security.EscapeOutput -- diffTable() escapes every value.
+                );
+                echo self::diffTable($rows); // phpcs:ignore WordPress.Security.EscapeOutput -- diffTable() escapes every value.
             }
             echo '</td></tr>';
         }
@@ -286,7 +287,7 @@ final class ChangesPage
     private function requestedPreviewScope(): ?UndoScope
     {
         // phpcs:disable WordPress.Security.NonceVerification.Recommended -- verified below with check_admin_referer().
-        if (($_GET['view'] ?? '') !== 'preview') {
+        if (sanitize_key(wp_unslash($_GET['view'] ?? '')) !== 'preview') {
             return null;
         }
         check_admin_referer(self::PREVIEW);

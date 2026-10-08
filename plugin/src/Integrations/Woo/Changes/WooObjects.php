@@ -17,7 +17,7 @@ final class WooObjects
     {
         $callable = [$object, $method];
         if (!is_callable($callable)) {
-            throw new \BadMethodCallException($method);
+            throw new \BadMethodCallException(esc_html($method));
         }
 
         return $callable(...$args);
@@ -32,7 +32,7 @@ final class WooObjects
     public static function make(string $class, ...$args): object
     {
         if (!class_exists($class)) {
-            throw new \RuntimeException($class . ' is not loaded');
+            throw new \RuntimeException(esc_html($class) . ' is not loaded');
         }
 
         return new $class(...$args);
@@ -42,7 +42,7 @@ final class WooObjects
     public static function fn(string $function, ...$args): mixed
     {
         if (!is_callable($function)) {
-            throw new \RuntimeException($function . '() is not available');
+            throw new \RuntimeException(esc_html($function) . '() is not available');
         }
 
         return $function(...$args);
@@ -53,7 +53,7 @@ final class WooObjects
     {
         $callable = [$class, $method];
         if (!is_callable($callable)) {
-            throw new \RuntimeException($class . '::' . $method . '() is not available');
+            throw new \RuntimeException(esc_html($class . '::' . $method) . '() is not available');
         }
 
         return $callable(...$args);

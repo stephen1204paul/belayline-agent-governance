@@ -274,7 +274,7 @@ final class SureCartChangeAdapter implements ResultAwareSnapshotter, ChangeCaptu
     {
         $model = self::modelFor($change->objectType);
         if ($model === null) {
-            throw new \RuntimeException('Unknown SureCart object type: ' . $change->objectType);
+            throw new \RuntimeException('Unknown SureCart object type: ' . esc_html($change->objectType));
         }
 
         if ($change->action === ChangeAction::Create) {
@@ -299,7 +299,7 @@ final class SureCartChangeAdapter implements ResultAwareSnapshotter, ChangeCaptu
                 continue;
             }
             if (!in_array($field, $writable, true)) {
-                throw new \RuntimeException('Field not restorable: ' . $field);
+                throw new \RuntimeException('Field not restorable: ' . esc_html($field));
             }
             $fields[$field] = $change->before[$field] ?? null;
         }
@@ -372,11 +372,10 @@ final class SureCartChangeAdapter implements ResultAwareSnapshotter, ChangeCaptu
         $ids = get_posts([
             'post_type' => 'sc_product',
             'post_status' => 'any',
-            'meta_key' => 'sc_id',
-            'meta_value' => $productId,
+            'meta_key' => 'sc_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- single-row lookup by SureCart id (numberposts 1).
+            'meta_value' => $productId, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- single-row lookup by SureCart id (numberposts 1).
             'fields' => 'ids',
             'numberposts' => 1,
-            'suppress_filters' => true,
         ]);
 
         return is_array($ids) && isset($ids[0]) ? (int) $ids[0] : null;
