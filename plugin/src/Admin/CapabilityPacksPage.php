@@ -52,6 +52,9 @@ final class CapabilityPacksPage
     private const RENEW_SHADOW = 'agsafe_renew_shadow_pack';
     private const IP = 'agsafe_save_ip_allowlist';
 
+    /** DOM id of the row a deep link asked to bind; the page scrolls to and highlights it. */
+    private const PREFILL_ROW = 'agsafe-bind-prefill';
+
     /** Observation windows offered on the shadow form, in days; the last is the default. */
     private const SHADOW_DAYS = [1, 3, 7];
 
@@ -110,9 +113,43 @@ final class CapabilityPacksPage
         $this->renderEnvironment();
         $this->renderIpAllowlist();
         $this->renderCatalog($registry->names());
-        $this->renderBindings($registry->names(), $registry->defaultPack(), $registry->bindings());
+        $this->renderBindings($registry->names(), $registry->defaultPack(), $registry->bindings(), $this->bindPrefill($registry->names()));
 
         echo '</div>';
+    }
+
+    /**
+     * Read-only deep-link pre-fill: `senrogate_bind_token` + `senrogate_bind_pack`
+     * select a pack in a row's dropdown for the admin to review. Both must
+     * match something this page lists (a token an identity provider offers, a
+     * registered pack); anything else is ignored silently. Nothing is
+     * persisted from the GET — the existing POST + nonce save is the only
+     * writer.
+     *
+     * @param  list<string>                                         $names
+     * @return array{token: string, pack: string, label: string}|null
+     */
+    private function bindPrefill(array $names): ?array
+    {
+        // phpcs:disable WordPress.Security.NonceVerification.Recommended -- display-only pre-fill; validated against the listed tokens/packs and never saved from GET.
+        $token = isset($_GET['senrogate_bind_token']) && is_string($_GET['senrogate_bind_token'])
+            ? sanitize_text_field(wp_unslash($_GET['senrogate_bind_token'])) : '';
+        $pack = isset($_GET['senrogate_bind_pack']) && is_string($_GET['senrogate_bind_pack'])
+            ? sanitize_text_field(wp_unslash($_GET['senrogate_bind_pack'])) : '';
+        // phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+        if ($token === '' || $pack === '' || !in_array($pack, $names, true)) {
+            return null;
+        }
+
+        foreach ($this->identity->providers() as $provider) {
+            $tokens = $provider->bindableTokens();
+            if (isset($tokens[$token])) {
+                return ['token' => $token, 'pack' => $pack, 'label' => $tokens[$token]];
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -609,8 +646,9 @@ final class CapabilityPacksPage
      *
      * @param list<string>          $names
      * @param array<string, string> $bindings
+     * @param array{token: string, pack: string, label: string}|null $prefill
      */
-    private function renderBindings(array $names, string $default, array $bindings): void
+    private function renderBindings(array $names, string $default, array $bindings, ?array $prefill = null): void
     {
         echo '<h2 style="margin-top:2em;">' . esc_html__('Credential bindings', 'senrogate') . '</h2>';
         echo '<p>' . esc_html__('Bind a credential or role to a pack. Unbound tokens use the default pack.', 'senrogate') . '</p>';
@@ -626,23 +664,37 @@ final class CapabilityPacksPage
             return;
         }
 
+        if ($prefill !== null) {
+            echo '<div class="notice notice-info"><p>' . esc_html(sprintf(
+                /* translators: 1: role or user display name, 2: capability pack name */
+                __('SenroFlux asked to bind %1$s to %2$s. Review and Save.', 'senrogate'),
+                $prefill['label'],
+                $prefill['pack']
+            )) . '</p></div>';
+        }
+
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
         echo '<input type="hidden" name="action" value="' . esc_attr(self::SAVE) . '">';
         echo wp_nonce_field(self::SAVE, '_wpnonce', true, false); // phpcs:ignore WordPress.Security.EscapeOutput -- wp_nonce_field returns safe markup.
 
         foreach ($providers as $provider) {
-            $this->renderProviderSection($provider, $names, $default, $bindings);
+            $this->renderProviderSection($provider, $names, $default, $bindings, $prefill);
         }
 
         echo '<p><button type="submit" class="button button-primary">' . esc_html__('Save bindings', 'senrogate') . '</button></p>';
         echo '</form>';
+
+        if ($prefill !== null) {
+            echo '<script>document.getElementById("' . self::PREFILL_ROW . '")?.scrollIntoView({block:"center"});</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- static constant.
+        }
     }
 
     /**
      * @param list<string>          $names
      * @param array<string, string> $bindings
+     * @param array{token: string, pack: string, label: string}|null $prefill
      */
-    private function renderProviderSection(IdentityProvider $provider, array $names, string $default, array $bindings): void
+    private function renderProviderSection(IdentityProvider $provider, array $names, string $default, array $bindings, ?array $prefill = null): void
     {
         $tokens = $provider->bindableTokens();
 
@@ -655,7 +707,13 @@ final class CapabilityPacksPage
 
         foreach ($tokens as $token => $description) {
             $current = $bindings[$token] ?? '';
-            echo '<tr>';
+            $asked = $prefill !== null && $prefill['token'] === (string) $token;
+            if ($asked) {
+                $current = $prefill['pack'];
+            }
+            echo $asked
+                ? '<tr id="' . esc_attr(self::PREFILL_ROW) . '" style="outline:2px solid #2271b1;background:#f0f6fc;">'
+                : '<tr>'; // phpcs:ignore WordPress.Security.EscapeOutput -- static markup plus esc_attr'd constant.
             echo '<td><code>' . esc_html($token) . '</code></td>';
             echo '<td>' . esc_html($description) . '</td>';
             echo '<td>' . $this->packSelect($token, $names, $default, $current) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- esc_* in helper.

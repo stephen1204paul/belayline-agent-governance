@@ -11,6 +11,7 @@ use Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder;
 use Specflux\AgentSafety\Plugin\Support\PackResolver;
 use Specflux\AgentSafety\Plugin\Support\RequestContext;
 use Specflux\AgentSafety\Plugin\Support\ShadowMode;
+use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeIdentityProvider;
 use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
 
 /**
@@ -36,6 +37,7 @@ final class CapabilityPacksPageTest extends TestCase
         $GLOBALS['wpas_test_user_caps'] = ['manage_options' => true];
         remove_all_filters(ShadowMode::FILTER);
         RequestContext::reset();
+        $_GET = [];
 
         $this->sink = new InMemoryAuditSink();
         $this->page = new CapabilityPacksPage(
@@ -54,6 +56,98 @@ final class CapabilityPacksPageTest extends TestCase
         $GLOBALS['wpas_test_user_caps'] = [];
         remove_all_filters(ShadowMode::FILTER);
         RequestContext::reset();
+        $_GET = [];
+        $_POST = [];
+    }
+
+    // --- deep-link pre-fill ----------------------------------------------------
+
+    /** @param array<string, string> $get */
+    private function renderWithGet(array $get): string
+    {
+        $_GET = $get;
+        $page = new CapabilityPacksPage(
+            new PackResolver(),
+            new IdentityChain([new FakeIdentityProvider([], ['role:administrator' => 'Administrator', 'user:5' => 'Dana'], 'Users & Roles')]),
+            new ShadowMode(),
+            new AdminChangeRecorder($this->sink),
+        );
+
+        ob_start();
+        $page->render();
+        $out = (string) ob_get_clean();
+
+        // The shadow form above has its own selected option; only the bindings section matters here.
+        return $out;
+    }
+
+    private function bindingsSection(string $out): string
+    {
+        return substr($out, (int) strpos($out, 'Credential bindings'));
+    }
+
+    public function testAValidDeepLinkPreselectsThePackHighlightsTheRowAndNotifies(): void
+    {
+        $out = $this->renderWithGet(['senrogate_bind_token' => 'role:administrator', 'senrogate_bind_pack' => 'owner']);
+
+        $this->assertStringContainsString('SenroFlux asked to bind Administrator to owner. Review and Save.', $out);
+        $this->assertStringContainsString('<tr id="agsafe-bind-prefill"', $out);
+        $this->assertStringContainsString('<option value="owner" selected=\'selected\'>owner</option>', $out);
+        // Only that row is touched: the other row's dropdown selects nothing.
+        $this->assertSame(1, substr_count($this->bindingsSection($out), 'selected='));
+    }
+
+    public function testAnUnknownTokenIsIgnoredSilently(): void
+    {
+        foreach (['role:nobody', 'garbage', '<script>x</script>'] as $token) {
+            $out = $this->renderWithGet(['senrogate_bind_token' => $token, 'senrogate_bind_pack' => 'owner']);
+            $this->assertStringNotContainsString('SenroFlux asked', $out);
+            $this->assertStringNotContainsString('agsafe-bind-prefill', $out);
+            $this->assertStringNotContainsString('selected=', $this->bindingsSection($out));
+        }
+    }
+
+    public function testAnUnregisteredPackIsIgnoredSilently(): void
+    {
+        $out = $this->renderWithGet(['senrogate_bind_token' => 'role:administrator', 'senrogate_bind_pack' => 'no-such-pack']);
+
+        $this->assertStringNotContainsString('SenroFlux asked', $out);
+        $this->assertStringNotContainsString('agsafe-bind-prefill', $out);
+        $this->assertStringNotContainsString('selected=', $this->bindingsSection($out));
+    }
+
+    public function testADeepLinkGetNeverChangesTheStoredBindings(): void
+    {
+        $GLOBALS['wpas_test_options'][PackResolver::BINDINGS_OPTION] = ['user:5' => 'default-agent'];
+
+        $this->renderWithGet(['senrogate_bind_token' => 'role:administrator', 'senrogate_bind_pack' => 'owner']);
+
+        $this->assertSame(['user:5' => 'default-agent'], $GLOBALS['wpas_test_options'][PackResolver::BINDINGS_OPTION]);
+        $this->assertSame([], $this->sink->records);
+    }
+
+    public function testSavingStillNeedsTheNonceAndTheCapability(): void
+    {
+        $_POST = ['bindings' => ['role:administrator' => 'owner']];
+
+        $_POST['_wpnonce'] = 'forged';
+        try {
+            $this->page->save();
+            $this->fail('a bad nonce must stop the save');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('expired', $e->getMessage());
+        }
+
+        $_POST['_wpnonce'] = 'test-nonce';
+        $GLOBALS['wpas_test_user_caps'] = [];
+        try {
+            $this->page->save();
+            $this->fail('a user without manage_options must not save');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('Insufficient', $e->getMessage());
+        }
+
+        $this->assertArrayNotHasKey(PackResolver::BINDINGS_OPTION, $GLOBALS['wpas_test_options']);
     }
 
     // --- shadow mode ---------------------------------------------------------
