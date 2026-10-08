@@ -101,7 +101,63 @@ final class AbilityAuditLogTest extends TestCase
     {
         $sink = new InMemoryAuditSink();
         $log = $this->log($sink, ['woocommerce/']);
-        McpRequestAuditHandler::captureArgs(['id' => 1], 'woocommerce-orders-list');
+        McpRequestAuditHandler::captureArgs(['id' => 1], 'woocommerce-orders-list', null, self::defaultServer());
+
+        $log->before('woocommerce/orders-list', ['id' => 1]);
+        $log->after('woocommerce/orders-list', ['id' => 1], ['data' => ['status' => 200]]);
+
+        $this->assertCount(0, $sink->records);
+    }
+
+    /**
+     * Custom mcp-adapter server (e.g. SenroFlux's): its observability handler is
+     * NOT ours, so no mcp.request record will ever replace this hook's row.
+     * captureArgs() must not stash and after() must write its own row.
+     *
+     * @dataProvider nonDefaultServers
+     */
+    public function testCustomServerCallIsNotDedupedAndWritesItsOwnRow(mixed $server): void
+    {
+        $sink = new InMemoryAuditSink();
+        $log = $this->log($sink, ['woocommerce/']);
+        McpRequestAuditHandler::captureArgs(['id' => 1], 'woocommerce-orders-list', null, $server);
+
+        $this->assertFalse(McpRequestAuditHandler::hasPendingCapture());
+
+        $log->before('woocommerce/orders-list', ['id' => 1]);
+        $log->after('woocommerce/orders-list', ['id' => 1], ['data' => ['status' => 200]]);
+
+        $this->assertCount(1, $sink->records);
+        $record = $sink->records[0]->toArray();
+        $this->assertSame('allowed', $record['decision']);
+        $this->assertSame('success', $record['result']);
+    }
+
+    /** @return array<string, array{mixed}> */
+    public static function nonDefaultServers(): array
+    {
+        return [
+            'null handler' => [new class { public ?object $observability_handler = null;
+            }],
+            'other handler' => [new class { public object $observability_handler;
+                public function __construct()
+                {
+                    $this->observability_handler = new \stdClass();
+                }
+            }],
+            'no property' => [new \stdClass()],
+            'not an object' => ['server'],
+            'missing (null)' => [null],
+        ];
+    }
+
+    public function testDefaultServerCallStashesAndAfterSkips(): void
+    {
+        $sink = new InMemoryAuditSink();
+        $log = $this->log($sink, ['woocommerce/']);
+        McpRequestAuditHandler::captureArgs(['id' => 1], 'woocommerce-orders-list', null, self::defaultServer());
+
+        $this->assertTrue(McpRequestAuditHandler::hasPendingCapture());
 
         $log->before('woocommerce/orders-list', ['id' => 1]);
         $log->after('woocommerce/orders-list', ['id' => 1], ['data' => ['status' => 200]]);
@@ -139,7 +195,7 @@ final class AbilityAuditLogTest extends TestCase
         $sink = new InMemoryAuditSink();
         $log = $this->log($sink, ['woocommerce/']);
 
-        McpRequestAuditHandler::captureArgs(['id' => 1], 'woocommerce-orders-list');
+        McpRequestAuditHandler::captureArgs(['id' => 1], 'woocommerce-orders-list', null, self::defaultServer());
         // Simulate record_event() having consumed the one stashed entry for this
         // tool -- the stash for it is now empty (McpRequestAuditHandler has no
         // public "consume one" API beyond record_event() itself, and reset()
@@ -162,7 +218,7 @@ final class AbilityAuditLogTest extends TestCase
     {
         $sink = new InMemoryAuditSink();
         $log = $this->log($sink, ['woocommerce/']);
-        McpRequestAuditHandler::captureArgs(['id' => 1], 'core-something');
+        McpRequestAuditHandler::captureArgs(['id' => 1], 'core-something', null, self::defaultServer());
 
         $log->before('core/something', ['id' => 1]);
         $log->after('core/something', ['id' => 1], ['data' => ['status' => 200]]);
@@ -180,7 +236,7 @@ final class AbilityAuditLogTest extends TestCase
     {
         $sink = new InMemoryAuditSink();
         $log = $this->log($sink, ['woocommerce/']);
-        McpRequestAuditHandler::captureArgs(['id' => 1], 'woocommerce-orders-list');
+        McpRequestAuditHandler::captureArgs(['id' => 1], 'woocommerce-orders-list', null, self::defaultServer());
 
         $log->before('woocommerce/orders-list', ['id' => 1]);
         $log->after('woocommerce/orders-list', ['id' => 1], ['data' => ['status' => 200]]);
@@ -220,5 +276,18 @@ final class AbilityAuditLogTest extends TestCase
         $log->after('agent-safety/other-verb', [], ['status' => 'ok']);
 
         $this->assertCount(1, $sink->records);
+    }
+
+    /** A stand-in for the adapter's default server: our handler is its observability handler. */
+    private static function defaultServer(): object
+    {
+        return new class {
+            public object $observability_handler;
+
+            public function __construct()
+            {
+                $this->observability_handler = new McpRequestAuditHandler();
+            }
+        };
     }
 }

@@ -136,7 +136,7 @@ final class McpRequestAuditHandler implements McpObservabilityHandlerInterface
      */
     public function register(): void
     {
-        add_filter('mcp_adapter_pre_tool_call', [self::class, 'captureArgs'], PHP_INT_MIN, 2);
+        add_filter('mcp_adapter_pre_tool_call', [self::class, 'captureArgs'], PHP_INT_MIN, 4);
     }
 
     /**
@@ -154,12 +154,30 @@ final class McpRequestAuditHandler implements McpObservabilityHandlerInterface
      * assert against. Fine for this plugin's synchronous single-request model;
      * would NOT be safe to rely on across an async/queued transport.
      *
+     * Stashes ONLY when the calling server's public `observability_handler`
+     * property is an instance of this class. This handler is installed solely
+     * on the adapter's DEFAULT server (via `mcp_adapter_default_server_config`);
+     * a custom server (e.g. SenroFlux's) never calls {@see record_event()}, so
+     * a stash entry there would make {@see AbilityAuditLog::after()} skip its
+     * row (the DOUBLE-LOGGING DEDUPE) with nothing to replace it — a missing
+     * audit row. Rule: when unsure (server missing, not an object, no such
+     * property, or a different handler) do NOT stash — a possible duplicate row
+     * is always preferable to a missing one.
+     *
      * @param array<string, mixed> $args
+     * @param mixed $mcpTool Unused; the adapter's tool object.
+     * @param mixed $server The calling `McpServer` (4th filter arg).
      * @return array<string, mixed> Unchanged — this hook only observes.
      */
-    public static function captureArgs(array $args, string $toolName): array
+    public static function captureArgs(array $args, string $toolName, mixed $mcpTool = null, mixed $server = null): array
     {
-        self::$rawArgsStash[$toolName][] = $args;
+        if (
+            is_object($server)
+            && property_exists($server, 'observability_handler')
+            && $server->observability_handler instanceof self
+        ) {
+            self::$rawArgsStash[$toolName][] = $args;
+        }
 
         return $args;
     }

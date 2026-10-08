@@ -68,7 +68,7 @@ final class McpRequestAuditHandlerTest extends TestCase
     public function testSuccessWithPrimedStashProducesExecutionRecordWithRawArgs(): void
     {
         $rawArgs = ['api_key' => 'sekret', 'note' => 'hi'];
-        McpRequestAuditHandler::captureArgs($rawArgs, 'test-verify-success');
+        McpRequestAuditHandler::captureArgs($rawArgs, 'test-verify-success', null, self::defaultServer());
         $GLOBALS['wpas_test_current_user_id'] = 42;
 
         $tags = self::commonTags('test-verify-success', 'test/verify-success', 101, 'success');
@@ -194,7 +194,7 @@ final class McpRequestAuditHandlerTest extends TestCase
     public function testBlockedByPreToolCallFilterProducesFailedExecutionRecordWithRawArgs(): void
     {
         $rawArgs = ['api_key' => 'sekret', 'note' => 'blocked call'];
-        McpRequestAuditHandler::captureArgs($rawArgs, 'test-verify-blocked');
+        McpRequestAuditHandler::captureArgs($rawArgs, 'test-verify-blocked', null, self::defaultServer());
 
         $tags = self::commonTags('test-verify-blocked', 'test/verify-blocked', 104, 'error', 'Rate limit exceeded for this session');
         $this->handler->record_event('mcp.request', $tags, 0.8);
@@ -213,7 +213,7 @@ final class McpRequestAuditHandlerTest extends TestCase
     public function testExecutionErrorProducesFailedExecutionRecordWithRawArgs(): void
     {
         $rawArgs = ['api_key' => 'sekret', 'note' => 'boom'];
-        McpRequestAuditHandler::captureArgs($rawArgs, 'test-verify-execution-error');
+        McpRequestAuditHandler::captureArgs($rawArgs, 'test-verify-execution-error', null, self::defaultServer());
 
         $tags = self::commonTags('test-verify-execution-error', 'test/verify-execution-error', 105, 'error', 'Custom execution failure message');
         $this->handler->record_event('mcp.request', $tags, 5.5);
@@ -281,8 +281,8 @@ final class McpRequestAuditHandlerTest extends TestCase
 
     public function testStashIsConsumedFifoPerToolThenExhausted(): void
     {
-        McpRequestAuditHandler::captureArgs(['call' => 'first'], 'batch-tool');
-        McpRequestAuditHandler::captureArgs(['call' => 'second'], 'batch-tool');
+        McpRequestAuditHandler::captureArgs(['call' => 'first'], 'batch-tool', null, self::defaultServer());
+        McpRequestAuditHandler::captureArgs(['call' => 'second'], 'batch-tool', null, self::defaultServer());
 
         $tags = self::commonTags('batch-tool', 'test/batch-tool', 301, 'success');
 
@@ -296,5 +296,18 @@ final class McpRequestAuditHandlerTest extends TestCase
         $this->assertSame(['call' => 'first'], $this->sink->records[0]->toArray()['input']['args']);
         $this->assertSame(['call' => 'second'], $this->sink->records[1]->toArray()['input']['args']);
         $this->assertTrue($this->sink->records[2]->toArray()['input']['args']['_raw_args_unavailable']);
+    }
+
+    /** A stand-in for the adapter's default server: our handler is its observability handler. */
+    private static function defaultServer(): object
+    {
+        return new class {
+            public object $observability_handler;
+
+            public function __construct()
+            {
+                $this->observability_handler = new McpRequestAuditHandler();
+            }
+        };
     }
 }
