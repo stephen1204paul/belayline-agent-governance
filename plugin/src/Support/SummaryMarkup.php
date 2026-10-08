@@ -33,6 +33,25 @@ final class SummaryMarkup
      */
     private const TAG = "\x02agent-safety:html\x03";
 
+    /**
+     * Second sentinel: the summary was generated from the call's (redacted)
+     * arguments. It is plain text, shown on the approval screen only; it is
+     * kept out of notification channels, which stay identifiers-only.
+     */
+    private const ARGS_TAG = "\x02agent-safety:args\x03";
+
+    /** Tag an argument-derived summary (text; never markup, never notified). */
+    public static function wrapArgs(string $text): string
+    {
+        return self::ARGS_TAG . $text;
+    }
+
+    /** True when this stored summary was generated from call arguments. */
+    public static function isArgsDerived(string $stored): bool
+    {
+        return str_starts_with($stored, self::ARGS_TAG);
+    }
+
     /** Tag host-authored markup so the approval screen may render it as markup. */
     public static function wrap(string $html): string
     {
@@ -52,6 +71,10 @@ final class SummaryMarkup
      */
     public static function unwrap(string $stored): string
     {
+        if (self::isArgsDerived($stored)) {
+            return substr($stored, strlen(self::ARGS_TAG));
+        }
+
         return self::isHostAuthored($stored) ? substr($stored, strlen(self::TAG)) : $stored;
     }
 }

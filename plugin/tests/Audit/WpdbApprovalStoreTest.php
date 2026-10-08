@@ -6,6 +6,7 @@ namespace Specflux\AgentSafety\Plugin\Tests\Audit;
 
 use PHPUnit\Framework\TestCase;
 use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
+use Specflux\AgentSafety\Plugin\Support\SummaryMarkup;
 use wpdb;
 
 /**
@@ -84,6 +85,20 @@ final class WpdbApprovalStoreTest extends TestCase
         ));
         $this->assertCount(1, $fired);
         $this->assertSame([$approvalId, 'woocommerce/orders-refund', 'summary text'], array_slice($fired[0], 1));
+    }
+
+    public function testArgumentDerivedSummaryNeverReachesTheNotificationHook(): void
+    {
+        $GLOBALS['wpas_test_actions'] = [];
+        $store = new WpdbApprovalStore(new wpdb());
+
+        $approvalId = $store->request('acme/do', 'h', SummaryMarkup::wrapArgs('acme/do { note: "secret plan" }'), 'corr', 'evt', 'key_1');
+
+        $fired = array_values(array_filter(
+            $GLOBALS['wpas_test_actions'],
+            static fn (array $a): bool => $a[0] === 'agent_safety_approval_requested',
+        ));
+        $this->assertSame([$approvalId, 'acme/do', 'acme/do'], array_slice($fired[0], 1));
     }
 
     public function testReusedPendingRequestDoesNotReNotify(): void

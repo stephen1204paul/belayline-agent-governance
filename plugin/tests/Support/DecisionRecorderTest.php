@@ -6,6 +6,7 @@ namespace Specflux\AgentSafety\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
 use Specflux\AgentSafety\Approval\ApprovalBinding;
+use Specflux\AgentSafety\Plugin\Support\SummaryMarkup;
 use Specflux\AgentSafety\Gate\Decision;
 use Specflux\AgentSafety\Packs\Pack;
 use Specflux\AgentSafety\Plugin\Support\DecisionRecorder;
@@ -186,7 +187,7 @@ final class DecisionRecorderTest extends TestCase
         $call = $store->requestCalls[0];
         $this->assertSame('orders/refund', $call['verb']);
         $this->assertSame(ApprovalBinding::hash('orders/refund', $input), $call['args_hash']);
-        $this->assertSame('orders/refund { id=42 }', $call['summary']);
+        $this->assertSame(SummaryMarkup::wrapArgs('orders/refund { id: 42 }'), $call['summary']);
         $this->assertSame(RequestContext::correlation(), $call['correlation_id']);
         $this->assertSame('evt_1', $call['audit_event_id']);
         $this->assertNull($call['subject']);
@@ -271,7 +272,7 @@ final class DecisionRecorderTest extends TestCase
 
         $summary = $recorder->summarize('orders/refund', $input);
 
-        $this->assertSame('orders/refund { a=1, b=2 }', $summary);
+        $this->assertSame('orders/refund { a: 1, b: 2, nested: 3 items }', $summary);
     }
 
     public function testSummarizeWithNoDisplayableArgsIsJustTheVerb(): void
@@ -279,22 +280,5 @@ final class DecisionRecorderTest extends TestCase
         $recorder = new DecisionRecorder(null, null);
 
         $this->assertSame('orders/refund', $recorder->summarize('orders/refund', [ApprovalBinding::TOKEN_ARG => 'tok']));
-    }
-
-    public function testSummarizeCapsAtEightParts(): void
-    {
-        $recorder = new DecisionRecorder(null, null);
-        $input = [];
-        for ($i = 1; $i <= 10; $i++) {
-            $input["k{$i}"] = $i;
-        }
-
-        $summary = $recorder->summarize('orders/bulk', $input);
-
-        $expectedParts = [];
-        for ($i = 1; $i <= 8; $i++) {
-            $expectedParts[] = "k{$i}={$i}";
-        }
-        $this->assertSame('orders/bulk { ' . implode(', ', $expectedParts) . ' }', $summary);
     }
 }

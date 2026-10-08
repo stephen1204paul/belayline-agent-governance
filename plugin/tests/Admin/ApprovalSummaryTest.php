@@ -50,7 +50,7 @@ final class ApprovalSummaryTest extends TestCase
 
         $this->assertSame('apr_rich', $id);
         $this->assertCount(1, $calls, 'the filter fires exactly once per request row');
-        $this->assertSame('pages/publish { id=42 }', $calls[0]['summary'], 'the filter receives the flat summary');
+        $this->assertSame('pages/publish { id: 42 }', $calls[0]['summary'], 'the filter receives the flat summary');
         $this->assertSame('pages/publish', $calls[0]['verb']);
         $this->assertSame(42, $calls[0]['input']['id']);
 
@@ -75,7 +75,7 @@ final class ApprovalSummaryTest extends TestCase
 
         $recorder->requestApproval('orders/refund', ['id' => 1], 'evt_1');
 
-        $this->assertSame('orders/refund { id=1 }', $store->requestCalls[0]['summary']);
+        $this->assertSame(SummaryMarkup::wrapArgs('orders/refund { id: 1 }'), $store->requestCalls[0]['summary']);
     }
 
     public function testANonStringFilterReturnFallsBackToTheFlatSummary(): void
@@ -86,7 +86,7 @@ final class ApprovalSummaryTest extends TestCase
 
         $recorder->requestApproval('orders/refund', ['id' => 1], 'evt_1');
 
-        $this->assertSame('orders/refund { id=1 }', $store->requestCalls[0]['summary']);
+        $this->assertSame(SummaryMarkup::wrapArgs('orders/refund { id: 1 }'), $store->requestCalls[0]['summary']);
     }
 
     public function testFilterReturningTheFlatSummaryUnchangedStaysAgentAuthored(): void
@@ -98,7 +98,7 @@ final class ApprovalSummaryTest extends TestCase
         $recorder->requestApproval('orders/refund', ['id' => 1], 'evt_1');
 
         // Nothing was enriched, so nothing earns markup rendering.
-        $this->assertSame('orders/refund { id=1 }', $store->requestCalls[0]['summary']);
+        $this->assertSame(SummaryMarkup::wrapArgs('orders/refund { id: 1 }'), $store->requestCalls[0]['summary']);
         $this->assertFalse(SummaryMarkup::isHostAuthored($store->requestCalls[0]['summary']));
     }
 
@@ -225,5 +225,31 @@ final class ApprovalSummaryTest extends TestCase
         $page->render();
 
         return (string) ob_get_clean();
+    }
+
+    public function testGenericSummaryShowsArgsAndEscapesHtmlOnThePage(): void
+    {
+        $store = new FakeApprovalStore();
+        $recorder = new DecisionRecorder(null, $store);
+        $recorder->requestApproval('senroflux/update-settings', ['settings' => ['blogdescription' => '<script>alert(1)</script>', 'password' => 'hunter2']], 'evt');
+
+        $html = PendingActionsPage::summaryHtml($store->requestCalls[0]['summary']);
+
+        $this->assertStringContainsString('settings.blogdescription: &quot;&lt;script&gt;alert(1)&lt;/script&gt;&quot;', $html);
+        $this->assertStringNotContainsString('<script', $html);
+        $this->assertStringNotContainsString('hunter2', $html);
+        $this->assertStringNotContainsString('agent-safety:args', $html);
+    }
+
+    public function testHostFilteredSummaryIsStillMarkupAndUnchangedByTheFallback(): void
+    {
+        add_filter('agent_safety_approval_summary', static fn () => 'Publish <a href="/p">page</a>');
+        $store = new FakeApprovalStore();
+        (new DecisionRecorder(null, $store))->requestApproval('pages/publish', ['id' => 1], 'evt');
+
+        $stored = $store->requestCalls[0]['summary'];
+        $this->assertTrue(SummaryMarkup::isHostAuthored($stored));
+        $this->assertFalse(SummaryMarkup::isArgsDerived($stored));
+        $this->assertSame('Publish <a href="/p">page</a>', PendingActionsPage::summaryHtml($stored));
     }
 }

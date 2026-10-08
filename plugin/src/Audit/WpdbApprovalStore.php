@@ -134,7 +134,9 @@ final class WpdbApprovalStore implements ApprovalStore, ApprovalMinter
         // as authored, without the host-authored provenance tag the approval
         // SCREEN uses to decide escaping ({@see SummaryMarkup}) — that tag is a
         // rendering concern and never part of this hook's contract.
-        do_action('agent_safety_approval_requested', $approvalId, $verb, SummaryMarkup::unwrap($summary));
+        // Argument-derived summaries stay on-site: subscribers (the email +
+        // webhook notifier included) get the verb alone for those.
+        do_action('agent_safety_approval_requested', $approvalId, $verb, SummaryMarkup::isArgsDerived($summary) ? $verb : SummaryMarkup::unwrap($summary));
 
         return $approvalId;
     }

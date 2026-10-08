@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Specflux\AgentSafety\Plugin\Support;
 
 use Specflux\AgentSafety\Approval\ApprovalBinding;
+use Specflux\AgentSafety\Approval\ArgumentSummarizer;
 use Specflux\AgentSafety\Approval\ApprovalStore;
 use Specflux\AgentSafety\Audit\AuditDecision;
 use Specflux\AgentSafety\Audit\AuditRecord;
@@ -199,7 +200,7 @@ final class DecisionRecorder
 
         return is_string($filtered) && $filtered !== $flat
             ? SummaryMarkup::wrap($filtered)
-            : $flat;
+            : SummaryMarkup::wrapArgs($flat);
     }
 
     /**
@@ -227,20 +228,14 @@ final class DecisionRecorder
     }
 
     /**
-     * A short, human-readable description of the action for the approval screen.
+     * A short, human-readable description of the action for the approval screen:
+     * the verb plus a redacted, capped rendering of its arguments
+     * ({@see ArgumentSummarizer}).
      *
      * @param array<string, mixed> $input
      */
     public function summarize(string $verb, array $input): string
     {
-        $parts = [];
-        foreach ($input as $k => $v) {
-            if ($k === ApprovalBinding::TOKEN_ARG || is_array($v)) {
-                continue;
-            }
-            $parts[] = $k . '=' . (is_scalar($v) ? (string) $v : gettype($v));
-        }
-
-        return $verb . ($parts === [] ? '' : ' { ' . implode(', ', array_slice($parts, 0, 8)) . ' }');
+        return ArgumentSummarizer::summarize($verb, $input);
     }
 }

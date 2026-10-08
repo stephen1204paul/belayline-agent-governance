@@ -266,7 +266,7 @@ final class PendingActionsPage
     public static function summaryHtml(string $summary): string
     {
         if (!SummaryMarkup::isHostAuthored($summary)) {
-            return esc_html($summary);
+            return esc_html(SummaryMarkup::unwrap($summary));
         }
 
         return wp_kses(SummaryMarkup::unwrap($summary), ['a' => ['href' => true]]);
