@@ -292,13 +292,14 @@ runs.
   redacted and long values cut short. Approval emails and webhooks still carry no arguments.
 * Calls made through a plugin's own MCP server (SenroFlux's, for example) are now written to the
   audit log, not only calls through mcp-adapter's default server.
-* Refuses to load beside the old Agent Safety plugin instead of causing a fatal error.
 * Public PHP API for change history and undo (`agent_safety()->changes()`), and for ability
   review status, so other plugins can show an agent's changes.
 
 = 0.4.4 =
 * Security: order status values with WooCommerce's wc- prefix now get the same approval tier as
   unprefixed ones.
+* Refuses to load beside the old Agent Safety plugin instead of causing a fatal error, and asks
+  you to deactivate the old one.
 
 = 0.4.3 =
 * Renamed to SenroGate: slug and text domain `senrogate`, main file `senrogate.php`. Data, settings
