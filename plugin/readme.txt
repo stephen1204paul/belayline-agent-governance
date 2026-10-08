@@ -12,16 +12,21 @@ Governs other plugins' agent tool calls, with human approval and a tamper-eviden
 
 == Description ==
 
-SenroGate governs other plugins' agent tool calls, not just its own. It sits between AI
-agents (through the WordPress Abilities API, and through MCP servers built on
-[mcp-adapter](https://github.com/WordPress/mcp-adapter), as WooCommerce's is) and the actions
-those agents can take on your site. Every governed call is classified by tier, checked against a
-capability pack bound to the calling identity, and written to a tamper-evident, hash-chained
-audit log, before it runs.
+SenroGate governs other plugins' agent tool calls, not just its own. Whatever connects an AI
+agent to your site (mcp-adapter's default server, WooCommerce's MCP server, a plugin's own MCP
+server built on [mcp-adapter](https://github.com/WordPress/mcp-adapter), or SenroFlux), the
+calls end up as WordPress Abilities, and SenroGate sits on that path. Every governed call is
+classified by tier, checked against a capability pack bound to the calling identity, and written
+to a tamper-evident, hash-chained audit log, before it runs. Writes record what they changed, so
+an administrator can undo them later.
 
-The plugin is WordPress-general. It ships a `core/*` module that runs on every site, and a
-WooCommerce module that wires in automatically when WooCommerce is active. Neither one trusts a
-tool's own "read-only" or "safe" label; classification comes from the plugin's own policy map.
+One honest limit: SenroGate sees ability calls. A plugin that gives agents tools without
+registering them as abilities is outside its reach.
+
+The plugin is WordPress-general. It ships a `core/*` module that runs on every site, plus
+WooCommerce, FluentCart and SureCart modules that wire in automatically when those plugins are
+active. None of them trusts a tool's own "read-only" or "safe" label; classification comes from
+the plugin's own policy map.
 
 **Capability packs and tiers**
 
@@ -103,6 +108,41 @@ information to an agent:
 We recommend running agents against the shared mcp-adapter server. WooCommerce's own endpoint is
 supported for as long as WooCommerce ships it, with the limitation above.
 
+**FluentCart and SureCart coverage**
+
+When FluentCart or SureCart is active, SenroGate governs the abilities each one registers, with
+its own tier for every one. Refunds are irreversible and can't be pre-approved with a grant, so
+each one waits for a person. Some writes move up a tier based on what they do: a price change
+that goes live for customers, a coupon switched on, a customer's email changed. Anything under
+those namespaces that SenroGate doesn't recognise is refused.
+
+**Change history and undo**
+
+Every governed write records the fields it changed, before and after, linked to its audit row.
+**Tools → Agent Changes** lists them. An administrator can restore one change, or everything a
+single agent session changed at once (a whole SenroFlux run, for example), after a preview of
+what will be written back. Posts, pages, post meta, terms, options, WooCommerce products,
+prices and coupons, and FluentCart and SureCart catalogue objects can be restored.
+
+Some changes can be recorded but not undone, and the screen says why: a refund, a permanent
+delete, or a customer record captured under a pack that redacts personal data. If someone has
+edited the object since the agent did, undo leaves it alone and shows the recorded, current and
+proposed values side by side.
+
+**Abilities from other plugins**
+
+Plugins keep registering abilities SenroGate has never heard of. Under **Tools → Agent
+Abilities**, an administrator gives each one a tier, with no code. An ability nobody has reviewed
+stays refused, and one whose input schema changes after review is refused again until someone
+looks at it.
+
+**IP allowlist**
+
+Optionally limit application passwords and WooCommerce API keys to a list of addresses or CIDR
+ranges, under **Tools → Agent Capability Packs**. Logged-in browser sessions are never IP-checked,
+so a typo can't lock an administrator out. Behind a proxy or CDN, name it as a trusted proxy and
+SenroGate reads the forwarded address; otherwise it uses the connecting address.
+
 **Environment awareness**
 
 SenroGate notices when a site's address changes (a migration, a staging clone) and treats it
@@ -153,8 +193,8 @@ it.
 = What happens to my data on uninstall? =
 
 Nothing, by default. Deleting the plugin from the Plugins screen leaves the audit log, approval
-tables, and plugin options in place, because the audit log is a tamper-evident security record.
-To have uninstall remove everything (all three tables, every option, every scheduled cron event),
+tables, change history and plugin options in place, because the audit log is a tamper-evident
+security record. To have uninstall remove everything (every table, option and scheduled cron event),
 define `AGSAFE_REMOVE_DATA` as `true` (for example in `wp-config.php`) before deleting the
 plugin.
 
@@ -181,6 +221,14 @@ event name, the approval id, the verb (ability) that was called, and a link to t
 No call arguments are sent. The webhook is off until an administrator enters a URL, and the
 destination is the site operator's choice. Nothing is sent to the plugin's author.
 
+**SureCart (only when SureCart is active).** SureCart keeps its products, prices and coupons on
+its own servers. To record what an agent changed, SenroGate reads the object's current values
+through the SureCart plugin before and after a governed write, and an undo writes the recorded
+values back the same way. These requests go to SureCart's API using the SureCart plugin's own
+connection and the store's existing SureCart account; SenroGate adds no data beyond the object id
+and the fields being restored. See SureCart's terms and privacy policy:
+https://surecart.com/terms-and-conditions/ and https://surecart.com/privacy-policy/
+
 == Privacy ==
 
 SenroGate keeps a hash-chained audit log of gate decisions and executed agent actions,
@@ -193,7 +241,19 @@ tool inputs are never searched for personal data, but they may contain it, since
 data handled by other plugins (customer records, order details) that the calling agent's tool
 touched.
 
+The change history stores the before and after values of each governed write, which can include
+personal data when an agent edits a customer or an order. Rows older than 30 days are deleted
+daily (the `agsafe_changes_retention_days` option changes the period). A personal-data export
+includes a user's change rows, and an erasure request deletes them; unlike audit rows they aren't
+part of the hash chain.
+
 == Upgrade Notice ==
+
+= 0.5.0 =
+Adds change history and undo, ability review for other plugins' abilities, an IP allowlist, and FluentCart and SureCart modules. Adds a change-history table; back up your database first.
+
+= 0.4.4 =
+Security fix: WooCommerce order statuses written with the wc- prefix now get the same approval tier as unprefixed ones. Update right away.
 
 = 0.4.3 =
 Renamed to SenroGate (new folder and main file). If you installed an earlier build from GitHub, deactivate and delete the old plugin folder, then install this one. Tables and settings carry over.
@@ -210,6 +270,35 @@ your database before upgrading. There is no downgrade path back to a pre-0.4.0 b
 runs.
 
 == Changelog ==
+
+= 0.5.0 =
+* Change history: every governed write records the fields it changed, before and after, linked
+  to its audit row. Listed under Tools → Agent Changes and kept for 30 days by default.
+* Undo: restore one change, or everything one agent session changed, after a preview. Covers
+  posts, pages, post meta, terms, options, WooCommerce products, prices and coupons, and
+  FluentCart and SureCart catalogue objects. A change made since the agent's is never
+  overwritten; the screen shows it instead.
+* Ability review under Tools → Agent Abilities: give abilities registered by other plugins a tier
+  without code. Unreviewed abilities stay refused, and a changed input schema needs a fresh
+  review.
+* IP allowlist for application passwords and WooCommerce API keys, with trusted-proxy support.
+  Browser sessions are never IP-checked.
+* FluentCart and SureCart modules, each with its own verb catalogue, elevation rules and starter
+  packs.
+* WooCommerce: moving an order to pending or on-hold is now irreversible-tier, like cancelling
+  it, so the starter packs hold it for approval.
+* Denials now carry a machine-readable `reason` in their error data.
+* The Pending Agent Actions screen summarises held calls from their arguments, with secrets
+  redacted and long values cut short. Approval emails and webhooks still carry no arguments.
+* Calls made through a plugin's own MCP server (SenroFlux's, for example) are now written to the
+  audit log, not only calls through mcp-adapter's default server.
+* Refuses to load beside the old Agent Safety plugin instead of causing a fatal error.
+* Public PHP API for change history and undo (`agent_safety()->changes()`), and for ability
+  review status, so other plugins can show an agent's changes.
+
+= 0.4.4 =
+* Security: order status values with WooCommerce's wc- prefix now get the same approval tier as
+  unprefixed ones.
 
 = 0.4.3 =
 * Renamed to SenroGate: slug and text domain `senrogate`, main file `senrogate.php`. Data, settings
