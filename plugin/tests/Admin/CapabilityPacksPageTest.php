@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Admin;
+namespace Belayline\Plugin\Tests\Admin;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Admin\CapabilityPacksPage;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Support\ShadowMode;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Plugin\Admin\CapabilityPacksPage;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Support\AdminChangeRecorder;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Support\ShadowMode;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
 
 /**
  * The Packs screen's two saves are exercised through their apply*() seams
@@ -255,14 +255,14 @@ final class CapabilityPacksPageTest extends TestCase
         // A registry filter that swaps bindings must not make the audit row
         // describe a "from" the option never held.
         $GLOBALS['wpas_test_options'][PackResolver::BINDINGS_OPTION] = ['app:1' => 'default-agent'];
-        add_filter('agent_safety_pack_registry', static function ($registry) {
-            return \Specflux\AgentSafety\Packs\PackRegistry::withBuiltins(['app:1' => 'owner']);
+        add_filter('belayline_pack_registry', static function ($registry) {
+            return \Belayline\Packs\PackRegistry::withBuiltins(['app:1' => 'owner']);
         });
 
         try {
             $this->page->applyBindings(['app:1' => 'owner']);
         } finally {
-            remove_all_filters('agent_safety_pack_registry');
+            remove_all_filters('belayline_pack_registry');
         }
 
         $this->assertCount(1, $this->sink->records);

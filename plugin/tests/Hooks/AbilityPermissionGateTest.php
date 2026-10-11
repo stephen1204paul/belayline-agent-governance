@@ -2,28 +2,28 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Hooks;
+namespace Belayline\Plugin\Tests\Hooks;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Approval\ApprovalBinding;
-use Specflux\AgentSafety\Gate\Gate;
-use Specflux\AgentSafety\Packs\ArgumentCap;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Hooks\AbilityPermissionGate;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Support\DecisionRecorder;
-use Specflux\AgentSafety\Plugin\Support\GrantRecorder;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeApprovalStore;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeGrantStore;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeIdentityProvider;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
-use Specflux\AgentSafety\Plugin\Verdict\GrantGate;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Approval\ApprovalBinding;
+use Belayline\Gate\Gate;
+use Belayline\Packs\ArgumentCap;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Hooks\AbilityPermissionGate;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Support\DecisionRecorder;
+use Belayline\Plugin\Support\GrantRecorder;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\FakeApprovalStore;
+use Belayline\Plugin\Tests\Fakes\FakeGrantStore;
+use Belayline\Plugin\Tests\Fakes\FakeIdentityProvider;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Plugin\Verdict\GrantGate;
+use Belayline\Plugin\Verdict\VerdictPipeline;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 use WP_Error;
 
 /**
@@ -43,17 +43,17 @@ use WP_Error;
  * Every gating BEHAVIOUR behind the verdict — rate caps, argument caps, shadow
  * mode, the approval flow, re-entrancy, what a hint does to a decision — is
  * proven once, in both modes, in
- * {@see \Specflux\AgentSafety\Plugin\Tests\Verdict\VerdictPipelineTest}
+ * {@see \Belayline\Plugin\Tests\Verdict\VerdictPipelineTest}
  * (and hint PARSING in
- * {@see \Specflux\AgentSafety\Plugin\Tests\Verdict\HintsTest}).
+ * {@see \Belayline\Plugin\Tests\Verdict\HintsTest}).
  */
 final class AbilityPermissionGateTest extends TestCase
 {
     protected function setUp(): void
     {
         RequestContext::reset();
-        remove_all_filters('agent_safety_enable_grants');
-        remove_all_filters('agent_safety_grant_eligible');
+        remove_all_filters('belayline_enable_grants');
+        remove_all_filters('belayline_grant_eligible');
         $GLOBALS['wpas_test_options'] = [];
         $GLOBALS['wpas_test_transients'] = [];
         \CounterTableWpdb::install();
@@ -62,8 +62,8 @@ final class AbilityPermissionGateTest extends TestCase
     protected function tearDown(): void
     {
         RequestContext::reset();
-        remove_all_filters('agent_safety_enable_grants');
-        remove_all_filters('agent_safety_grant_eligible');
+        remove_all_filters('belayline_enable_grants');
+        remove_all_filters('belayline_grant_eligible');
         $GLOBALS['wpas_test_options'] = [];
         $GLOBALS['wpas_test_transients'] = [];
     }
@@ -330,8 +330,8 @@ final class AbilityPermissionGateTest extends TestCase
      */
     private function reservedUnderGrant(): array
     {
-        add_filter('agent_safety_enable_grants', static fn (): bool => true);
-        add_filter('agent_safety_grant_eligible', static fn (): bool => true);
+        add_filter('belayline_enable_grants', static fn (): bool => true);
+        add_filter('belayline_grant_eligible', static fn (): bool => true);
 
         $verb = 'woocommerce/orders-list';
         $pack = new Pack(name: 'grant-pack', allow: ['woocommerce/*'], approvalByClass: ['tier2' => true]);
@@ -355,12 +355,12 @@ final class AbilityPermissionGateTest extends TestCase
             $grantGate,
         );
 
-        $grantId = $grants->issue($verb, 2, 'test:token', 'senroflux:run:7', 5, 'step_1');
+        $grantId = $grants->issue($verb, 2, 'test:token', 'example:run:7', 5, 'step_1');
         $callback = $gate->wrap(['permission_callback' => static fn () => true], $verb)['permission_callback'];
         $callArgs = ['order_id' => 1042];
 
         $this->assertTrue(RequestContext::withCorrelation(
-            'senroflux:run:7',
+            'example:run:7',
             static fn () => $callback($callArgs)
         ));
         $this->assertSame(1, $grants->get($grantId)?->remainingCount, 'the reservation was spent up front');
@@ -408,7 +408,7 @@ final class AbilityPermissionGateTest extends TestCase
      * pre-approval for the rest of the request: a grant for two publishes was
      * gone after two markup retries that wrote nothing, and the real publish
      * parked for an approval the human had already given. Observed live on
-     * wp-env (senroflux run 48).
+     * wp-env (Site Agent run 48).
      */
     public function testAnAbandonedReservationIsReleasedWhenTheNextCallStarts(): void
     {
@@ -422,7 +422,7 @@ final class AbilityPermissionGateTest extends TestCase
         $callback = $gate->wrap(['permission_callback' => static fn () => true], $verb)['permission_callback'];
         $retryArgs = ['order_id' => 2024];
         $this->assertTrue(RequestContext::withCorrelation(
-            'senroflux:run:7',
+            'example:run:7',
             static fn () => $callback($retryArgs)
         ));
         $this->assertSame(0, $grants->get($grantId)?->remainingCount, 'the retry spends the second slot');

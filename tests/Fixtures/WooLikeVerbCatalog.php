@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Tests\Fixtures;
+namespace Belayline\Tests\Fixtures;
 
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Policy\Tier;
+use Belayline\Policy\VerbCatalog;
 
 /**
- * Test-only stand-in for the moved `Specflux\AgentSafety\Plugin\Integrations\Woo\WooVerbCatalog`
+ * Test-only stand-in for the moved `Belayline\Plugin\Integrations\Woo\WooVerbCatalog`
  * map (that class lives in the plugin package and is not reachable from core
  * tests). Mirrors it exactly so GateTest/TierClassifierTest keep exercising
  * realistic woocommerce/* fixtures against the now-generic core classes.

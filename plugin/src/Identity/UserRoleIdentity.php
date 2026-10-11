@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Identity;
+namespace Belayline\Plugin\Identity;
 
 /**
  * Identity provider over the logged-in WP user and their roles. Gives a site
@@ -52,6 +52,6 @@ final class UserRoleIdentity implements IdentityProvider
 
     public function label(): string
     {
-        return __('Users & Roles', 'senrogate');
+        return __('Users & Roles', 'belayline-agent-governance');
     }
 }

@@ -1,6 +1,6 @@
 # Roadmap
 
-What's planned for Agent Safety, roughly in order. No dates — items move up when
+What's planned for Belayline, roughly in order. No dates — items move up when
 there's real demand for them (open an issue if one matters to you). Anything
 here can change; the constraint that can't is the design principle: every
 addition must fail closed, and nothing a tool or agent self-reports may ever
@@ -34,7 +34,7 @@ that already ran. Run a week of observation before turning enforcement on.
 ## Planned for 0.4
 
 **AS-11 — Approval summary filter.** `DecisionRecorder::requestApproval()`
-passes the human-facing summary through `agent_safety_approval_summary`
+passes the human-facing summary through `belayline_approval_summary`
 (filter receives the flat summary, the verb and the input; a non-string return
 falls back to the flat summary) before persisting, and the Pending Agent
 Actions screen renders the persisted summary through `wp_kses` with exactly
@@ -43,26 +43,26 @@ never script or markup. The binding (verb + args hash + principal) is outside
 the filter's reach by construction. No schema change; grant-minted rows fire
 the same filter.
 
-**AS-12 — Pre-approval grants (behind `agent_safety_enable_grants`, default
+**AS-12 — Pre-approval grants (behind `belayline_enable_grants`, default
 off).** A human authorises up to N future calls of ONE verb inside ONE scope,
-instead of clicking once per action. New `{prefix}agent_safety_grants` table
+instead of clicking once per action. New `{prefix}belayline_grants` table
 with issue/reserve/release/revoke/TTL, reached through
-`agent_safety()->grants()`; the scope is a host-set correlation id
+`belayline()->grants()`; the scope is a host-set correlation id
 (`RequestContext::withCorrelation()`, restored in a `finally` so two runs
 ticked in one process never see each other's grants). A grant is matched on
 (correlation, verb, subject) — an empty subject never matches — and then has to
-pass the default-false `agent_safety_grant_eligible` filter before it mints an
+pass the default-false `belayline_grant_eligible` filter before it mints an
 already-approved record bound to the real arguments, which the ordinary
 reserve/finalize/rollback path claims. That default is what keeps per-verb
 grants safe for per-object work: a missing hook means no grant applies, never
 that every grant applies to any object, and a filter may narrow but never
 widen. The count is restored on every path the call does not execute on, and
 `grant.issued` / `grant.revoked` / `grant.exhausted` land in the audit trail.
-Consumed by SenroFlux's accept-with-pre-approval path.
+Consumed by Site Agent's accept-with-pre-approval path.
 
 **Argument-aware elevation rules from site code.** New
-`agent_safety_elevation_rules` filter, the companion the existing
-`agent_safety_governed_namespaces` / `agent_safety_verb_map` pair was missing:
+`belayline_elevation_rules` filter, the companion the existing
+`belayline_governed_namespaces` / `belayline_verb_map` pair was missing:
 a site could govern its own namespace and map base tiers, but a verb whose
 blast radius depends on its arguments (publish vs draft, bulk vs single) had no
 seam and had to be over-classified as irreversible. The filter may only add
@@ -80,10 +80,10 @@ both write tier classes hard-walled). Read-path redaction masks `user_pass`,
 `user_activation_key`, and `user_email` on user-info results; logins stay
 visible so approvals can name their target.
 
-**Programmatic approvals API.** A shared `Approvals` service (`agent_safety()->approvals()`)
+**Programmatic approvals API.** A shared `Approvals` service (`belayline()->approvals()`)
 exposes approve/reject/lookup gated by `manage_options` through the new
-`agent_safety_can_approve` filter, writing the same hash-chained reconciliation
-rows as the wp-admin form and firing `agent_safety_approval_resolved`. The
+`belayline_can_approve` filter, writing the same hash-chained reconciliation
+rows as the wp-admin form and firing `belayline_approval_resolved`. The
 Pending Agent Actions screen delegates to it, so every approver takes one code
 path.
 
@@ -101,7 +101,7 @@ GitHub Actions, failing loudly when the tag does not match the plugin header.
 
 - **WordPress.org plugin directory submission** — i18n/translation readiness
   and directory review compliance.
-- **WP-CLI commands** — `wp agsafe audit list`, `wp agsafe audit verify`
+- **WP-CLI commands** — `wp belayline audit list`, `wp belayline audit verify`
   (hash-chain check), CSV export, approval management from the shell.
 - **Audit retention and export** — configurable retention windows, webhook or
   syslog export for sites shipping logs to a SIEM.
@@ -132,4 +132,4 @@ with known limits that need upstream changes rather than plugin workarounds:
   itself behave — it assumes the agent can be wrong and bounds the damage.
 - **Replacing WordPress capabilities.** Packs layer on top of the existing
   permission model; a call still needs to pass the underlying capability
-  checks. Agent Safety narrows what a credential may do, never widens it.
+  checks. Belayline narrows what a credential may do, never widens it.

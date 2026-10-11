@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Api;
+namespace Belayline\Plugin\Api;
 
-use Specflux\AgentSafety\Approval\Grant;
-use Specflux\AgentSafety\Plugin\Approval\WpdbGrantStore;
-use Specflux\AgentSafety\Plugin\Support\GrantRecorder;
-use Specflux\AgentSafety\Plugin\Verdict\GrantGate;
+use Belayline\Approval\Grant;
+use Belayline\Plugin\Approval\WpdbGrantStore;
+use Belayline\Plugin\Support\GrantRecorder;
+use Belayline\Plugin\Verdict\GrantGate;
 
 /**
  * The programmatic pre-approval API (AS-12), reached through
- * `agent_safety()->grants()`. The counterpart to {@see Approvals}: that service
+ * `belayline()->grants()`. The counterpart to {@see Approvals}: that service
  * resolves ONE blocked action after the fact; this one records a human's
  * decision to allow N future actions of one verb inside one scope.
  *
@@ -24,8 +24,8 @@ use Specflux\AgentSafety\Plugin\Verdict\GrantGate;
  * server-side code that already has a human's decision in hand — and that
  * decision is checked here, not taken on trust. Every grant names its grantor,
  * who must hold `manage_options` (or be vouched for by the
- * `agent_safety_can_grant` filter, honoured only when it returns literal
- * `true`), and asks for no more than `agent_safety_grant_max_count` calls. A
+ * `belayline_can_grant` filter, honoured only when it returns literal
+ * `true`), and asks for no more than `belayline_grant_max_count` calls. A
  * cron tick or WP-CLI run with no human behind it therefore cannot issue one;
  * a host carries the accepting user's id from the request that captured the
  * decision. Every refusal past the feature switch is audited
@@ -35,7 +35,7 @@ use Specflux\AgentSafety\Plugin\Verdict\GrantGate;
  */
 final class Grants
 {
-    /** The most calls one grant may carry unless `agent_safety_grant_max_count` says otherwise. */
+    /** The most calls one grant may carry unless `belayline_grant_max_count` says otherwise. */
     public const MAX_COUNT = 50;
 
     public const REFUSED_INVALID_REQUEST = 'invalid_request';
@@ -49,7 +49,7 @@ final class Grants
     ) {
     }
 
-    /** Is the grants feature switched on for this site (`agent_safety_enable_grants`)? */
+    /** Is the grants feature switched on for this site (`belayline_enable_grants`)? */
     public function enabled(): bool
     {
         return GrantGate::enabled();
@@ -69,7 +69,7 @@ final class Grants
      * effect", not as "it probably worked".
      *
      * $correlationId MUST be derived from server-side state the host owns (a run
-     * row's id, e.g. "senroflux:run:42") and never from agent-authored arguments
+     * row's id, e.g. "example:run:42") and never from agent-authored arguments
      * or an HTTP parameter: it is half of what the gate matches on.
      */
     public function issue(
@@ -164,7 +164,7 @@ final class Grants
      * The grantor gate, the same shape as {@see Approvals::authorized()}. The
      * default asks whether the GRANTOR holds `manage_options` — the named user,
      * not the current one, since the human who accepted need not be on the
-     * request that issues — and `agent_safety_can_grant` may override it either
+     * request that issues — and `belayline_can_grant` may override it either
      * way. Only a literal `true` issues: a filtered false denies, and so does any
      * other value (fail closed), so a host vouching for a grantor has to say so
      * exactly.
@@ -173,7 +173,7 @@ final class Grants
     {
         /** @var mixed $filtered */
         $filtered = apply_filters(
-            'agent_safety_can_grant',
+            'belayline_can_grant',
             user_can($grantedBy, 'manage_options'),
             $grantedBy,
             $verb,
@@ -185,7 +185,7 @@ final class Grants
     }
 
     /**
-     * The most calls one grant may carry (`agent_safety_grant_max_count`). A
+     * The most calls one grant may carry (`belayline_grant_max_count`). A
      * filtered value that is not a positive int is ignored. A request above the
      * ceiling is refused rather than clamped: a host asking for more than the
      * site allows is a configuration error, and issuing less would hide it.
@@ -193,7 +193,7 @@ final class Grants
     private function maxCount(): int
     {
         /** @var mixed $filtered */
-        $filtered = apply_filters('agent_safety_grant_max_count', self::MAX_COUNT);
+        $filtered = apply_filters('belayline_grant_max_count', self::MAX_COUNT);
 
         return is_int($filtered) && $filtered > 0 ? $filtered : self::MAX_COUNT;
     }

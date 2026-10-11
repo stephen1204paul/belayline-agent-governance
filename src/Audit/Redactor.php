@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Audit;
+namespace Belayline\Audit;
 
 /**
  * Masks known PII fields before they enter the audit trail, so the logged

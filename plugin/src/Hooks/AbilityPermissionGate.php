@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Hooks;
+namespace Belayline\Plugin\Hooks;
 
-use Specflux\AgentSafety\Approval\ApprovalStore;
-use Specflux\AgentSafety\Plugin\Support\ExecutionResult;
-use Specflux\AgentSafety\Plugin\Verdict\GrantGate;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Verdict\Hints;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictMode;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
+use Belayline\Approval\ApprovalStore;
+use Belayline\Plugin\Support\ExecutionResult;
+use Belayline\Plugin\Verdict\GrantGate;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Verdict\Hints;
+use Belayline\Plugin\Verdict\VerdictMode;
+use Belayline\Plugin\Verdict\VerdictPipeline;
 
 /**
  * Working gate seam for the SHIPPING stack (verified: WooCommerce 11.1.0 vendors
@@ -29,7 +29,7 @@ use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
  * This is the CLAIM-mode adapter of the shared {@see VerdictPipeline}: the
  * pipeline decides and reserves; this hook only wraps the callback, feeds the
  * ability's self-reported annotations in as {@see Hints}, translates the
- * {@see \Specflux\AgentSafety\Plugin\Verdict\Verdict}, and owns what happens to a
+ * {@see \Belayline\Plugin\Verdict\Verdict}, and owns what happens to a
  * reserved grant AFTER the verdict — "consume on execution success":
  *   - First touch of an irreversible verb with no grant → WP_Error('approval_required')
  *     plus a persisted pending request for a human to review.
@@ -63,7 +63,7 @@ final class AbilityPermissionGate
     /**
      * @param list<string> $governedNamespaces Ability-id prefixes this gate governs
      *                                          (contributed by integrations + the
-     *                                          `agent_safety_governed_namespaces`
+     *                                          `belayline_governed_namespaces`
      *                                          filter). Empty => inert no-op, same as
      *                                          today on a site with no integration active.
      */

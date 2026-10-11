@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Verdict;
+namespace Belayline\Plugin\Verdict;
 
-use Specflux\AgentSafety\Gate\Decision;
-use Specflux\AgentSafety\Gate\Outcome;
-use Specflux\AgentSafety\Packs\Pack;
+use Belayline\Gate\Decision;
+use Belayline\Gate\Outcome;
+use Belayline\Packs\Pack;
 use WP_Error;
 
 /**
  * What actually happened to one call after the {@see VerdictPipeline} ran: the
  * core {@see Decision} plus its consequences. Adapters translate a Verdict into
  * their transport's shape and nothing else; {@see error()} is the ONLY producer
- * of the WP_Error contract consumers such as SenroFlux depend on.
+ * of the WP_Error contract consumers such as Site Agent depend on.
  */
 final class Verdict
 {
@@ -39,7 +39,7 @@ final class Verdict
      *                                    first-time park, `Stale` when this call's own claim attempt
      *                                    found the target had changed and re-filed a fresh request.
      * @param bool    $paused             AS-8 (§3.5 item 3): the site is paused right now. Only ever
-     *                                    set on the `agent-safety/check-approval` exemption verdict
+     *                                    set on the `belayline/check-approval` exemption verdict
      *                                    ({@see VerdictPipeline::judgeCheckApproval()}) — every other
      *                                    verb is simply denied while paused, so it never reaches a
      *                                    Verdict at all. Informational only: it never affects
@@ -71,7 +71,7 @@ final class Verdict
      *
      * Contract (frozen — see docs/adr/0001-single-verdict-pipeline.md and
      * plugin/tests/Fixtures/VerdictErrorFixture.php):
-     *   - deny:              code `agent_safety_denied`, data {status: 403, verb, tier}
+     *   - deny:              code `belayline_denied`, data {status: 403, verb, tier}
      *   - approval required: code `approval_required`, data {status: 202, verb, tier, approval_id}
      * On the approval-required error null-valued data keys are dropped, so `tier` and
      * `approval_id` may be absent; the deny error always carries all three keys.
@@ -84,8 +84,8 @@ final class Verdict
 
         if (Outcome::Deny === $this->decision->outcome) {
             return new WP_Error(
-                'agent_safety_denied',
-                sprintf('Blocked by SenroGate (%s): %s', $this->pack->name, $this->decision->reason),
+                'belayline_denied',
+                sprintf('Blocked by Belayline Agent Governance (%s): %s', $this->pack->name, $this->decision->reason),
                 ['status' => 403, 'verb' => $this->verb, 'tier' => $this->decision->tier?->value]
             );
         }
@@ -107,11 +107,11 @@ final class Verdict
     {
         return match ($variant) {
             /* translators: %1$s the verb (ability id) that needs re-approval */
-            ApprovalMessageVariant::Stale => __('"%1$s" needs human approval again: the target changed after the earlier approval, so a new request has been filed for review.', 'senrogate'),
+            ApprovalMessageVariant::Stale => __('"%1$s" needs human approval again: the target changed after the earlier approval, so a new request has been filed for review.', 'belayline-agent-governance'),
             /* translators: %1$s the verb (ability id) that needs re-approval */
-            ApprovalMessageVariant::SiteMoved => __('"%1$s" needs human approval again: the site\'s address changed after the earlier approval, so a new request has been filed for review.', 'senrogate'),
+            ApprovalMessageVariant::SiteMoved => __('"%1$s" needs human approval again: the site\'s address changed after the earlier approval, so a new request has been filed for review.', 'belayline-agent-governance'),
             /* translators: %1$s the verb (ability id) awaiting approval */
-            ApprovalMessageVariant::Base => __('"%1$s" needs human approval before it can run. A request has been filed for review.', 'senrogate'),
+            ApprovalMessageVariant::Base => __('"%1$s" needs human approval before it can run. A request has been filed for review.', 'belayline-agent-governance'),
         };
     }
 }

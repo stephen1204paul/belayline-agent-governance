@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder;
-use Specflux\AgentSafety\Plugin\Support\PauseSwitch;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Plugin\Support\AdminChangeRecorder;
+use Belayline\Plugin\Support\PauseSwitch;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
 
 /**
  * The switch itself: what the option and the filter each can and cannot do,
  * and the audit row every throw and lift leaves. What a pause does to a
- * governed call is proven in {@see \Specflux\AgentSafety\Plugin\Tests\Verdict\VerdictPipelineStopsTest}.
+ * governed call is proven in {@see \Belayline\Plugin\Tests\Verdict\VerdictPipelineStopsTest}.
  */
 final class PauseSwitchTest extends TestCase
 {

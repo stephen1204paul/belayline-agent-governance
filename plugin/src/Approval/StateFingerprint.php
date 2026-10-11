@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Approval;
+namespace Belayline\Plugin\Approval;
 
-use Specflux\AgentSafety\Approval\ApprovalBinding;
+use Belayline\Approval\ApprovalBinding;
 
 /**
  * Turns one {@see StateProbe} result into the sha256 fingerprint stored on

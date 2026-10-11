@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Support\RateCounter;
+use Belayline\Plugin\Support\RateCounter;
 
 /**
  * Exercises the fixed-window bucketing itself (backlog #16), independent of
- * the allow/deny arithmetic ({@see \Specflux\AgentSafety\Packs\LimitPolicyTest}
+ * the allow/deny arithmetic ({@see \Belayline\Packs\LimitPolicyTest}
  * covers that in core). Time is frozen/advanced via $GLOBALS['wpas_test_time'],
  * which Support\RateCounter's bare time() call resolves to in this test run
  * (see tests/stubs/wpas-clock.php).

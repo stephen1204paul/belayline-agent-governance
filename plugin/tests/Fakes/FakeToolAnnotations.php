@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Fakes;
+namespace Belayline\Plugin\Tests\Fakes;
 
 /**
  * Minimal stand-in for mcp-adapter's ToolAnnotations DTO, duck-typed to the
- * two accessors {@see \Specflux\AgentSafety\Plugin\Hooks\PreToolCallGate}
+ * two accessors {@see \Belayline\Plugin\Hooks\PreToolCallGate}
  * reads: getReadOnlyHint() and getDestructiveHint().
  */
 final class FakeToolAnnotations

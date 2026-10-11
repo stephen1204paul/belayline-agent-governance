@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
 use CounterTableWpdb;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Support\RateCounter;
-use Specflux\AgentSafety\Plugin\Support\RateLimitGate;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Support\RateCounter;
+use Belayline\Plugin\Support\RateLimitGate;
 
 /**
  * Distinct simulated calls pass distinct args on purpose: admit() memoizes the

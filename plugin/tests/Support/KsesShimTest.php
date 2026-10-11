@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
 
@@ -75,7 +75,7 @@ final class KsesShimTest extends TestCase
             'mailto' => ['mailto:ops@example.test'],
             'root relative' => ['/wp-admin/post.php?post=42&action=edit'],
             'relative' => ['post.php?post=42'],
-            'query only' => ['?page=agent-safety-pending'],
+            'query only' => ['?page=belayline-pending'],
             'anchor only' => ['#row-42'],
             'protocol relative' => ['//example.test/preview'],
             'colon later in a relative path' => ['/preview?next=javascript:alert(1)'],

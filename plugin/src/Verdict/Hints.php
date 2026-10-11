@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Verdict;
+namespace Belayline\Plugin\Verdict;
 
 /**
  * A tool's or ability's SELF-REPORTED behavioural annotations, as the adapter
@@ -12,7 +12,7 @@ namespace Specflux\AgentSafety\Plugin\Verdict;
  *   - destructive: a call our own classifier placed below the approval tier is
  *     treated as though it HAD classified as irreversible.
  *   - readonly: never relaxes anything; its only effect is the core
- *     {@see \Specflux\AgentSafety\Policy\TierClassifier::isReadonlyButWrites()}
+ *     {@see \Belayline\Policy\TierClassifier::isReadonlyButWrites()}
  *     rule, which can only ADD a "readonly_but_writes" denial.
  */
 final class Hints

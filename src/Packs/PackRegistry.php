@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Packs;
+namespace Belayline\Packs;
 
 /**
  * The catalog of Capability Packs plus the credential→pack bindings.
@@ -10,7 +10,7 @@ namespace Specflux\AgentSafety\Packs;
  * Pure core: holds named {@see Pack} definitions and a map of subject (a
  * namespaced credential/role token id, e.g. "wc:key_7" or "role:editor") →
  * pack name, and resolves a request's subject to exactly one pack. The host
- * {@see \Specflux\AgentSafety\Plugin\Support\PackResolver} builds one of these
+ * {@see \Belayline\Plugin\Support\PackResolver} builds one of these
  * from persisted bindings; this class stays WP-free so the resolution rule is
  * unit-testable. Integrations contribute additional packs via {@see register()}.
  *
@@ -83,7 +83,7 @@ final class PackRegistry
      * Add (or overwrite by name) a pack contributed by an integration on top of
      * the built-in catalog — e.g. a WooCommerce module registering its own
      * capability packs. Overwriting is intentional: a later registration for
-     * the same name replaces the earlier one, same as {@see \Specflux\AgentSafety\Policy\VerbCatalog::register()}.
+     * the same name replaces the earlier one, same as {@see \Belayline\Policy\VerbCatalog::register()}.
      */
     public function register(Pack $pack): void
     {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Identity;
+namespace Belayline\Plugin\Identity;
 
 use WP_Application_Passwords;
 
@@ -50,6 +50,6 @@ final class ApplicationPasswordIdentity implements IdentityProvider
 
     public function label(): string
     {
-        return __('Application Passwords', 'senrogate');
+        return __('Application Passwords', 'belayline-agent-governance');
     }
 }

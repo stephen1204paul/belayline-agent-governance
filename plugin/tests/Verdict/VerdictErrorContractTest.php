@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Verdict;
+namespace Belayline\Plugin\Tests\Verdict;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Gate\Decision;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Tests\Fixtures\VerdictErrorFixture;
-use Specflux\AgentSafety\Plugin\Verdict\Verdict;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Gate\Decision;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Tests\Fixtures\VerdictErrorFixture;
+use Belayline\Plugin\Verdict\Verdict;
+use Belayline\Policy\Tier;
 
 /**
  * Producer side of the frozen WP_Error contract: {@see Verdict::error()} must
- * emit exactly the shapes in {@see VerdictErrorFixture}. SenroFlux runs the
+ * emit exactly the shapes in {@see VerdictErrorFixture}. Site Agent runs the
  * consumer side against the same fixture file.
  */
 final class VerdictErrorContractTest extends TestCase

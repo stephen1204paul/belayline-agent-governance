@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Approval;
+namespace Belayline\Approval;
 
 /**
  * Lifecycle of one pre-approval {@see Grant}.

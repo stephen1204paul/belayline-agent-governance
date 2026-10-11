@@ -2,27 +2,27 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Verdict;
+namespace Belayline\Plugin\Tests\Verdict;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Gate\Gate;
-use Specflux\AgentSafety\Gate\Outcome;
-use Specflux\AgentSafety\Packs\ArgumentCap;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Support\DecisionRecorder;
-use Specflux\AgentSafety\Plugin\Support\GrantRecorder;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeApprovalStore;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeGrantStore;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeIdentityProvider;
-use Specflux\AgentSafety\Plugin\Verdict\GrantGate;
-use Specflux\AgentSafety\Plugin\Verdict\Hints;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictMode;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Gate\Gate;
+use Belayline\Gate\Outcome;
+use Belayline\Packs\ArgumentCap;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Support\DecisionRecorder;
+use Belayline\Plugin\Support\GrantRecorder;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\FakeApprovalStore;
+use Belayline\Plugin\Tests\Fakes\FakeGrantStore;
+use Belayline\Plugin\Tests\Fakes\FakeIdentityProvider;
+use Belayline\Plugin\Verdict\GrantGate;
+use Belayline\Plugin\Verdict\Hints;
+use Belayline\Plugin\Verdict\VerdictMode;
+use Belayline\Plugin\Verdict\VerdictPipeline;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 
 /**
  * The pre-approval grant branch as the PIPELINE sees it (AS-12): when a grant
@@ -36,7 +36,7 @@ use Specflux\AgentSafety\Policy\VerbCatalog;
 final class VerdictPipelineGrantTest extends TestCase
 {
     private const SUBJECT = 'test:token';
-    private const CORRELATION = 'senroflux:run:7';
+    private const CORRELATION = 'example:run:7';
     private const VERB = 'demo/publish';
 
     protected function setUp(): void
@@ -44,15 +44,15 @@ final class VerdictPipelineGrantTest extends TestCase
         $GLOBALS['wpas_test_options'] = [];
         $GLOBALS['wpas_test_transients'] = [];
         \CounterTableWpdb::install();
-        remove_all_filters('agent_safety_enable_grants');
-        remove_all_filters('agent_safety_grant_eligible');
+        remove_all_filters('belayline_enable_grants');
+        remove_all_filters('belayline_grant_eligible');
         RequestContext::reset();
     }
 
     protected function tearDown(): void
     {
-        remove_all_filters('agent_safety_enable_grants');
-        remove_all_filters('agent_safety_grant_eligible');
+        remove_all_filters('belayline_enable_grants');
+        remove_all_filters('belayline_grant_eligible');
         RequestContext::reset();
         $GLOBALS['wpas_test_options'] = [];
         $GLOBALS['wpas_test_transients'] = [];
@@ -61,8 +61,8 @@ final class VerdictPipelineGrantTest extends TestCase
 
     private function enableGrants(bool $eligible = true): void
     {
-        add_filter('agent_safety_enable_grants', static fn (): bool => true);
-        add_filter('agent_safety_grant_eligible', static fn (): bool => $eligible);
+        add_filter('belayline_enable_grants', static fn (): bool => true);
+        add_filter('belayline_grant_eligible', static fn (): bool => $eligible);
     }
 
     /** A pack that allows the demo verbs outright but gates tier 2 on approval. */
@@ -105,7 +105,7 @@ final class VerdictPipelineGrantTest extends TestCase
         array $args = ['post_id' => 42],
         VerdictMode $mode = VerdictMode::Claim,
         ?Pack $pack = null,
-    ): \Specflux\AgentSafety\Plugin\Verdict\Verdict {
+    ): \Belayline\Plugin\Verdict\Verdict {
         return RequestContext::withCorrelation(
             self::CORRELATION,
             fn () => $pipeline->judge(self::VERB, $args, $pack ?? $this->pack(), Hints::none(), $mode)
@@ -147,7 +147,7 @@ final class VerdictPipelineGrantTest extends TestCase
     {
         // The headline fail-closed property: grants ON, a perfectly matching
         // grant present, no host hook — and the call still parks for a human.
-        add_filter('agent_safety_enable_grants', static fn (): bool => true);
+        add_filter('belayline_enable_grants', static fn (): bool => true);
         $approvals = new FakeApprovalStore();
         $grants = new FakeGrantStore();
         $grantId = $grants->issue(self::VERB, 2, self::SUBJECT, self::CORRELATION, 5, null);
@@ -168,7 +168,7 @@ final class VerdictPipelineGrantTest extends TestCase
         $pipeline = $this->pipeline($approvals, $grants);
         $approvalId = $approvals->seedApproved(
             self::VERB,
-            \Specflux\AgentSafety\Approval\ApprovalBinding::hash(self::VERB, ['post_id' => 42]),
+            \Belayline\Approval\ApprovalBinding::hash(self::VERB, ['post_id' => 42]),
             self::SUBJECT,
         );
 
@@ -304,11 +304,11 @@ final class VerdictPipelineGrantTest extends TestCase
         $this->enableGrants();
         $approvals = new FakeApprovalStore();
         $grants = new FakeGrantStore();
-        $runOne = $grants->issue(self::VERB, 2, self::SUBJECT, 'senroflux:run:1', 5, null);
+        $runOne = $grants->issue(self::VERB, 2, self::SUBJECT, 'example:run:1', 5, null);
         $pipeline = $this->pipeline($approvals, $grants);
 
         $inRunOne = RequestContext::withCorrelation(
-            'senroflux:run:1',
+            'example:run:1',
             fn () => $pipeline->judge(self::VERB, ['post_id' => 1], $this->pack(), Hints::none(), VerdictMode::Claim)
         );
         RequestContext::reset();
@@ -316,7 +316,7 @@ final class VerdictPipelineGrantTest extends TestCase
             new FakeIdentityProvider(currentTokens: [self::SUBJECT]),
         ]));
         $inRunTwo = RequestContext::withCorrelation(
-            'senroflux:run:2',
+            'example:run:2',
             fn () => $pipeline->judge(self::VERB, ['post_id' => 2], $this->pack(), Hints::none(), VerdictMode::Claim)
         );
 

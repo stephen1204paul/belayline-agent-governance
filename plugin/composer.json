@@ -1,11 +1,11 @@
 {
-    "name": "specflux/agent-safety",
-    "description": "Thin WordPress plugin host for the SenroGate core: a governed safety/audit layer for AI agent tool calls. Wires the security package into mcp_adapter_* hooks and wp-admin, with WooCommerce supported as a capability pack.",
+    "name": "stephen1204paul/belayline-agent-governance",
+    "description": "Thin WordPress plugin host for the Belayline Agent Governance core: a governed safety/audit layer for AI agent tool calls. Wires the security package into mcp_adapter_* hooks and wp-admin, with WooCommerce supported as a capability pack.",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
     "require": {
         "php": ">=8.1",
-        "specflux/agent-safety-core": "@dev"
+        "stephen1204paul/belayline-core": "@dev"
     },
     "repositories": [
         {
@@ -16,7 +16,7 @@
     ],
     "autoload": {
         "psr-4": {
-            "Specflux\\AgentSafety\\Plugin\\": "src/"
+            "Belayline\\Plugin\\": "src/"
         }
     },
     "config": {

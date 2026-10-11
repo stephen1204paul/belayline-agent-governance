@@ -11,7 +11,7 @@ REPO_ROOT="$(cd "$DIR/../.." && pwd)"
 # deviations note.
 RESEARCH_MCP_ADAPTER="$(cd "$REPO_ROOT/../research/mcp-adapter" && pwd)"
 
-WORK=/tmp/agsafe-release-0.4-proof
+WORK=/tmp/belayline-release-0.4-proof
 
 # A previous run's `npx @wordpress/env stop` (deliberately never `destroy`,
 # so an interactive re-run can poke at it) leaves the SAME database/files
@@ -40,8 +40,8 @@ fail() {
 
 STOPPED=0
 cleanup() {
-    if [ "${AGSAFE_KEEP_ENV:-}" = "1" ]; then
-        log "AGSAFE_KEEP_ENV=1 set — leaving wp-env running."
+    if [ "${BELAYLINE_KEEP_ENV:-}" = "1" ]; then
+        log "BELAYLINE_KEEP_ENV=1 set — leaving wp-env running."
         return
     fi
     if [ "$STOPPED" -eq 1 ]; then
@@ -63,9 +63,9 @@ check_disk_or_die
 # ---------------------------------------------------------------------------
 log "== building the 0.4.0 zip =="
 (cd "$REPO_ROOT" && bin/build-zip.sh --restore-dev-deps)
-VERSION="$(awk '/^[[:space:]]*\*[[:space:]]*Version:/ {print $NF; exit}' "$REPO_ROOT/plugin/senrogate.php")"
+VERSION="$(awk '/^[[:space:]]*\*[[:space:]]*Version:/ {print $NF; exit}' "$REPO_ROOT/plugin/belayline-agent-governance.php")"
 [ -n "$VERSION" ] || fail "could not read Version: from plugin header"
-ZIP_040="$REPO_ROOT/senrogate-${VERSION}.zip"
+ZIP_040="$REPO_ROOT/belayline-agent-governance-${VERSION}.zip"
 [ -f "$ZIP_040" ] || fail "expected zip not found: $ZIP_040"
 log "0.4.0 zip: $ZIP_040"
 
@@ -116,7 +116,7 @@ cat > "$WORK/.wp-env.json" <<EOF
         "$WORK/mcp-adapter-pinned"
     ],
     "mappings": {
-        "wp-content/mu-plugins/agsafe-release-fixture.php": "$DIR/release-0.4/agsafe-release-fixture.php"
+        "wp-content/mu-plugins/belayline-release-fixture.php": "$DIR/release-0.4/belayline-release-fixture.php"
     },
     "config": {
         "WP_DEBUG": true,
@@ -194,20 +194,20 @@ cli_exec "$CLI_NAME" plugin delete agent-safety
 # BUG FOUND AND FIXED (post-review): deleting the plugin's FILES drops
 # nothing from the database — P1a's fleeting 0.4.0 activation just above
 # already ran Schema::install() once, which creates the (empty) NEW
-# `agsafe_grants` table via dbDelta. If that empty table survives into P2's
+# `belayline_grants` table via dbDelta. If that empty table survives into P2's
 # 0.3 phase, `Schema::renameLegacyGrantsTable()` on the LATER 0.3->0.4.0
-# upgrade sees BOTH the legacy `agent_safety_grants` (0.3's real data) and
-# the new `agsafe_grants` (P1a's empty leftover) already present, treats it
+# upgrade sees BOTH the legacy `belayline_grants` (0.3's real data) and
+# the new `belayline_grants` (P1a's empty leftover) already present, treats it
 # as "a crashed earlier rename" (its own documented, correct behavior for
 # that ambiguous case — not a plugin defect) and refuses to migrate,
 # stranding P2's seeded grant in the OLD table forever. In the real world
 # nobody activates 0.4.0 before ever having run 0.3.x, so this ordering
 # artifact is specific to this harness reusing one site for both P1 and P2;
-# fix it here by dropping every table/option Agent Safety's fleeting P1a
+# fix it here by dropping every table/option Belayline's fleeting P1a
 # activation could have created, so P2 begins from a DB state indistinguishable
 # from "0.4.0 was never on this site" — the real-world precondition P2 means
 # to test.
-cli_exec "$CLI_NAME" eval 'global $wpdb; foreach (["agsafe_audit_log", "agsafe_approvals", "agsafe_grants"] as $t) { $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}$t"); } $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE \"agsafe%\"");'
+cli_exec "$CLI_NAME" eval 'global $wpdb; foreach (["belayline_audit_log", "belayline_approvals", "belayline_grants"] as $t) { $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}$t"); } $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE \"belayline%\"");'
 
 # ---------------------------------------------------------------------------
 # 13. P2 setup (0.3 phase).
@@ -216,11 +216,11 @@ log "== P2 setup: installing 0.3.0 and seeding data =="
 docker cp "$ZIP_030" "$CLI_NAME:/tmp/agent-safety-030.zip"
 cli_exec "$CLI_NAME" plugin install /tmp/agent-safety-030.zip --activate
 
-docker cp "$DIR/release-0.4/provision-woo.php" "$CLI_NAME:/tmp/agsafe-provision-woo.php"
-docker cp "$DIR/release-0.4/query.php" "$CLI_NAME:/tmp/agsafe-query.php"
-docker cp "$DIR/release-0.4/seed-shadow-and-grant.php" "$CLI_NAME:/tmp/agsafe-seed-shadow-and-grant.php"
+docker cp "$DIR/release-0.4/provision-woo.php" "$CLI_NAME:/tmp/belayline-provision-woo.php"
+docker cp "$DIR/release-0.4/query.php" "$CLI_NAME:/tmp/belayline-query.php"
+docker cp "$DIR/release-0.4/seed-shadow-and-grant.php" "$CLI_NAME:/tmp/belayline-seed-shadow-and-grant.php"
 
-PROVISION1_JSON="$(cli_exec "$CLI_NAME" eval-file /tmp/agsafe-provision-woo.php)"
+PROVISION1_JSON="$(cli_exec "$CLI_NAME" eval-file /tmp/belayline-provision-woo.php)"
 echo "$PROVISION1_JSON"
 
 ADMIN_USER_ID="$(cli_exec "$CLI_NAME" user get admin --field=ID 2>/dev/null || cli_exec "$CLI_NAME" user get "$ADMIN_LOGIN" --field=ID)"
@@ -260,7 +260,7 @@ WC_CONSUMER_KEY="$WC_CONSUMER_KEY" WC_CONSUMER_SECRET="$WC_CONSUMER_SECRET" FIRS
   const pid = parseInt(process.env.FIRST_PRODUCT_ID, 10);
   (async () => {
     const headers = { "X-MCP-API-Key": `${ck}:${cs}`, "Content-Type": "application/json", Accept: "application/json, text/event-stream", Connection: "close" };
-    const init = await fetch(MCP, { method: "POST", headers, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "agsafe-p2-setup", version: "0.1.0" } } }) });
+    const init = await fetch(MCP, { method: "POST", headers, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "belayline-p2-setup", version: "0.1.0" } } }) });
     const sid = init.headers.get("mcp-session-id");
     const h2 = Object.assign({}, headers, { "Mcp-Session-Id": sid, "MCP-Protocol-Version": "2025-06-18" });
     await fetch(MCP, { method: "POST", headers: h2, body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) });
@@ -270,11 +270,11 @@ WC_CONSUMER_KEY="$WC_CONSUMER_KEY" WC_CONSUMER_SECRET="$WC_CONSUMER_SECRET" FIRS
 '
 
 sleep 2
-P2_PENDING_APPROVAL_ID="$(docker exec -e AGSAFE_SQL="SELECT approval_id FROM $(cli_exec "$CLI_NAME" config get table_prefix)agsafe_approvals WHERE verb='woocommerce/products-delete' AND status='pending' ORDER BY id DESC LIMIT 1" --user www-data "$CLI_NAME" wp eval-file /tmp/agsafe-query.php | tail -1 | node -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{const r=JSON.parse(d);console.log(r[0]?r[0].approval_id:"");})')"
+P2_PENDING_APPROVAL_ID="$(docker exec -e BELAYLINE_SQL="SELECT approval_id FROM $(cli_exec "$CLI_NAME" config get table_prefix)belayline_approvals WHERE verb='woocommerce/products-delete' AND status='pending' ORDER BY id DESC LIMIT 1" --user www-data "$CLI_NAME" wp eval-file /tmp/belayline-query.php | tail -1 | node -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{const r=JSON.parse(d);console.log(r[0]?r[0].approval_id:"");})')"
 log "P2 pending approval id: $P2_PENDING_APPROVAL_ID"
 
 log "== P2: filing a second approval and approving it (approved-unclaimed) =="
-PROVISION2_JSON="$(docker exec -e AGSAFE_PRODUCT_NAME="agsafe-p2-second-$(date +%s)" --user www-data "$CLI_NAME" wp eval-file /tmp/agsafe-provision-woo.php)"
+PROVISION2_JSON="$(docker exec -e BELAYLINE_PRODUCT_NAME="belayline-p2-second-$(date +%s)" --user www-data "$CLI_NAME" wp eval-file /tmp/belayline-provision-woo.php)"
 SECOND_PRODUCT_ID="$(echo "$PROVISION2_JSON" | tail -1 | node -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{console.log(JSON.parse(d).product_id);})')"
 
 # Same argv-vs-env fix as the first delete call above.
@@ -285,7 +285,7 @@ WC_CONSUMER_KEY="$WC_CONSUMER_KEY" WC_CONSUMER_SECRET="$WC_CONSUMER_SECRET" SECO
   const pid = parseInt(process.env.SECOND_PRODUCT_ID, 10);
   (async () => {
     const headers = { "X-MCP-API-Key": `${ck}:${cs}`, "Content-Type": "application/json", Accept: "application/json, text/event-stream", Connection: "close" };
-    const init = await fetch(MCP, { method: "POST", headers, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "agsafe-p2-setup", version: "0.1.0" } } }) });
+    const init = await fetch(MCP, { method: "POST", headers, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "belayline-p2-setup", version: "0.1.0" } } }) });
     const sid = init.headers.get("mcp-session-id");
     const h2 = Object.assign({}, headers, { "Mcp-Session-Id": sid, "MCP-Protocol-Version": "2025-06-18" });
     await fetch(MCP, { method: "POST", headers: h2, body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) });
@@ -296,7 +296,7 @@ WC_CONSUMER_KEY="$WC_CONSUMER_KEY" WC_CONSUMER_SECRET="$WC_CONSUMER_SECRET" SECO
 
 sleep 2
 TABLE_PREFIX="$(cli_exec "$CLI_NAME" config get table_prefix)"
-P2_SECOND_PENDING_ID="$(docker exec -e AGSAFE_SQL="SELECT approval_id FROM ${TABLE_PREFIX}agsafe_approvals WHERE verb='woocommerce/products-delete' AND status='pending' ORDER BY id DESC LIMIT 1" --user www-data "$CLI_NAME" wp eval-file /tmp/agsafe-query.php | tail -1 | node -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{const r=JSON.parse(d);console.log(r[0]?r[0].approval_id:"");})')"
+P2_SECOND_PENDING_ID="$(docker exec -e BELAYLINE_SQL="SELECT approval_id FROM ${TABLE_PREFIX}belayline_approvals WHERE verb='woocommerce/products-delete' AND status='pending' ORDER BY id DESC LIMIT 1" --user www-data "$CLI_NAME" wp eval-file /tmp/belayline-query.php | tail -1 | node -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{const r=JSON.parse(d);console.log(r[0]?r[0].approval_id:"");})')"
 
 # BUG FOUND AND FIXED (post-review): `Api\Approvals::approve()`'s
 # `authorized()` gate checks `current_user_can('manage_options')` for
@@ -307,10 +307,10 @@ P2_SECOND_PENDING_ID="$(docker exec -e AGSAFE_SQL="SELECT approval_id FROM ${TAB
 # `approve()` always returned false, leaving the "approved-unclaimed"
 # seed permanently `pending`. Fixed by setting the current user to the
 # granting admin first.
-APPROVE_SCRIPT="<?php defined('ABSPATH') || exit; wp_set_current_user((int) getenv('AGSAFE_APPROVE_BY')); \$ok = agent_safety()->approvals()->approve(getenv('AGSAFE_APPROVE_ID'), (int) getenv('AGSAFE_APPROVE_BY')); echo \$ok ? 'ok' : 'fail';"
+APPROVE_SCRIPT="<?php defined('ABSPATH') || exit; wp_set_current_user((int) getenv('BELAYLINE_APPROVE_BY')); \$ok = belayline()->approvals()->approve(getenv('BELAYLINE_APPROVE_ID'), (int) getenv('BELAYLINE_APPROVE_BY')); echo \$ok ? 'ok' : 'fail';"
 echo "$APPROVE_SCRIPT" > "$WORK/approve-p2.php"
-docker cp "$WORK/approve-p2.php" "$CLI_NAME:/tmp/agsafe-approve-p2.php"
-docker exec -e AGSAFE_APPROVE_ID="$P2_SECOND_PENDING_ID" -e AGSAFE_APPROVE_BY="$ADMIN_USER_ID" --user www-data "$CLI_NAME" wp eval-file /tmp/agsafe-approve-p2.php
+docker cp "$WORK/approve-p2.php" "$CLI_NAME:/tmp/belayline-approve-p2.php"
+docker exec -e BELAYLINE_APPROVE_ID="$P2_SECOND_PENDING_ID" -e BELAYLINE_APPROVE_BY="$ADMIN_USER_ID" --user www-data "$CLI_NAME" wp eval-file /tmp/belayline-approve-p2.php
 P2_APPROVED_APPROVAL_ID="$P2_SECOND_PENDING_ID"
 log "P2 approved-unclaimed approval id: $P2_APPROVED_APPROVAL_ID"
 
@@ -329,14 +329,14 @@ log "== P2: seeding a grant + shadow window via seed-shadow-and-grant.php =="
 # credential actually calls through. `readonly-analyst` (WooPacks.php) has
 # no credential bound to it anywhere in this harness.
 docker exec \
-    -e AGSAFE_GRANT_VERB="woocommerce/products-delete" \
-    -e AGSAFE_GRANT_SUBJECT="wc:${WC_KEY_ID}" \
-    -e AGSAFE_GRANT_CORRELATION="agsafe-p2-e2e" \
-    -e AGSAFE_GRANT_COUNT="3" \
-    -e AGSAFE_GRANT_BY_USER_ID="$ADMIN_USER_ID" \
-    -e AGSAFE_SHADOW_PACK="readonly-analyst" \
-    -e AGSAFE_SHADOW_TTL_SECONDS="3600" \
-    --user www-data "$CLI_NAME" wp eval-file /tmp/agsafe-seed-shadow-and-grant.php
+    -e BELAYLINE_GRANT_VERB="woocommerce/products-delete" \
+    -e BELAYLINE_GRANT_SUBJECT="wc:${WC_KEY_ID}" \
+    -e BELAYLINE_GRANT_CORRELATION="belayline-p2-e2e" \
+    -e BELAYLINE_GRANT_COUNT="3" \
+    -e BELAYLINE_GRANT_BY_USER_ID="$ADMIN_USER_ID" \
+    -e BELAYLINE_SHADOW_PACK="readonly-analyst" \
+    -e BELAYLINE_SHADOW_TTL_SECONDS="3600" \
+    --user www-data "$CLI_NAME" wp eval-file /tmp/belayline-seed-shadow-and-grant.php
 
 # ---------------------------------------------------------------------------
 # 14. P2 upgrade: delete files (DB rows survive), install 0.4.0.
@@ -351,7 +351,7 @@ cli_exec "$CLI_NAME" plugin install /tmp/agent-safety-040.zip --activate
 # 15. Provision what P3-P7 need: admin app password + second WP user pack.
 # ---------------------------------------------------------------------------
 log "== provisioning admin app password + P5 second principal binding =="
-PROVISION3_JSON="$(docker exec -e AGSAFE_MINT_APP_PASSWORD=1 -e AGSAFE_APP_PASSWORD_PACK="woo-default-agent" --user www-data "$CLI_NAME" wp eval-file /tmp/agsafe-provision-woo.php)"
+PROVISION3_JSON="$(docker exec -e BELAYLINE_MINT_APP_PASSWORD=1 -e BELAYLINE_APP_PASSWORD_PACK="woo-default-agent" --user www-data "$CLI_NAME" wp eval-file /tmp/belayline-provision-woo.php)"
 echo "$PROVISION3_JSON"
 export PROVISION3_JSON
 P3_STATE="$(node -e '
@@ -378,7 +378,7 @@ cat > "$WORK/state.json" <<EOF
   "admin_app_password_uuid": "$ADMIN_APP_PASSWORD_UUID",
   "admin_user_id": "$ADMIN_USER_ID",
   "admin_password": "$ADMIN_PASSWORD",
-  "shop_manager_email": "agsafe_shop_manager@example.test",
+  "shop_manager_email": "belayline_shop_manager@example.test",
   "p2_pending_approval_id": "$P2_PENDING_APPROVAL_ID",
   "p2_approved_approval_id": "$P2_APPROVED_APPROVAL_ID"
 }
@@ -392,7 +392,7 @@ cat "$WORK/state.json"
 # ---------------------------------------------------------------------------
 log "== running run.js (P2 assertions, P3-P8) =="
 set +e
-AGSAFE_STATE_PATH="$WORK/state.json" AGSAFE_RESULTS_PATH="$WORK/results.json" node "$DIR/release-0.4/run.js"
+BELAYLINE_STATE_PATH="$WORK/state.json" BELAYLINE_RESULTS_PATH="$WORK/results.json" node "$DIR/release-0.4/run.js"
 RUN_JS_EXIT=$?
 set -e
 log "run.js exit code: $RUN_JS_EXIT"
@@ -413,7 +413,7 @@ P1B_EXIT=$?
 set -e
 echo "$P1B_OUTPUT"
 P1B_OK=0
-if [ "$P1B_EXIT" -ne 0 ] || echo "$P1B_OUTPUT" | grep -q "Agent Safety does not support WordPress multisite. It was not activated."; then
+if [ "$P1B_EXIT" -ne 0 ] || echo "$P1B_OUTPUT" | grep -q "Belayline does not support WordPress multisite. It was not activated."; then
     P1B_OK=1
 fi
 if [ "$P1B_OK" -eq 1 ]; then

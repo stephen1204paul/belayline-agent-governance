@@ -2,29 +2,29 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Verdict;
+namespace Belayline\Plugin\Tests\Verdict;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Approval\ApprovalBinding;
-use Specflux\AgentSafety\Gate\Gate;
-use Specflux\AgentSafety\Gate\Outcome;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Approval\StateFingerprint;
-use Specflux\AgentSafety\Plugin\Approval\StateProbe;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Support\DecisionRecorder;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Support\ShadowMode;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeApprovalStore;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeIdentityProvider;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
-use Specflux\AgentSafety\Plugin\Verdict\ApprovalMessageVariant;
-use Specflux\AgentSafety\Plugin\Verdict\Hints;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictMode;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Approval\ApprovalBinding;
+use Belayline\Gate\Gate;
+use Belayline\Gate\Outcome;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Approval\StateFingerprint;
+use Belayline\Plugin\Approval\StateProbe;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Support\DecisionRecorder;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Support\ShadowMode;
+use Belayline\Plugin\Tests\Fakes\FakeApprovalStore;
+use Belayline\Plugin\Tests\Fakes\FakeIdentityProvider;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Plugin\Verdict\ApprovalMessageVariant;
+use Belayline\Plugin\Verdict\Hints;
+use Belayline\Plugin\Verdict\VerdictMode;
+use Belayline\Plugin\Verdict\VerdictPipeline;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 
 /**
  * AS-6: the state-fingerprint behaviour {@see VerdictPipeline} adds on top of
@@ -169,7 +169,7 @@ final class VerdictPipelineFingerprintTest extends TestCase
 
         $error = $verdict->error();
         $this->assertNotNull($error);
-        $this->assertSame('agent_safety_denied', $error->get_error_code());
+        $this->assertSame('belayline_denied', $error->get_error_code());
     }
 
     public function testProbeReturningNullDeniesStateUnverifiableAtClaimTimeAndReservesNothing(): void
@@ -206,7 +206,7 @@ final class VerdictPipelineFingerprintTest extends TestCase
         $this->assertSame(ApprovalMessageVariant::Base, $this->variantOf($verdict));
     }
 
-    private function variantOf(\Specflux\AgentSafety\Plugin\Verdict\Verdict $verdict): ApprovalMessageVariant
+    private function variantOf(\Belayline\Plugin\Verdict\Verdict $verdict): ApprovalMessageVariant
     {
         // No public accessor for the variant beyond error()'s rendered text;
         // the base message is asserted directly here rather than reaching

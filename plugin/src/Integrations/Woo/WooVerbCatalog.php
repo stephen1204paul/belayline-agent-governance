@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\Woo;
+namespace Belayline\Plugin\Integrations\Woo;
 
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Policy\Tier;
 
 /**
  * OUR tier assignments for WooCommerce verbs, contributed into the
- * core {@see \Specflux\AgentSafety\Policy\VerbCatalog} by {@see WooIntegration::register()}.
+ * core {@see \Belayline\Policy\VerbCatalog} by {@see WooIntegration::register()}.
  * This is authoritative and overrides any self-reported readonly/destructive
  * annotation: if a Woo ability claims read-only but appears here as a
  * write, the gate fails closed.

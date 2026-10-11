@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Support\WindowCounter;
+use Belayline\Plugin\Support\WindowCounter;
 
 /**
  * The generic fixed-window bucket the tripwires count in, with the same
@@ -69,7 +69,7 @@ final class WindowCounterTest extends TestCase
 
         $this->assertNotSame([], $GLOBALS['wpdb']->rows);
         foreach (array_keys($GLOBALS['wpdb']->rows) as $key) {
-            $this->assertStringStartsWith('agsafe_win_', $key);
+            $this->assertStringStartsWith('belayline_win_', $key);
             $this->assertLessThanOrEqual(64, strlen($key));
         }
     }

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Fakes;
+namespace Belayline\Plugin\Tests\Fakes;
 
 /**
  * Minimal stand-in for mcp-adapter's McpTool, duck-typed to the exact accessor
- * chain {@see \Specflux\AgentSafety\Plugin\Hooks\PreToolCallGate} reads:
+ * chain {@see \Belayline\Plugin\Hooks\PreToolCallGate} reads:
  * get_protocol_dto()->getAnnotations()?->getReadOnlyHint()/getDestructiveHint().
  * The real WP\MCP\Domain\Tools\McpTool is `final` with a private constructor
  * (factory methods only), so it cannot be instantiated or mocked directly in a
@@ -17,7 +17,7 @@ namespace Specflux\AgentSafety\Plugin\Tests\Fakes;
  * tell the difference.
  *
  * Also stands in for the `get_observability_context()` accessor
- * {@see \Specflux\AgentSafety\Plugin\Hooks\ToolCallResultRedactor} reads —
+ * {@see \Belayline\Plugin\Hooks\ToolCallResultRedactor} reads —
  * upstream's `McpTool::fromAbility()` puts the real ability id there for any
  * ability-backed tool (`['ability_name' => $ability->get_name(), ...]`).
  */

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Approval;
+namespace Belayline\Plugin\Approval;
 
 /**
  * The seam a pre-approval grant uses to turn itself into ONE already-approved
- * {@see \Specflux\AgentSafety\Approval\ApprovalStore} record, bound to the real
+ * {@see \Belayline\Approval\ApprovalStore} record, bound to the real
  * call arguments (AS-12).
  *
  * Deliberately a HOST interface, not part of the core ApprovalStore contract:
@@ -27,7 +27,7 @@ interface ApprovalMinter
      * return its id, or null when nothing was written.
      *
      * @param string  $verb          The governed verb.
-     * @param string  $argsHash      {@see \Specflux\AgentSafety\Approval\ApprovalBinding::hash()} of the REAL args.
+     * @param string  $argsHash      {@see \Belayline\Approval\ApprovalBinding::hash()} of the REAL args.
      * @param string  $summary       Human-facing summary (already through the AS-11 filter).
      * @param string  $correlationId The scope the grant was matched in.
      * @param string  $auditEventId  Audit event this mint is cross-referenced by.

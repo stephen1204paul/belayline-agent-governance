@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
 /**
  * Fixed-window day totals backing a Pack's argument-aware caps (roadmap 0.2
- * "spend limits"): the sums {@see \Specflux\AgentSafety\Packs\ArgumentCapPolicy}
+ * "spend limits"): the sums {@see \Belayline\Packs\ArgumentCapPolicy}
  * evaluates `max_total_per_day` against. Storage is the atomic
  * {@see AtomicCounterStore}, keyed by (pack name, identity token, cap id,
  * UTC-day bucket) — the same design as {@see RateCounter}, summing float
@@ -18,14 +18,14 @@ namespace Specflux\AgentSafety\Plugin\Support;
  * D26 chose it for rate caps: an abuse backstop, not billing-grade metering.
  *  *
  * Calls bare time() unqualified so the test suite's
- * Specflux\AgentSafety\Plugin\Support\time() override (tests/stubs/wpas-clock.php)
+ * Belayline\Plugin\Support\time() override (tests/stubs/wpas-clock.php)
  * can freeze/advance "now"; production always falls through to the global.
  */
 final class ValueAccumulator
 {
     // Namespaces this counter's rows in the shared counters table (the key is
     // per pack/identity/cap/day, so no fixed list of full names exists).
-    public const PREFIX = 'agsafe_vc_';
+    public const PREFIX = 'belayline_vc_';
 
     private const DAY_WINDOW = 86400;
 

@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Hooks;
+namespace Belayline\Plugin\Tests\Hooks;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Hooks\ToolCallResultRedactor;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeIdentityProvider;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeMcpTool;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Hooks\ToolCallResultRedactor;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\FakeIdentityProvider;
+use Belayline\Plugin\Tests\Fakes\FakeMcpTool;
 use WP_Error;
 
 /**

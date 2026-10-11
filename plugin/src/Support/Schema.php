@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
-use Specflux\AgentSafety\Plugin\Audit\WpdbAuditSink;
+use Belayline\Plugin\Audit\WpdbAuditSink;
 use wpdb;
 
 /**
  * Single source of truth for the plugin's four custom tables
- * ({@see \Specflux\AgentSafety\Plugin\Audit\WpdbAuditSink},
- * {@see \Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore} and
- * {@see \Specflux\AgentSafety\Plugin\Approval\WpdbGrantStore}) and their
+ * ({@see \Belayline\Plugin\Audit\WpdbAuditSink},
+ * {@see \Belayline\Plugin\Audit\WpdbApprovalStore} and
+ * {@see \Belayline\Plugin\Approval\WpdbGrantStore}) and their
  * versioned installation.
  *
  * {@see install()} runs on activation (and on {@see maybeUpgrade()} whenever the
@@ -35,31 +35,31 @@ final class Schema
      * changes shape; {@see maybeUpgrade()} reinstalls (dbDelta-diffs) and
      * reruns the option migrations once the stored option falls behind this.
      *
-     * 3: `agsafe_shadow_packs` became pack name => expiry ({@see ShadowMode}).
+     * 3: `belayline_shadow_packs` became pack name => expiry ({@see ShadowMode}).
      * 4: approvals gained `fingerprint`/`fingerprint_kind` (AS-6); the grants
-     *    table was renamed `agent_safety_grants` => `agsafe_grants`
+     *    table was renamed `belayline_grants` => `belayline_grants`
      *    ({@see grantsTable()}, {@see renameLegacyGrantsTable()}). Still
      *    unreleased at the time `probe_args TEXT NULL` was added (security
      *    fix: the approve-time re-probe now re-runs against the probe's own
-     *    captured {@see \Specflux\AgentSafety\Plugin\Approval\StateProbe::targetArgs()}
+     *    captured {@see \Belayline\Plugin\Approval\StateProbe::targetArgs()}
      *    instead of parsing them back out of the free-text summary), so this
      *    is a v4 addition, not a new version bump.
-     * 5: new `agsafe_counters` table ({@see countersTable()}) backing the
+     * 5: new `belayline_counters` table ({@see countersTable()}) backing the
      *    atomic rate/quota/tripwire counters ({@see AtomicCounterStore}),
      *    replacing their non-atomic transients.
      */
     public const VERSION = '5';
 
-    public const VERSION_OPTION = 'agsafe_schema_version';
+    public const VERSION_OPTION = 'belayline_schema_version';
 
     /**
      * Legacy grants table name, pre-v4. Named here, in
      * {@see renameLegacyGrantsTable()}, and by the opted-in uninstall path
-     * ({@see \Specflux\AgentSafety\Plugin\Support\UninstallManifest}), which
+     * ({@see \Belayline\Plugin\Support\UninstallManifest}), which
      * must also drop it when a crashed v4 upgrade left it behind — every
      * other reference in the plugin goes through {@see grantsTable()}.
      */
-    public const LEGACY_GRANTS_TABLE = 'agent_safety_grants';
+    public const LEGACY_GRANTS_TABLE = 'belayline_grants';
 
     /**
      * Set (never autoloaded) when {@see renameLegacyGrantsTable()} finds BOTH
@@ -68,18 +68,18 @@ final class Schema
      * rather than guessed at. {@see renderGrantsRenameConflictNotice()} shows
      * an admin notice until an operator resolves it by hand.
      */
-    public const GRANTS_RENAME_CONFLICT_OPTION = 'agsafe_grants_rename_conflict';
+    public const GRANTS_RENAME_CONFLICT_OPTION = 'belayline_grants_rename_conflict';
 
     /**
      * Table base names (without the `$wpdb` prefix), named here so the
-     * opted-in uninstall path ({@see \Specflux\AgentSafety\Plugin\Support\UninstallManifest})
+     * opted-in uninstall path ({@see \Belayline\Plugin\Support\UninstallManifest})
      * can drop the same three tables this class installs without guessing
      * at their names a second time.
      */
-    public const AUDIT_LOG_TABLE = 'agsafe_audit_log';
-    public const APPROVALS_TABLE = 'agsafe_approvals';
-    public const GRANTS_TABLE = 'agsafe_grants';
-    public const COUNTERS_TABLE = 'agsafe_counters';
+    public const AUDIT_LOG_TABLE = 'belayline_audit_log';
+    public const APPROVALS_TABLE = 'belayline_approvals';
+    public const GRANTS_TABLE = 'belayline_grants';
+    public const COUNTERS_TABLE = 'belayline_counters';
 
     public static function auditLogTable(wpdb $db): string
     {
@@ -141,7 +141,7 @@ final class Schema
      * values are `probe` and `grant`. No backfill.
      *
      * `probe_args` (security fix, still v4): canonical JSON of the probe's
-     * {@see \Specflux\AgentSafety\Plugin\Approval\StateProbe::targetArgs()},
+     * {@see \Belayline\Plugin\Approval\StateProbe::targetArgs()},
      * captured only alongside a `probe`-kind fingerprint. NULL for every
      * other kind and for rows written before this column existed; a
      * `probe`-kind row with a NULL/undecodable value is treated as stale by
@@ -181,7 +181,7 @@ final class Schema
     /**
      * Column/key body (no surrounding `CREATE TABLE ... ( )`) for the grants
      * table. The index mirrors the ONLY lookup the gate performs
-     * ({@see \Specflux\AgentSafety\Plugin\Approval\WpdbGrantStore::reserve()}):
+     * ({@see \Belayline\Plugin\Approval\WpdbGrantStore::reserve()}):
      * (correlation_id, verb, status). `subject` is deliberately NOT in the key
      * — the candidate set per (correlation, verb) is tiny, and the subject
      * comparison stays an exact string match in the WHERE clause where the
@@ -230,7 +230,7 @@ final class Schema
         self::ensureDbDelta();
 
         // MUST run before dbDelta(): dbDelta only ever creates or ALTERs the
-        // table it's told about (agsafe_grants); it has no idea a
+        // table it's told about (belayline_grants); it has no idea a
         // differently-named table already holds the data.
         self::renameLegacyGrantsTable($db);
 
@@ -270,8 +270,8 @@ final class Schema
     }
 
     /**
-     * Pre-v4 installs named the grants table `{prefix}agent_safety_grants`;
-     * v4 renamed it to `{prefix}agsafe_grants` ({@see grantsTable()}) so only
+     * Pre-v4 installs named the grants table `{prefix}belayline_grants`;
+     * v4 renamed it to `{prefix}belayline_grants` ({@see grantsTable()}) so only
      * `Schema.php` ever names it, matching every other table (§3.6 item 4).
      * Runs unconditionally (idempotent, shape-checked): a fresh install has
      * no legacy table and no-ops immediately.
@@ -310,7 +310,7 @@ final class Schema
 
     /**
      * Admin notice for the {@see GRANTS_RENAME_CONFLICT_OPTION} flag. Wired
-     * unconditionally (see `senrogate.php`); a no-op render when the flag
+     * unconditionally (see `belayline-agent-governance.php`); a no-op render when the flag
      * isn't set, matching the `CapabilityPacksPage::pausedNotice()` pattern.
      */
     public static function renderGrantsRenameConflictNotice(): void
@@ -326,8 +326,8 @@ final class Schema
         printf(
             '<div class="notice notice-warning"><p>%s</p></div>',
             esc_html__(
-                'SenroGate found both the old (agent_safety_grants) and new (agsafe_grants) grants tables during an upgrade, which means an earlier upgrade did not finish. It is using the new table. Once you have confirmed no grants were lost, an administrator can drop the old table to clear this notice.',
-                'senrogate'
+                'Belayline Agent Governance found both the old (belayline_grants) and new (belayline_grants) grants tables during an upgrade, which means an earlier upgrade did not finish. It is using the new table. Once you have confirmed no grants were lost, an administrator can drop the old table to clear this notice.',
+                'belayline-agent-governance'
             )
         );
     }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
 /**
  * Pure normalisation of a site's `home_url()` into the Site binding (§3.9,
@@ -10,7 +10,7 @@ namespace Specflux\AgentSafety\Plugin\Support;
  * an http-to-https migration is not a site move, but `/shop` and `/staging`
  * are different sites.
  *
- * No WordPress calls: {@see \Specflux\AgentSafety\Plugin\Support\EnvironmentGuard}
+ * No WordPress calls: {@see \Belayline\Plugin\Support\EnvironmentGuard}
  * is the only caller and supplies the raw `home_url()` string, so this stays
  * a pure, exhaustively unit-testable function.
  */

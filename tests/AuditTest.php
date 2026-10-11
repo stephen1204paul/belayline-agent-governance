@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Tests;
+namespace Belayline\Tests;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Audit\AuditDecision;
-use Specflux\AgentSafety\Audit\AuditRecord;
-use Specflux\AgentSafety\Audit\HashChain;
-use Specflux\AgentSafety\Audit\Redactor;
-use Specflux\AgentSafety\Gate\Outcome;
+use Belayline\Audit\AuditDecision;
+use Belayline\Audit\AuditRecord;
+use Belayline\Audit\HashChain;
+use Belayline\Audit\Redactor;
+use Belayline\Gate\Outcome;
 
 final class AuditTest extends TestCase
 {

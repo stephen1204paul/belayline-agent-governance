@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Audit;
+namespace Belayline\Audit;
 
-use Specflux\AgentSafety\Gate\Outcome;
+use Belayline\Gate\Outcome;
 
 /**
  * The audit-log `decision` field. Distinct from {@see Outcome}: the gate

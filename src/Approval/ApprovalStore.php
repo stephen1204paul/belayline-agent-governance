@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Approval;
+namespace Belayline\Approval;
 
 /**
  * Persistence contract for the async approval flow. The core defines the
@@ -51,7 +51,7 @@ interface ApprovalStore
      * exists, so an agent that retries before a human acts does not spawn duplicate
      * requests.
      *
-     * AS-6: $fingerprintKind is one of `probe` (a host {@see \Specflux\AgentSafety\Plugin\Approval\StateProbe}
+     * AS-6: $fingerprintKind is one of `probe` (a host {@see \Belayline\Plugin\Approval\StateProbe}
      * produced $fingerprint), `none` (the verb declares no probe), or `grant`
      * (the row was minted under a pre-approval grant, never fingerprinted). A
      * request whose (verb, args_hash, subject) matches an existing NON-EXPIRED
@@ -61,7 +61,7 @@ interface ApprovalStore
      * AS-6 §3.3 item 7).
      *
      * Security fix (post-AS-6): $probeArgs is the canonical-JSON encoding of
-     * {@see \Specflux\AgentSafety\Plugin\Approval\StateProbe::targetArgs()}'s
+     * {@see \Belayline\Plugin\Approval\StateProbe::targetArgs()}'s
      * return value — the EXACT subset of the real call arguments the probe
      * reads — captured only when $fingerprintKind is `probe`. The approve-time
      * re-probe decodes this instead of parsing the human-readable summary, so

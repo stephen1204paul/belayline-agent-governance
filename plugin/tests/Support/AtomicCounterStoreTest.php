@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use CounterTableWpdb;
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Support\AtomicCounterStore;
+use Belayline\Plugin\Support\AtomicCounterStore;
 
 /**
  * The shared counter table's contract, against {@see CounterTableWpdb}, which
@@ -108,7 +108,7 @@ final class AtomicCounterStoreTest extends TestCase
         $store->add('k', 1.0, 60);
         $store->get('k');
 
-        $creates = array_filter($this->db->queries, static fn (string $q): bool => str_starts_with($q, 'CREATE TABLE IF NOT EXISTS wp_agsafe_counters'));
+        $creates = array_filter($this->db->queries, static fn (string $q): bool => str_starts_with($q, 'CREATE TABLE IF NOT EXISTS wp_belayline_counters'));
         $this->assertCount(1, $creates);
     }
 }

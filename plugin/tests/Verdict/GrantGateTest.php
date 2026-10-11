@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Verdict;
+namespace Belayline\Plugin\Tests\Verdict;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Approval\ApprovalBinding;
-use Specflux\AgentSafety\Approval\Grant;
-use Specflux\AgentSafety\Approval\GrantStatus;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Support\DecisionRecorder;
-use Specflux\AgentSafety\Plugin\Support\GrantRecorder;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Support\SummaryMarkup;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeApprovalStore;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeGrantStore;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeIdentityProvider;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
-use Specflux\AgentSafety\Plugin\Verdict\GrantGate;
+use Belayline\Approval\ApprovalBinding;
+use Belayline\Approval\Grant;
+use Belayline\Approval\GrantStatus;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Support\DecisionRecorder;
+use Belayline\Plugin\Support\GrantRecorder;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Support\SummaryMarkup;
+use Belayline\Plugin\Tests\Fakes\FakeApprovalStore;
+use Belayline\Plugin\Tests\Fakes\FakeGrantStore;
+use Belayline\Plugin\Tests\Fakes\FakeIdentityProvider;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Plugin\Verdict\GrantGate;
 
 /**
  * The four independent conditions that must ALL hold before a pre-approval
@@ -27,14 +27,14 @@ use Specflux\AgentSafety\Plugin\Verdict\GrantGate;
 final class GrantGateTest extends TestCase
 {
     private const SUBJECT = 'test:token';
-    private const CORRELATION = 'senroflux:run:7';
+    private const CORRELATION = 'example:run:7';
     private const VERB = 'demo/publish';
 
     protected function setUp(): void
     {
-        remove_all_filters('agent_safety_enable_grants');
-        remove_all_filters('agent_safety_grant_eligible');
-        remove_all_filters('agent_safety_approval_summary');
+        remove_all_filters('belayline_enable_grants');
+        remove_all_filters('belayline_grant_eligible');
+        remove_all_filters('belayline_approval_summary');
         RequestContext::reset();
         RequestContext::configure(new IdentityChain([
             new FakeIdentityProvider(currentTokens: [self::SUBJECT]),
@@ -43,20 +43,20 @@ final class GrantGateTest extends TestCase
 
     protected function tearDown(): void
     {
-        remove_all_filters('agent_safety_enable_grants');
-        remove_all_filters('agent_safety_grant_eligible');
-        remove_all_filters('agent_safety_approval_summary');
+        remove_all_filters('belayline_enable_grants');
+        remove_all_filters('belayline_grant_eligible');
+        remove_all_filters('belayline_approval_summary');
         RequestContext::reset();
     }
 
     private function enableGrants(): void
     {
-        add_filter('agent_safety_enable_grants', static fn (): bool => true);
+        add_filter('belayline_enable_grants', static fn (): bool => true);
     }
 
     private function allowEverything(): void
     {
-        add_filter('agent_safety_grant_eligible', static fn (): bool => true);
+        add_filter('belayline_grant_eligible', static fn (): bool => true);
     }
 
     /**
@@ -94,7 +94,7 @@ final class GrantGateTest extends TestCase
 
     public function testATruthyButNonTrueEnableFilterStillReadsAsOff(): void
     {
-        add_filter('agent_safety_enable_grants', static fn (): string => 'yes');
+        add_filter('belayline_enable_grants', static fn (): string => 'yes');
         $this->allowEverything();
         $grants = new FakeGrantStore();
         $grants->issue(self::VERB, 2, self::SUBJECT, self::CORRELATION, 5, null);
@@ -133,7 +133,7 @@ final class GrantGateTest extends TestCase
         $this->enableGrants();
         $grants = new FakeGrantStore();
         $grantId = $grants->issue(self::VERB, 2, self::SUBJECT, self::CORRELATION, 5, null);
-        add_filter('agent_safety_grant_eligible', static fn (): bool => false);
+        add_filter('belayline_grant_eligible', static fn (): bool => false);
 
         RequestContext::withCorrelation(
             self::CORRELATION,
@@ -151,7 +151,7 @@ final class GrantGateTest extends TestCase
         $grants->issue(self::VERB, 2, self::SUBJECT, self::CORRELATION, 5, 'step_9');
         $seen = [];
         add_filter(
-            'agent_safety_grant_eligible',
+            'belayline_grant_eligible',
             static function (bool $eligible, Grant $grant, string $verb, array $args) use (&$seen): bool {
                 $seen = ['default' => $eligible, 'grant' => $grant, 'verb' => $verb, 'args' => $args];
 
@@ -208,10 +208,10 @@ final class GrantGateTest extends TestCase
         $this->enableGrants();
         $this->allowEverything();
         $grants = new FakeGrantStore();
-        $grants->issue(self::VERB, 2, self::SUBJECT, 'senroflux:run:1', 5, null);
+        $grants->issue(self::VERB, 2, self::SUBJECT, 'example:run:1', 5, null);
 
         $spent = RequestContext::withCorrelation(
-            'senroflux:run:2',
+            'example:run:2',
             fn (): ?string => $this->gate(['grants' => $grants])->mint(self::VERB, ['post_id' => 42])
         );
 
@@ -401,7 +401,7 @@ final class GrantGateTest extends TestCase
         $this->enableGrants();
         $this->allowEverything();
         add_filter(
-            'agent_safety_approval_summary',
+            'belayline_approval_summary',
             static fn (string $summary, string $verb): string => '<a href="/preview">Publish ' . $verb . '</a>',
             10,
             3
@@ -429,7 +429,7 @@ final class GrantGateTest extends TestCase
         $this->enableGrants();
         $grants = new FakeGrantStore();
         $grantId = $grants->issue(self::VERB, 2, self::SUBJECT, self::CORRELATION, 5, null);
-        add_filter('agent_safety_grant_eligible', static function (): bool {
+        add_filter('belayline_grant_eligible', static function (): bool {
             throw new \RuntimeException('the host blew up');
         });
 

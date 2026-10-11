@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
 /**
  * A fixed-window atomic counter for any subject string — the bucket scheme
@@ -23,7 +23,7 @@ final class WindowCounter
 {
     // Namespaces this counter's rows in the shared counters table (the key is
     // per-subject, so no fixed list of full names exists).
-    public const PREFIX = 'agsafe_win_';
+    public const PREFIX = 'belayline_win_';
 
     public function __construct(private readonly AtomicCounterStore $store = new AtomicCounterStore())
     {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Packs;
+namespace Belayline\Packs;
 
 /**
  * The one glob dialect used everywhere a pack config names verbs: "*" alone

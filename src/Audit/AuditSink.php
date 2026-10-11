@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Audit;
+namespace Belayline\Audit;
 
 /**
  * Append-only destination for audit records. The core defines the

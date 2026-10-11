@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use Specflux\AgentSafety\Plugin\Support\MultisiteGuard;
+use Belayline\Plugin\Support\MultisiteGuard;
 
 final class MultisiteGuardTest extends TestCase
 {
@@ -26,8 +26,8 @@ final class MultisiteGuardTest extends TestCase
 
         $this->assertFalse(MultisiteGuard::refused());
 
-        MultisiteGuard::refuseActivation('/plugins/senrogate/senrogate.php');
-        MultisiteGuard::refuseRuntime('/plugins/senrogate/senrogate.php');
+        MultisiteGuard::refuseActivation('/plugins/belayline-agent-governance/belayline-agent-governance.php');
+        MultisiteGuard::refuseRuntime('/plugins/belayline-agent-governance/belayline-agent-governance.php');
 
         $this->assertSame([], $GLOBALS['wpas_test_deactivated_plugins'] ?? []);
     }
@@ -41,10 +41,10 @@ final class MultisiteGuardTest extends TestCase
         $this->expectExceptionMessage('does not support WordPress multisite');
 
         try {
-            MultisiteGuard::refuseActivation('/plugins/senrogate/senrogate.php');
+            MultisiteGuard::refuseActivation('/plugins/belayline-agent-governance/belayline-agent-governance.php');
         } finally {
             $this->assertSame(
-                ['senrogate/senrogate.php'],
+                ['belayline-agent-governance/belayline-agent-governance.php'],
                 $GLOBALS['wpas_test_deactivated_plugins'] ?? []
             );
         }
@@ -59,17 +59,17 @@ final class MultisiteGuardTest extends TestCase
 
         $this->expectException(RuntimeException::class);
 
-        MultisiteGuard::refuseActivation('/plugins/senrogate/senrogate.php');
+        MultisiteGuard::refuseActivation('/plugins/belayline-agent-governance/belayline-agent-governance.php');
     }
 
     public function testMultisiteRuntimeGuardDeactivatesAndShowsAnAdminNotice(): void
     {
         $GLOBALS['wpas_test_multisite'] = true;
 
-        MultisiteGuard::refuseRuntime('/plugins/senrogate/senrogate.php');
+        MultisiteGuard::refuseRuntime('/plugins/belayline-agent-governance/belayline-agent-governance.php');
 
         $this->assertSame(
-            ['senrogate/senrogate.php'],
+            ['belayline-agent-governance/belayline-agent-governance.php'],
             $GLOBALS['wpas_test_deactivated_plugins'] ?? []
         );
         $this->assertNotEmpty($GLOBALS['wpas_test_added_actions']['admin_notices'] ?? []);

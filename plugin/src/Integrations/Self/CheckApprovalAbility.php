@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\Self;
+namespace Belayline\Plugin\Integrations\Self;
 
-use Specflux\AgentSafety\Audit\AuditDecision;
-use Specflux\AgentSafety\Audit\AuditRecord;
-use Specflux\AgentSafety\Audit\AuditSink;
-use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
-use Specflux\AgentSafety\Plugin\Support\PauseSwitch;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Support\SelfRateLimit;
-use Specflux\AgentSafety\Plugin\Support\SummaryMarkup;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Audit\AuditDecision;
+use Belayline\Audit\AuditRecord;
+use Belayline\Audit\AuditSink;
+use Belayline\Plugin\Audit\WpdbApprovalStore;
+use Belayline\Plugin\Support\PauseSwitch;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Support\SelfRateLimit;
+use Belayline\Plugin\Support\SummaryMarkup;
+use Belayline\Plugin\Verdict\VerdictPipeline;
+use Belayline\Policy\Tier;
 
 /**
- * AS-8 (§3.5): the actual `agent-safety/check-approval` poll — everything the
+ * AS-8 (§3.5): the actual `belayline/check-approval` poll — everything the
  * Verdict pipeline's exemption ({@see VerdictPipeline::judgeCheckApproval()})
  * deliberately does NOT do: authentication, scoping to the caller's own
  * Approval rows, this ability's own fixed rate limit, the output shape, and
@@ -178,14 +178,14 @@ final class CheckApprovalAbility
     private function nextAction(string $status, ?string $reason, bool $paused): string
     {
         $message = match ($status) {
-            'pending' => __('Waiting for a human. Check again in 30 seconds or more, and stop at pending_expires_at.', 'senrogate'),
-            'approved' => __('Retry the original call now, with exactly the same arguments.', 'senrogate'),
-            'rejected' => __('A human rejected this request. Don\'t retry it; tell the user.', 'senrogate'),
-            'expired' => __('Nobody reviewed this request in time. Ask the user before trying again.', 'senrogate'),
-            'used' => __('This approval has already been used. Another call needs a new approval.', 'senrogate'),
+            'pending' => __('Waiting for a human. Check again in 30 seconds or more, and stop at pending_expires_at.', 'belayline-agent-governance'),
+            'approved' => __('Retry the original call now, with exactly the same arguments.', 'belayline-agent-governance'),
+            'rejected' => __('A human rejected this request. Don\'t retry it; tell the user.', 'belayline-agent-governance'),
+            'expired' => __('Nobody reviewed this request in time. Ask the user before trying again.', 'belayline-agent-governance'),
+            'used' => __('This approval has already been used. Another call needs a new approval.', 'belayline-agent-governance'),
             'superseded' => 'site_moved' === $reason
-                ? __('The site\'s address changed. Retrying the call files a fresh request.', 'senrogate')
-                : __('The target changed after the request. Retrying the call files a fresh request.', 'senrogate'),
+                ? __('The site\'s address changed. Retrying the call files a fresh request.', 'belayline-agent-governance')
+                : __('The target changed after the request. Retrying the call files a fresh request.', 'belayline-agent-governance'),
             default => '',
         };
 
@@ -193,7 +193,7 @@ final class CheckApprovalAbility
             return $message;
         }
 
-        return __('SenroGate is paused on this site, so retrying won\'t work until an administrator resumes it. ', 'senrogate') . $message;
+        return __('Belayline Agent Governance is paused on this site, so retrying won\'t work until an administrator resumes it. ', 'belayline-agent-governance') . $message;
     }
 
     /** @param array<string, mixed>|null $row */
@@ -207,7 +207,7 @@ final class CheckApprovalAbility
             id: RequestContext::event(),
             ts: RequestContext::nowUtc(),
             correlationId: RequestContext::correlation(),
-            pack: 'agent-safety-self',
+            pack: 'belayline-self',
             actor: RequestContext::actor(),
             ability: VerdictPipeline::CHECK_APPROVAL_VERB,
             tier: Tier::Reversible->value,

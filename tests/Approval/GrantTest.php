@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Tests\Approval;
+namespace Belayline\Tests\Approval;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Approval\Grant;
-use Specflux\AgentSafety\Approval\GrantStatus;
+use Belayline\Approval\Grant;
+use Belayline\Approval\GrantStatus;
 
 /**
- * The pure usability rule every {@see \Specflux\AgentSafety\Approval\GrantStore}
+ * The pure usability rule every {@see \Belayline\Approval\GrantStore}
  * implementation must honour. Kept in the core, clock-free, so the whole
  * fail-closed matrix (TTL, exhaustion, revocation, scope, verb, empty subject)
  * is provable without a database — the SQL guard in the wpdb-backed store is
@@ -25,7 +25,7 @@ final class GrantTest extends TestCase
         string $expires = '2026-08-31 12:00:00',
         ?string $revoked = null,
         GrantStatus $status = GrantStatus::Active,
-        string $correlation = 'senroflux:run:7',
+        string $correlation = 'example:run:7',
         string $verb = 'core/post-publish',
     ): Grant {
         return new Grant(
@@ -46,7 +46,7 @@ final class GrantTest extends TestCase
     public function testAnActiveInScopeGrantWithRemainingCountMatches(): void
     {
         $this->assertTrue(
-            $this->grant()->canReserve('senroflux:run:7', 'core/post-publish', 'app:key-1', self::NOW)
+            $this->grant()->canReserve('example:run:7', 'core/post-publish', 'app:key-1', self::NOW)
         );
     }
 
@@ -54,8 +54,8 @@ final class GrantTest extends TestCase
     {
         $grant = $this->grant();
 
-        $this->assertFalse($grant->canReserve('senroflux:run:7', 'core/post-publish', '', self::NOW));
-        $this->assertFalse($grant->canReserve('senroflux:run:7', 'core/post-publish', null, self::NOW));
+        $this->assertFalse($grant->canReserve('example:run:7', 'core/post-publish', '', self::NOW));
+        $this->assertFalse($grant->canReserve('example:run:7', 'core/post-publish', null, self::NOW));
     }
 
     public function testAGrantStoredWithoutASubjectIsNeverClaimable(): void
@@ -64,7 +64,7 @@ final class GrantTest extends TestCase
         // a grant to whoever asks first.
         foreach ([null, ''] as $stored) {
             $grant = $this->grant(subject: $stored);
-            $this->assertFalse($grant->canReserve('senroflux:run:7', 'core/post-publish', 'app:key-1', self::NOW));
+            $this->assertFalse($grant->canReserve('example:run:7', 'core/post-publish', 'app:key-1', self::NOW));
         }
     }
 
@@ -78,14 +78,14 @@ final class GrantTest extends TestCase
     public function testADifferentCorrelationNeverMatches(): void
     {
         $this->assertFalse(
-            $this->grant()->canReserve('senroflux:run:8', 'core/post-publish', 'app:key-1', self::NOW)
+            $this->grant()->canReserve('example:run:8', 'core/post-publish', 'app:key-1', self::NOW)
         );
     }
 
     public function testADifferentSubjectNeverMatches(): void
     {
         $this->assertFalse(
-            $this->grant()->canReserve('senroflux:run:7', 'core/post-publish', 'app:key-2', self::NOW)
+            $this->grant()->canReserve('example:run:7', 'core/post-publish', 'app:key-2', self::NOW)
         );
     }
 
@@ -93,14 +93,14 @@ final class GrantTest extends TestCase
     {
         // A grant is per-verb: no globbing, no prefix matching.
         $this->assertFalse(
-            $this->grant()->canReserve('senroflux:run:7', 'core/post-delete', 'app:key-1', self::NOW)
+            $this->grant()->canReserve('example:run:7', 'core/post-delete', 'app:key-1', self::NOW)
         );
     }
 
     public function testAnExhaustedCountNeverMatches(): void
     {
         $this->assertFalse(
-            $this->grant(remaining: 0)->canReserve('senroflux:run:7', 'core/post-publish', 'app:key-1', self::NOW)
+            $this->grant(remaining: 0)->canReserve('example:run:7', 'core/post-publish', 'app:key-1', self::NOW)
         );
     }
 
@@ -108,7 +108,7 @@ final class GrantTest extends TestCase
     {
         $expired = $this->grant(remaining: 99, expires: '2026-08-30 11:59:59');
 
-        $this->assertFalse($expired->canReserve('senroflux:run:7', 'core/post-publish', 'app:key-1', self::NOW));
+        $this->assertFalse($expired->canReserve('example:run:7', 'core/post-publish', 'app:key-1', self::NOW));
     }
 
     public function testTheTtlBoundaryIsExclusive(): void
@@ -116,7 +116,7 @@ final class GrantTest extends TestCase
         // expires_ts == now is already dead: the wall is a hard one.
         $atWall = $this->grant(expires: self::NOW);
 
-        $this->assertFalse($atWall->canReserve('senroflux:run:7', 'core/post-publish', 'app:key-1', self::NOW));
+        $this->assertFalse($atWall->canReserve('example:run:7', 'core/post-publish', 'app:key-1', self::NOW));
     }
 
     public function testARevokedTimestampNeverMatchesEvenWhileStatusLooksActive(): void
@@ -125,7 +125,7 @@ final class GrantTest extends TestCase
         // yet flipped) must still fail closed.
         $revoked = $this->grant(revoked: '2026-08-30 11:30:00');
 
-        $this->assertFalse($revoked->canReserve('senroflux:run:7', 'core/post-publish', 'app:key-1', self::NOW));
+        $this->assertFalse($revoked->canReserve('example:run:7', 'core/post-publish', 'app:key-1', self::NOW));
     }
 
     /**
@@ -147,7 +147,7 @@ final class GrantTest extends TestCase
     {
         $grant = $this->grant(status: $status);
 
-        $this->assertFalse($grant->canReserve('senroflux:run:7', 'core/post-publish', 'app:key-1', self::NOW));
+        $this->assertFalse($grant->canReserve('example:run:7', 'core/post-publish', 'app:key-1', self::NOW));
     }
 
     public function testIsExhaustedTracksBothTheStatusAndTheCount(): void

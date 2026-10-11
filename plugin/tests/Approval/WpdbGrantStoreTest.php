@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Approval;
+namespace Belayline\Plugin\Tests\Approval;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Approval\GrantStatus;
-use Specflux\AgentSafety\Plugin\Approval\WpdbGrantStore;
+use Belayline\Approval\GrantStatus;
+use Belayline\Plugin\Approval\WpdbGrantStore;
 use wpdb;
 
 /**
  * WpdbGrantStore is wpdb-coupled by design: the single-claim guarantee lives in
  * the conditional UPDATE itself. The fake wpdb (tests/stubs/wpdb.php) executes
  * no SQL, so — exactly as in
- * {@see \Specflux\AgentSafety\Plugin\Tests\Audit\WpdbApprovalStoreTest} — these
+ * {@see \Belayline\Plugin\Tests\Audit\WpdbApprovalStoreTest} — these
  * tests assert on the CONSTRUCTED statement plus the branches the store decides
  * in PHP before it ever reaches the database.
  *
  * The matching RULE (TTL, exhaustion, revocation, scope, empty subject) is
  * proven database-free against the core value object in
- * {@see \Specflux\AgentSafety\Tests\Approval\GrantTest}; the store consults that
+ * {@see \Belayline\Tests\Approval\GrantTest}; the store consults that
  * same rule, so what is left to prove here is that it consults it, and that the
  * SQL guard repeats it.
  */
@@ -27,12 +27,12 @@ final class WpdbGrantStoreTest extends TestCase
 {
     protected function setUp(): void
     {
-        remove_all_filters('agent_safety_grant_ttl');
+        remove_all_filters('belayline_grant_ttl');
     }
 
     protected function tearDown(): void
     {
-        remove_all_filters('agent_safety_grant_ttl');
+        remove_all_filters('belayline_grant_ttl');
     }
 
     /**
@@ -43,7 +43,7 @@ final class WpdbGrantStoreTest extends TestCase
     {
         return array_merge([
             'grant_id' => 'gnt_1',
-            'correlation_id' => 'senroflux:run:7',
+            'correlation_id' => 'example:run:7',
             'verb' => 'core/post-publish',
             'remaining_count' => 2,
             'subject' => 'app:key-1',
@@ -63,12 +63,12 @@ final class WpdbGrantStoreTest extends TestCase
         $db = new wpdb();
         $store = new WpdbGrantStore($db);
 
-        $grantId = $store->issue('core/post-publish', 3, 'app:key-1', 'senroflux:run:7', 5, 'step_2');
+        $grantId = $store->issue('core/post-publish', 3, 'app:key-1', 'example:run:7', 5, 'step_2');
 
         $this->assertStringStartsWith('gnt_', $grantId);
         $data = $db->lastInsert['data'];
         $this->assertSame($grantId, $data['grant_id']);
-        $this->assertSame('senroflux:run:7', $data['correlation_id']);
+        $this->assertSame('example:run:7', $data['correlation_id']);
         $this->assertSame('core/post-publish', $data['verb']);
         $this->assertSame(3, $data['remaining_count']);
         $this->assertSame('app:key-1', $data['subject']);
@@ -81,7 +81,7 @@ final class WpdbGrantStoreTest extends TestCase
     {
         $db = new wpdb();
 
-        (new WpdbGrantStore($db))->issue('core/post-publish', -5, 'app:key-1', 'senroflux:run:7', 5, null);
+        (new WpdbGrantStore($db))->issue('core/post-publish', -5, 'app:key-1', 'example:run:7', 5, null);
 
         // A grant that authorises nothing, not one that wraps around.
         $this->assertSame(0, $db->lastInsert['data']['remaining_count']);
@@ -92,7 +92,7 @@ final class WpdbGrantStoreTest extends TestCase
         $db = new wpdb();
         $before = time();
 
-        (new WpdbGrantStore($db))->issue('core/post-publish', 1, 'app:key-1', 'senroflux:run:7', 5, null);
+        (new WpdbGrantStore($db))->issue('core/post-publish', 1, 'app:key-1', 'example:run:7', 5, null);
 
         $expires = strtotime($db->lastInsert['data']['expires_ts'] . ' UTC');
         $this->assertGreaterThanOrEqual($before + WpdbGrantStore::TTL_SECONDS, $expires);
@@ -102,11 +102,11 @@ final class WpdbGrantStoreTest extends TestCase
 
     public function testTheTtlFilterShortensTheHardWall(): void
     {
-        add_filter('agent_safety_grant_ttl', static fn (): int => 60);
+        add_filter('belayline_grant_ttl', static fn (): int => 60);
         $db = new wpdb();
         $before = time();
 
-        (new WpdbGrantStore($db))->issue('core/post-publish', 1, 'app:key-1', 'senroflux:run:7', 5, null);
+        (new WpdbGrantStore($db))->issue('core/post-publish', 1, 'app:key-1', 'example:run:7', 5, null);
 
         $expires = strtotime($db->lastInsert['data']['expires_ts'] . ' UTC');
         $this->assertGreaterThanOrEqual($before + 60, $expires);
@@ -117,11 +117,11 @@ final class WpdbGrantStoreTest extends TestCase
     {
         // Fail closed on the SAFE side: an unusable filtered value falls back to
         // the documented default rather than to "no expiry".
-        add_filter('agent_safety_grant_ttl', static fn (): string => 'forever');
+        add_filter('belayline_grant_ttl', static fn (): string => 'forever');
         $db = new wpdb();
         $before = time();
 
-        (new WpdbGrantStore($db))->issue('core/post-publish', 1, 'app:key-1', 'senroflux:run:7', 5, null);
+        (new WpdbGrantStore($db))->issue('core/post-publish', 1, 'app:key-1', 'example:run:7', 5, null);
 
         $expires = strtotime($db->lastInsert['data']['expires_ts'] . ' UTC');
         $this->assertGreaterThanOrEqual($before + WpdbGrantStore::TTL_SECONDS, $expires);
@@ -131,11 +131,11 @@ final class WpdbGrantStoreTest extends TestCase
     {
         // The filter only ever shortens a grant's life: a host asking for a
         // week gets the 24 h ceiling, never a longer wall.
-        add_filter('agent_safety_grant_ttl', static fn (): int => 7 * 86400);
+        add_filter('belayline_grant_ttl', static fn (): int => 7 * 86400);
         $db = new wpdb();
         $before = time();
 
-        (new WpdbGrantStore($db))->issue('core/post-publish', 1, 'app:key-1', 'senroflux:run:7', 5, null);
+        (new WpdbGrantStore($db))->issue('core/post-publish', 1, 'app:key-1', 'example:run:7', 5, null);
 
         $expires = strtotime($db->lastInsert['data']['expires_ts'] . ' UTC');
         $this->assertSame(86400, WpdbGrantStore::TTL_MAX_SECONDS);
@@ -152,7 +152,7 @@ final class WpdbGrantStoreTest extends TestCase
         $db->queryReturn = 1;
         $store = new WpdbGrantStore($db);
 
-        $this->assertSame('gnt_1', $store->reserve('senroflux:run:7', 'core/post-publish', 'app:key-1'));
+        $this->assertSame('gnt_1', $store->reserve('example:run:7', 'core/post-publish', 'app:key-1'));
     }
 
     public function testTheClaimingUpdateRepeatsEveryFailClosedCondition(): void
@@ -161,7 +161,7 @@ final class WpdbGrantStoreTest extends TestCase
         $db->rowReturn = $this->row();
         $db->queryReturn = 1;
 
-        (new WpdbGrantStore($db))->reserve('senroflux:run:7', 'core/post-publish', 'app:key-1');
+        (new WpdbGrantStore($db))->reserve('example:run:7', 'core/post-publish', 'app:key-1');
 
         $sql = end($db->queries);
         $this->assertStringContainsString("grant_id = 'gnt_1'", $sql);
@@ -178,7 +178,7 @@ final class WpdbGrantStoreTest extends TestCase
         $db->rowReturn = $this->row(['remaining_count' => 1]);
         $db->queryReturn = 1;
 
-        (new WpdbGrantStore($db))->reserve('senroflux:run:7', 'core/post-publish', 'app:key-1');
+        (new WpdbGrantStore($db))->reserve('example:run:7', 'core/post-publish', 'app:key-1');
 
         $this->assertStringContainsString(
             "CASE WHEN remaining_count - 1 <= 0 THEN 'exhausted' ELSE 'active' END",
@@ -207,7 +207,7 @@ final class WpdbGrantStoreTest extends TestCase
         $db->rowReturn = $this->row(['remaining_count' => 2]);
         $db->queryReturn = 1;
 
-        (new WpdbGrantStore($db))->reserve('senroflux:run:7', 'core/post-publish', 'app:key-1');
+        (new WpdbGrantStore($db))->reserve('example:run:7', 'core/post-publish', 'app:key-1');
 
         $sql = end($db->queries);
         $statusAt = strpos($sql, 'status = CASE WHEN');
@@ -231,7 +231,7 @@ final class WpdbGrantStoreTest extends TestCase
         $db->queryReturn = 0;
 
         $this->assertNull(
-            (new WpdbGrantStore($db))->reserve('senroflux:run:7', 'core/post-publish', 'app:key-1')
+            (new WpdbGrantStore($db))->reserve('example:run:7', 'core/post-publish', 'app:key-1')
         );
     }
 
@@ -242,7 +242,7 @@ final class WpdbGrantStoreTest extends TestCase
             $db->rowReturn = $this->row();
             $db->queryReturn = 1;
 
-            $this->assertNull((new WpdbGrantStore($db))->reserve('senroflux:run:7', 'core/post-publish', $subject));
+            $this->assertNull((new WpdbGrantStore($db))->reserve('example:run:7', 'core/post-publish', $subject));
             // Not even the lazy CREATE TABLE ran: an unauthenticated caller
             // cannot so much as probe for a grant.
             $this->assertSame([], $db->queries);
@@ -264,7 +264,7 @@ final class WpdbGrantStoreTest extends TestCase
         $db->rowReturn = null;
 
         $this->assertNull(
-            (new WpdbGrantStore($db))->reserve('senroflux:run:7', 'core/post-publish', 'app:key-1')
+            (new WpdbGrantStore($db))->reserve('example:run:7', 'core/post-publish', 'app:key-1')
         );
     }
 
@@ -280,7 +280,7 @@ final class WpdbGrantStoreTest extends TestCase
             'non-active status' => [['status' => 'revoked']],
             'stored without a subject' => [['subject' => null]],
             'different subject' => [['subject' => 'app:key-2']],
-            'different correlation' => [['correlation_id' => 'senroflux:run:8']],
+            'different correlation' => [['correlation_id' => 'example:run:8']],
             'different verb' => [['verb' => 'core/post-delete']],
             'unrecognised status' => [['status' => 'totally-fine-honest']],
         ];
@@ -288,7 +288,7 @@ final class WpdbGrantStoreTest extends TestCase
 
     /**
      * A row the database handed back but the CORE rule refuses is never claimed —
-     * the store must not out-trust {@see \Specflux\AgentSafety\Approval\Grant::canReserve()}.
+     * the store must not out-trust {@see \Belayline\Approval\Grant::canReserve()}.
      *
      * @dataProvider unusableRows
      * @param array<string, mixed> $overrides
@@ -300,7 +300,7 @@ final class WpdbGrantStoreTest extends TestCase
         $db->queryReturn = 1;
 
         $this->assertNull(
-            (new WpdbGrantStore($db))->reserve('senroflux:run:7', 'core/post-publish', 'app:key-1')
+            (new WpdbGrantStore($db))->reserve('example:run:7', 'core/post-publish', 'app:key-1')
         );
         foreach ($db->queries as $sql) {
             $this->assertStringNotContainsString('UPDATE', $sql);
@@ -341,11 +341,11 @@ final class WpdbGrantStoreTest extends TestCase
         $db->queryReturn = 4;
         $store = new WpdbGrantStore($db);
 
-        $this->assertSame(4, $store->revokeAll('senroflux:run:7'));
+        $this->assertSame(4, $store->revokeAll('example:run:7'));
         $sql = end($db->queries);
         $this->assertStringContainsString("status = 'revoked'", $sql);
         $this->assertStringContainsString('revoked_ts = UTC_TIMESTAMP()', $sql);
-        $this->assertStringContainsString("correlation_id = 'senroflux:run:7'", $sql);
+        $this->assertStringContainsString("correlation_id = 'example:run:7'", $sql);
         $this->assertStringContainsString("status IN ('active', 'exhausted')", $sql);
     }
 
@@ -356,7 +356,7 @@ final class WpdbGrantStoreTest extends TestCase
         $db = new wpdb();
         $db->queryReturn = 0;
 
-        $this->assertSame(0, (new WpdbGrantStore($db))->revokeAll('senroflux:run:7'));
+        $this->assertSame(0, (new WpdbGrantStore($db))->revokeAll('example:run:7'));
     }
 
     public function testRevokingAnEmptyScopeIsRefused(): void
@@ -373,7 +373,7 @@ final class WpdbGrantStoreTest extends TestCase
         $db = new wpdb();
         $db->queryReturn = 1;
 
-        (new WpdbGrantStore($db))->revokeByCorrelation('senroflux:run:7');
+        (new WpdbGrantStore($db))->revokeByCorrelation('example:run:7');
 
         $this->assertStringContainsString("status = 'revoked'", end($db->queries));
     }
@@ -389,7 +389,7 @@ final class WpdbGrantStoreTest extends TestCase
 
         $this->assertNotNull($grant);
         $this->assertSame('gnt_1', $grant->grantId);
-        $this->assertSame('senroflux:run:7', $grant->correlationId);
+        $this->assertSame('example:run:7', $grant->correlationId);
         $this->assertSame(2, $grant->remainingCount);
         $this->assertSame(5, $grant->grantedBy);
         $this->assertSame('step_2', $grant->planStepId);

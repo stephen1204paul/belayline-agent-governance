@@ -2,27 +2,27 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Hooks;
+namespace Belayline\Plugin\Tests\Hooks;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Plugin\Hooks\AbilityAuditLog;
-use Specflux\AgentSafety\Plugin\Hooks\McpRequestAuditHandler;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
+use Belayline\Policy\TierClassifier;
+use Belayline\Plugin\Hooks\AbilityAuditLog;
+use Belayline\Plugin\Hooks\McpRequestAuditHandler;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Plugin\Verdict\VerdictPipeline;
 
 /**
  * Exercises the governed-namespace gate behaviour on the
  * execution-audit hook: {@see AbilityAuditLog} must ignore any ability name
  * outside the injected namespace list, and ignore EVERYTHING when that list
  * is empty (a site with no integration active) -- same contract as {@see
- * \Specflux\AgentSafety\Plugin\Tests\Hooks\AbilityPermissionGateTest}.
+ * \Belayline\Plugin\Tests\Hooks\AbilityPermissionGateTest}.
  *
  * Also exercises the double-logging dedupe against {@see McpRequestAuditHandler}'s
  * raw-args stash (class docblock: DOUBLE-LOGGING DEDUPE). Every test resets that
  * static stash in setUp/tearDown so it never leaks between tests (or from
- * {@see \Specflux\AgentSafety\Plugin\Tests\McpRequestAuditHandlerTest}, which
+ * {@see \Belayline\Plugin\Tests\McpRequestAuditHandlerTest}, which
  * shares the same static state).
  */
 final class AbilityAuditLogTest extends TestCase
@@ -193,16 +193,16 @@ final class AbilityAuditLogTest extends TestCase
     }
 
     /**
-     * AS-8 (§3.5 item 7): a successful `agent-safety/check-approval` poll
-     * writes NO hash-chained execution record, even though `agent-safety/` is
+     * AS-8 (§3.5 item 7): a successful `belayline/check-approval` poll
+     * writes NO hash-chained execution record, even though `belayline/` is
      * itself a governed namespace here -- the exclusion is this one named
      * verb, never the whole namespace (a hypothetical future
-     * `agent-safety/other-verb` is still audited normally).
+     * `belayline/other-verb` is still audited normally).
      */
     public function testCheckApprovalVerbIsNeverAuditedHereEvenWhenItsNamespaceIsGoverned(): void
     {
         $sink = new InMemoryAuditSink();
-        $log = $this->log($sink, ['agent-safety/']);
+        $log = $this->log($sink, ['belayline/']);
 
         $log->before(VerdictPipeline::CHECK_APPROVAL_VERB, ['approval_id' => 'apr_1']);
         $log->after(VerdictPipeline::CHECK_APPROVAL_VERB, ['approval_id' => 'apr_1'], ['status' => 'pending']);
@@ -211,13 +211,13 @@ final class AbilityAuditLogTest extends TestCase
         $this->assertCount(0, $sink->records);
     }
 
-    public function testAnotherAgentSafetyVerbUnderTheSameNamespaceIsStillAudited(): void
+    public function testAnotherBelaylineVerbUnderTheSameNamespaceIsStillAudited(): void
     {
         $sink = new InMemoryAuditSink();
-        $log = $this->log($sink, ['agent-safety/']);
+        $log = $this->log($sink, ['belayline/']);
 
-        $log->before('agent-safety/other-verb', []);
-        $log->after('agent-safety/other-verb', [], ['status' => 'ok']);
+        $log->before('belayline/other-verb', []);
+        $log->after('belayline/other-verb', [], ['status' => 'ok']);
 
         $this->assertCount(1, $sink->records);
     }

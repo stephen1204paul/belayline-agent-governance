@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
-use Specflux\AgentSafety\Packs\LimitPolicy;
-use Specflux\AgentSafety\Packs\Pack;
+use Belayline\Packs\LimitPolicy;
+use Belayline\Packs\Pack;
 
 /**
  * Glues the core's pure {@see LimitPolicy} to the host's {@see RateCounter}
- * storage. Shared by BOTH gate seams ({@see \Specflux\AgentSafety\Plugin\Hooks\AbilityPermissionGate}
- * and {@see \Specflux\AgentSafety\Plugin\Hooks\PreToolCallGate}) for the same
+ * storage. Shared by BOTH gate seams ({@see \Belayline\Plugin\Hooks\AbilityPermissionGate}
+ * and {@see \Belayline\Plugin\Hooks\PreToolCallGate}) for the same
  * reason {@see DecisionRecorder} is shared: a pack's rate/quota caps must be
  * enforced identically no matter which seam intercepts a call first.
  *

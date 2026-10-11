@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\Woo;
+namespace Belayline\Plugin\Tests\Integrations\Woo;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Integrations\Woo\WooIntegration;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Integrations\Woo\WooIntegration;
 
 /**
  * Runs the REAL TierClassifier — built from WooIntegration's own catalog

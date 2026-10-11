@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Audit;
+namespace Belayline\Plugin\Audit;
 
-use Specflux\AgentSafety\Audit\AuditRecord;
-use Specflux\AgentSafety\Audit\AuditSink;
-use Specflux\AgentSafety\Audit\HashChain;
-use Specflux\AgentSafety\Plugin\Support\Schema;
+use Belayline\Audit\AuditRecord;
+use Belayline\Audit\AuditSink;
+use Belayline\Audit\HashChain;
+use Belayline\Plugin\Support\Schema;
 use wpdb;
 
 /**
@@ -30,7 +30,7 @@ use wpdb;
 final class WpdbAuditSink implements AuditSink
 {
     /** Advisory-lock name serializing all appends to this log. */
-    private const LOCK = 'agsafe_audit_append';
+    private const LOCK = 'belayline_audit_append';
 
     private bool $ensured = false;
 

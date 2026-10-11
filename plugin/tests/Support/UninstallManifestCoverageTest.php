@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
-use Specflux\AgentSafety\Plugin\Support\UninstallManifest;
+use Belayline\Plugin\Support\UninstallManifest;
 
 /**
  * §3.6 item 3: the opted-in uninstall path works from an explicit list

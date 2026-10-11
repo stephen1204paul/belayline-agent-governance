@@ -23,16 +23,16 @@ pipeline input on both seams; the Abilities adapter reads them from ability meta
 ## Considered options
 
 - **Delete `PreToolCallGate`** and read Hints on the Abilities seam only. Rejected: on adapters
-  ≥ 0.5.0 the early short-circuit is the only way a consumer such as SenroFlux sees the real
+  ≥ 0.5.0 the early short-circuit is the only way a consumer such as Site Agent sees the real
   approval error data, because `WP_Ability::execute()` discards a permission callback's `WP_Error`.
 - **Keep two evaluators and deduplicate helpers only.** Rejected: the drift was in the sequence,
   not the helpers; sharing helpers leaves the ordering hand-maintained twice.
 
 ## Consequences
 
-- The `WP_Error` contract (`agent_safety_denied`, `approval_required`; data keys `status`,
+- The `WP_Error` contract (`belayline_denied`, `approval_required`; data keys `status`,
   `verb`, `tier`, `approval_id`, nulls dropped) has exactly one producer, pinned by a fixture
-  test under `plugin/tests/Fixtures/` that consumers (SenroFlux) run against the same fixture.
+  test under `plugin/tests/Fixtures/` that consumers (Site Agent) run against the same fixture.
 - The peek-mode adapter is maintained even while dormant on the shipping Woo stack; do not
   remove it as dead code.
 - Governed-namespace scoping and the Approval lifecycle beyond *claim* are deliberately outside

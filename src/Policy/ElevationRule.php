@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Policy;
+namespace Belayline\Policy;
 
 /**
  * An arg-aware tier-elevation rule: a verb's BASE tier (from {@see

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Approval;
+namespace Belayline\Approval;
 
 /**
  * The outcome of {@see ApprovalStore::reserve()}: claimed one exact

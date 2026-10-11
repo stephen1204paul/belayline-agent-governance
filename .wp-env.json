@@ -3,7 +3,7 @@
     "core": null,
     "phpVersion": "8.3",
     "mappings": {
-        "wp-content/plugins/senrogate": "./plugin",
+        "wp-content/plugins/belayline-agent-governance": "./plugin",
         "wp-content/plugins/mcp-adapter": "../mcp-adapter"
     },
     "config": {

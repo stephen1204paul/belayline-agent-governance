@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Fakes;
+namespace Belayline\Plugin\Tests\Fakes;
 
-use Specflux\AgentSafety\Plugin\Identity\IdentityProvider;
+use Belayline\Plugin\Identity\IdentityProvider;
 
 /** Hand-rolled fake: returns whatever tokens/bindables the test wires up. */
 final class FakeIdentityProvider implements IdentityProvider

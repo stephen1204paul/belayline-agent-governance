@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder;
-use Specflux\AgentSafety\Plugin\Support\ApprovalNotifier;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Support\Tripwires;
-use Specflux\AgentSafety\Plugin\Support\WindowCounter;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Support\AdminChangeRecorder;
+use Belayline\Plugin\Support\ApprovalNotifier;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Support\Tripwires;
+use Belayline\Plugin\Support\WindowCounter;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
 
 /**
  * The tripwires on their own: threshold parsing, the per-request memos, what
  * a lockout leaves behind (row, action, email) and what the repeat guard
  * treats as one call. A fresh instance stands for a fresh request. How the
  * pipeline routes decisions into them is proven in
- * {@see \Specflux\AgentSafety\Plugin\Tests\Verdict\VerdictPipelineStopsTest}.
+ * {@see \Belayline\Plugin\Tests\Verdict\VerdictPipelineStopsTest}.
  */
 final class TripwiresTest extends TestCase
 {
@@ -67,7 +67,7 @@ final class TripwiresTest extends TestCase
     {
         $buckets = [];
         foreach ($GLOBALS['wpdb']->rows as $key => $row) {
-            if (str_starts_with($key, 'agsafe_win_')) {
+            if (str_starts_with($key, 'belayline_win_')) {
                 $buckets[$key] = (int) $row['value'];
             }
         }
@@ -143,10 +143,10 @@ final class TripwiresTest extends TestCase
         $this->assertCount(1, $GLOBALS['wpas_test_mail']);
         $mail = $GLOBALS['wpas_test_mail'][0];
         $this->assertSame('owner@example.test', $mail['to']);
-        $this->assertStringStartsWith('[SenroGate]', $mail['subject']);
+        $this->assertStringStartsWith('[Belayline Agent Governance]', $mail['subject']);
         $this->assertStringContainsString('tok', $mail['subject']);
         $this->assertStringContainsString('600 seconds', $mail['message']);
-        $this->assertStringContainsString('tools.php?page=agent-safety-audit', $mail['message']);
+        $this->assertStringContainsString('tools.php?page=belayline-audit', $mail['message']);
     }
 
     public function testTheConfiguredRecipientBeatsAdminEmailAndNoRecipientMeansNoMail(): void
