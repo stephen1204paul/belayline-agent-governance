@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Audit;
+namespace Belayline\Plugin\Audit;
 
-use Specflux\AgentSafety\Approval\ApprovalStore;
-use Specflux\AgentSafety\Approval\ReserveOutcome;
-use Specflux\AgentSafety\Plugin\Approval\ApprovalMinter;
-use Specflux\AgentSafety\Plugin\Support\Schema;
-use Specflux\AgentSafety\Plugin\Support\SummaryMarkup;
+use Belayline\Approval\ApprovalStore;
+use Belayline\Approval\ReserveOutcome;
+use Belayline\Plugin\Approval\ApprovalMinter;
+use Belayline\Plugin\Support\Schema;
+use Belayline\Plugin\Support\SummaryMarkup;
 use wpdb;
 
 /**
@@ -134,7 +134,7 @@ final class WpdbApprovalStore implements ApprovalStore, ApprovalMinter
         // as authored, without the host-authored provenance tag the approval
         // SCREEN uses to decide escaping ({@see SummaryMarkup}) — that tag is a
         // rendering concern and never part of this hook's contract.
-        do_action('agent_safety_approval_requested', $approvalId, $verb, SummaryMarkup::unwrap($summary));
+        do_action('belayline_approval_requested', $approvalId, $verb, SummaryMarkup::unwrap($summary));
 
         return $approvalId;
     }
@@ -448,7 +448,7 @@ final class WpdbApprovalStore implements ApprovalStore, ApprovalMinter
 
     /**
      * Delete rows that are both past their TTL and can never be acted on again
-     * (the backlog {@see \Specflux\AgentSafety\Plugin\Support\ApprovalSweep}
+     * (the backlog {@see \Belayline\Plugin\Support\ApprovalSweep}
      * hourly cron exists to control). Called with the current UTC time.
      *
      * Deleted — dead ends with no decision left to preserve:
@@ -462,8 +462,8 @@ final class WpdbApprovalStore implements ApprovalStore, ApprovalMinter
      *
      * Kept — still actionable, or the operational anchor for a real decision
      * already immutably recorded in the hash-chained audit log via
-     * {@see \Specflux\AgentSafety\Plugin\Admin\PendingActionsPage::reconcile()}
-     * (approve/reject) or {@see \Specflux\AgentSafety\Plugin\Hooks\AbilityPermissionGate::onExecuted()}
+     * {@see \Belayline\Plugin\Admin\PendingActionsPage::reconcile()}
+     * (approve/reject) or {@see \Belayline\Plugin\Hooks\AbilityPermissionGate::onExecuted()}
      * (finalize on execution):
      *  - `pending` still within its TTL — a human may yet approve/reject it.
      *  - `in_flight` — an execution is claiming this grant RIGHT NOW; its

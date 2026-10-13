@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Fakes;
+namespace Belayline\Plugin\Tests\Fakes;
 
-use Specflux\AgentSafety\Approval\ApprovalStore;
-use Specflux\AgentSafety\Approval\ReserveOutcome;
-use Specflux\AgentSafety\Plugin\Approval\ApprovalMinter;
+use Belayline\Approval\ApprovalStore;
+use Belayline\Approval\ReserveOutcome;
+use Belayline\Plugin\Approval\ApprovalMinter;
 
 /**
  * Hand-rolled in-memory fake (house style: no mocking framework, see
@@ -206,7 +206,7 @@ final class FakeApprovalStore implements ApprovalStore, ApprovalMinter
         }
     }
 
-    /** Test control knob mirroring {@see \Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore::markStale()}. */
+    /** Test control knob mirroring {@see \Belayline\Plugin\Audit\WpdbApprovalStore::markStale()}. */
     public function markStale(string $approvalId): bool
     {
         if (($this->rows[$approvalId]['status'] ?? null) !== 'pending') {

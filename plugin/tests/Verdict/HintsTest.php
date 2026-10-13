@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Verdict;
+namespace Belayline\Plugin\Tests\Verdict;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeMcpTool;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeToolAnnotations;
-use Specflux\AgentSafety\Plugin\Verdict\Hints;
+use Belayline\Plugin\Tests\Fakes\FakeMcpTool;
+use Belayline\Plugin\Tests\Fakes\FakeToolAnnotations;
+use Belayline\Plugin\Verdict\Hints;
 use stdClass;
 
 /**

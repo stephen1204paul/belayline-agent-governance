@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\Self;
+namespace Belayline\Plugin\Tests\Integrations\Self;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
-use Specflux\AgentSafety\Plugin\Integrations\Self\SelfIntegration;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
+use Belayline\Policy\Tier;
+use Belayline\Policy\VerbCatalog;
+use Belayline\Plugin\Integrations\Self\SelfIntegration;
+use Belayline\Plugin\Verdict\VerdictPipeline;
 
 /**
  * AS-8 (§3.5): the registration shape — always-on like Core, contributes the
- * `agent-safety/` namespace, catalogues exactly the one verb, and wires the
+ * `belayline/` namespace, catalogues exactly the one verb, and wires the
  * real Abilities API registration (label/description/category/schema/meta)
- * the way {@see \Specflux\AgentSafety\Plugin\Integrations\Self\CheckApprovalAbilityTest}
+ * the way {@see \Belayline\Plugin\Integrations\Self\CheckApprovalAbilityTest}
  * proves the poll BEHAVIOUR for.
  */
 final class SelfIntegrationTest extends TestCase
@@ -37,12 +37,12 @@ final class SelfIntegrationTest extends TestCase
         $contributions = SelfIntegration::register($catalog);
 
         $this->assertSame(Tier::Reversible, $catalog->baseTier(VerdictPipeline::CHECK_APPROVAL_VERB));
-        $this->assertSame(['agent-safety/'], $contributions['governedNamespaces']);
+        $this->assertSame(['belayline/'], $contributions['governedNamespaces']);
         $this->assertSame([], $contributions['elevationRules']);
         $this->assertSame([], $contributions['packs']);
 
-        // No wildcard entry pre-classifies a future agent-safety/* verb.
-        $this->assertNull($catalog->baseTier('agent-safety/some-other-verb'));
+        // No wildcard entry pre-classifies a future belayline/* verb.
+        $this->assertNull($catalog->baseTier('belayline/some-other-verb'));
     }
 
     public function testRegisterAbilityWiresBothAbilitiesApiHooks(): void

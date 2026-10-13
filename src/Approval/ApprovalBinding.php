@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Approval;
+namespace Belayline\Approval;
 
 /**
  * Binds an approval to one exact action: an approval token minted for
@@ -51,7 +51,7 @@ final class ApprovalBinding
      * sets hash identically regardless of the order the agent serialised them in.
      * List arrays (sequential 0..n keys) keep their order — position is meaningful.
      *
-     * Public: {@see \Specflux\AgentSafety\Plugin\Approval\StateFingerprint}
+     * Public: {@see \Belayline\Plugin\Approval\StateFingerprint}
      * (AS-6) reuses this exact canonicalisation for state-probe fingerprints,
      * so a probe result that differs only in key order hashes identically —
      * the same property this class relies on for its own args hash.

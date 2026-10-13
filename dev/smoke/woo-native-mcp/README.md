@@ -1,13 +1,13 @@
 # Stage 3: Woo-native-MCP e2e
 
-A live wp-env leg proving Agent Safety governs **WooCommerce 11.1's own native
+A live wp-env leg proving Belayline governs **WooCommerce 11.1's own native
 MCP server** — Woo's (deprecated, off-by-default) `/wp-json/woocommerce/mcp`
 transport, running on the mcp-adapter v0.3.0 Woo bundles itself, not the
 standalone mcp-adapter the core-module smoke (`dev/smoke/smoke-core.js`)
 drives. See spec §3.2 item 5, §1's "Woo's MCP transport" bullet, and §6's
 hook-ordering risk.
 
-It also answers ticket 01's open runtime question: does Agent Safety's
+It also answers ticket 01's open runtime question: does Belayline's
 `wp_register_ability_args` filter register before WooCommerce registers its
 own abilities on a live site, so Woo's abilities are actually wrapped? Yes —
 see "Hook-ordering evidence" below.
@@ -47,21 +47,21 @@ The environment: WordPress (latest), PHP 8.3, WooCommerce **11.1.0** pinned
 (the exact `downloads.wordpress.org` zip, not `trunk` or `latest`), Agent
 Safety mounted from `../../../plugin`, **no standalone mcp-adapter** — Woo
 11.1 bundles its own (v0.3.0) — `WP_DEBUG`/`WP_DEBUG_LOG` on, and an mu-plugin
-fixture (`agsafe-woo-mcp-fixture.php`) that:
+fixture (`belayline-woo-mcp-fixture.php`) that:
 
 1. Lets Woo's MCP transport accept plain HTTP (wp-env has no TLS) via the
    `woocommerce_mcp_allow_insecure_transport` filter — dev-only, never ship.
-2. Registers one test-only ability, `woocommerce/agsafe-smoke-widget-list`,
+2. Registers one test-only ability, `woocommerce/belayline-smoke-widget-list`,
    with `expose_in_deprecated_woocommerce_mcp => true` metadata (the same
    metadata Woo's own REST-derived abilities carry) so it is genuinely
-   reachable through Woo's MCP tool list — not a namespace Agent Safety
+   reachable through Woo's MCP tool list — not a namespace Belayline
    invented, a real uncatalogued ability on Woo's own endpoint.
 
 `setup.sh` provisions a **Shop Manager** user (not an administrator — a pass
 here can't come from admin capabilities), a WooCommerce REST API key with
 `read_write` permission for that user (built the same way
 `WC_Ajax::update_api_key()` does, via `wp eval-file`), binds `wc:<key_id>` to
-`woo-default-agent` in `agsafe_pack_bindings`, and seeds one product.
+`woo-default-agent` in `belayline_pack_bindings`, and seeds one product.
 
 `run.js` calls `/wp-json/woocommerce/mcp` with `X-MCP-API-Key: <ck>:<cs>`:
 
@@ -87,19 +87,19 @@ here can't come from admin capabilities), a WooCommerce REST API key with
   know the verdict came from the *bound* pack and not a default that happens
   to allow the same calls.
 - Also checked on every run: `debug.log` carries no PHP warning, notice, or
-  deprecation notice attributable to Agent Safety.
+  deprecation notice attributable to Belayline.
 
 ## Hook-ordering evidence (ticket 01)
 
 `AbilityPermissionGate::register()` calls
 `add_filter('wp_register_ability_args', ...)` from the plugin's
-`plugins_loaded` (priority 0) callback in `plugin/senrogate.php`. Adding a
+`plugins_loaded` (priority 0) callback in `plugin/belayline-agent-governance.php`. Adding a
 filter callback only requires that the `add_filter()` call itself run before
 WordPress fires `apply_filters('wp_register_ability_args', ...)` for a given
 ability — filter *priority* only orders multiple callbacks on the *same*
 hook, it says nothing about hooks that fire at different times. WooCommerce
 registers abilities no earlier than `init`/`wp_abilities_api_init`, which
-fires strictly after `plugins_loaded`. So statically, Agent Safety's filter
+fires strictly after `plugins_loaded`. So statically, Belayline's filter
 is guaranteed to already be registered by the time Woo's abilities register.
 
 This harness proves it empirically, not just by that reading: case 2 filing
@@ -111,7 +111,7 @@ the SAME live site flip from allowed to denied purely by editing
 `WooVerbCatalog::MAP` and restarting — proof the wrap is live on Woo's own
 abilities, not a static reading of the source.
 
-**Answer: yes, on a live WooCommerce 11.1.0 + WP site, Agent Safety's
+**Answer: yes, on a live WooCommerce 11.1.0 + WP site, Belayline's
 `wp_register_ability_args` filter registers before WooCommerce registers its
 abilities, and Woo's abilities are wrapped.**
 
@@ -135,7 +135,7 @@ Captured output (2026-09-24), case 1 only:
 
 ```
 # RED (products-list removed from WooVerbCatalog::MAP)
-FAIL  woocommerce-products-list executes without error   [... "Permission denied: Blocked by Agent Safety (woo-default-agent): unknown_verb" ...]
+FAIL  woocommerce-products-list executes without error   [... "Permission denied: Blocked by Belayline (woo-default-agent): unknown_verb" ...]
 FAIL  products-list response mentions the seeded product
 FAIL  audit row(s) allowed for woocommerce/products-list   [before=3 after=3]
 
@@ -161,7 +161,7 @@ as a side effect of validating the API key (`WooCommerceRestTransport.php`,
 WooCommerce 11.1.0). `RequestContext::tokenId()` — the audit actor field —
 used to return the FIRST candidate token across the WHOLE identity chain,
 and the chain order is `[ApplicationPasswordIdentity, UserRoleIdentity,
-WcApiKeyIdentity]` (`plugin/senrogate.php`, `WooIntegration::register()`
+WcApiKeyIdentity]` (`plugin/belayline-agent-governance.php`, `WooIntegration::register()`
 appends the Woo provider LAST). So for a Woo-authenticated request,
 `UserRoleIdentity`'s `user:<id>` token was always first, and
 `WcApiKeyIdentity`'s `wc:<key_id>` token was always last.
@@ -186,7 +186,7 @@ identity-chain token actually WON the pack binding (falling back to the
 first token, then null), computed by `PackResolver::principal()` and wired
 into `RequestContext` through an injected resolver
 (`RequestContext::configurePrincipalResolver()`) set at plugin bootstrap
-alongside `$agsafe_packs`. Pack resolution itself is unchanged. Covered by
+alongside `$belayline_packs`. Pack resolution itself is unchanged. Covered by
 unit tests (`PackResolverTest`, a `VerdictPipelineTest` case asserting both
 the approval `key_id` and the audit actor `token_id`); this harness's Case-2
 Control assertions (`run.js`) now pass on the same real Woo MCP request that
@@ -205,22 +205,22 @@ The tool-call response for the approval-required case is:
 `tier`, `approval_id`) never reaches the client — this mcp-adapter version's
 `ToolsHandler` only serializes `get_error_message()` into the CallToolResult,
 not `get_error_data()`. The approval genuinely exists — confirmed directly
-against `wp_agsafe_approvals` (`status='pending'`, `verb='woocommerce/products-delete'`,
+against `wp_belayline_approvals` (`status='pending'`, `verb='woocommerce/products-delete'`,
 a real `apr_...` id) and the audit row (`tier: 2`, `reason: "approval_required"`,
 `approval: {"id": "apr_..."}`) — it just isn't visible to an agent reading
 only the MCP response, on this transport. This reinforces, with a concrete
 example, the gap spec §3.2 item 7 already documents ("agents connected only
-through Woo's MCP server can't see `agent-safety/check-approval`" either): an
+through Woo's MCP server can't see `belayline/check-approval`" either): an
 agent working purely against Woo's own endpoint cannot self-serve an
 approval id from the tool-call response and would need the admin's Pending
 Actions page.
 
-**Orchestrator decision: this is a transport limitation, not an Agent Safety
+**Orchestrator decision: this is a transport limitation, not an Belayline
 defect**, and is not fixed here — it lives in Woo's bundled mcp-adapter
 version, outside this plugin. `run.js`'s Case 2 asserts what actually crosses
 this transport (`isError: true`, an approval message for the verb, the
 product still existing) and treats "the approval was actually filed" —
-including its `key_id` — as DB ground truth against `wp_agsafe_approvals`
+including its `key_id` — as DB ground truth against `wp_belayline_approvals`
 and the audit log, checked independently of the MCP response body. The
 message-text assertion matches spec §3.11's base `approval_required` text
 exactly.

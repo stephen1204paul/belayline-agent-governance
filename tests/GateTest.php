@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Tests;
+namespace Belayline\Tests;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Gate\Gate;
-use Specflux\AgentSafety\Gate\GateContext;
-use Specflux\AgentSafety\Gate\Outcome;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Tests\Fixtures\BulkDeleteElevationRuleFixture;
-use Specflux\AgentSafety\Tests\Fixtures\FulfillmentElevationRuleFixture;
-use Specflux\AgentSafety\Tests\Fixtures\WooLikeVerbCatalog;
+use Belayline\Gate\Gate;
+use Belayline\Gate\GateContext;
+use Belayline\Gate\Outcome;
+use Belayline\Packs\Pack;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Tests\Fixtures\BulkDeleteElevationRuleFixture;
+use Belayline\Tests\Fixtures\FulfillmentElevationRuleFixture;
+use Belayline\Tests\Fixtures\WooLikeVerbCatalog;
 
 final class GateTest extends TestCase
 {

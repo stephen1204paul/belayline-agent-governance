@@ -2,34 +2,34 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Api;
+namespace Belayline\Plugin\Tests\Api;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Api\Grants;
-use Specflux\AgentSafety\Plugin\Approval\WpdbGrantStore;
-use Specflux\AgentSafety\Plugin\Container;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Support\GrantRecorder;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeIdentityProvider;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Plugin\Api\Grants;
+use Belayline\Plugin\Approval\WpdbGrantStore;
+use Belayline\Plugin\Container;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Support\GrantRecorder;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\FakeIdentityProvider;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
 use wpdb;
 
 /**
- * The programmatic pre-approval surface a host (SenroFlux) drives: what it
+ * The programmatic pre-approval surface a host (Site Agent) drives: what it
  * refuses, who it lets grant, and what the audit trail says afterwards.
  */
 final class GrantsServiceTest extends TestCase
 {
     private const VERB = 'core/post-publish';
     private const SUBJECT = 'app:key-1';
-    private const SCOPE = 'senroflux:run:7';
+    private const SCOPE = 'example:run:7';
 
     protected function setUp(): void
     {
-        remove_all_filters('agent_safety_enable_grants');
-        remove_all_filters('agent_safety_can_grant');
-        remove_all_filters('agent_safety_grant_max_count');
+        remove_all_filters('belayline_enable_grants');
+        remove_all_filters('belayline_can_grant');
+        remove_all_filters('belayline_grant_max_count');
         $GLOBALS['wpas_test_user_caps'] = [];
         $GLOBALS['wpas_test_user_caps_by_id'] = [];
         RequestContext::reset();
@@ -41,9 +41,9 @@ final class GrantsServiceTest extends TestCase
 
     protected function tearDown(): void
     {
-        remove_all_filters('agent_safety_enable_grants');
-        remove_all_filters('agent_safety_can_grant');
-        remove_all_filters('agent_safety_grant_max_count');
+        remove_all_filters('belayline_enable_grants');
+        remove_all_filters('belayline_can_grant');
+        remove_all_filters('belayline_grant_max_count');
         $GLOBALS['wpas_test_user_caps'] = [];
         $GLOBALS['wpas_test_user_caps_by_id'] = [];
         RequestContext::reset();
@@ -52,7 +52,7 @@ final class GrantsServiceTest extends TestCase
 
     private function enable(): void
     {
-        add_filter('agent_safety_enable_grants', static fn (): bool => true);
+        add_filter('belayline_enable_grants', static fn (): bool => true);
     }
 
     /** The grantor holds manage_options, so the default authorisation passes. */
@@ -118,7 +118,7 @@ final class GrantsServiceTest extends TestCase
         [$service, $db, $sink] = $this->service();
 
         $this->assertFalse($service->enabled());
-        $this->assertNull($service->issue('core/post-publish', 3, 'app:key-1', 'senroflux:run:7', 5, 'step_1'));
+        $this->assertNull($service->issue('core/post-publish', 3, 'app:key-1', 'example:run:7', 5, 'step_1'));
         $this->assertNull($db->lastInsert);
         $this->assertSame([], $sink->records);
     }
@@ -129,11 +129,11 @@ final class GrantsServiceTest extends TestCase
     public static function refusedArguments(): array
     {
         return [
-            'no verb' => ['', 3, 'app:key-1', 'senroflux:run:7'],
-            'zero count' => ['core/post-publish', 0, 'app:key-1', 'senroflux:run:7'],
-            'negative count' => ['core/post-publish', -1, 'app:key-1', 'senroflux:run:7'],
-            'null subject' => ['core/post-publish', 3, null, 'senroflux:run:7'],
-            'empty subject' => ['core/post-publish', 3, '', 'senroflux:run:7'],
+            'no verb' => ['', 3, 'app:key-1', 'example:run:7'],
+            'zero count' => ['core/post-publish', 0, 'app:key-1', 'example:run:7'],
+            'negative count' => ['core/post-publish', -1, 'app:key-1', 'example:run:7'],
+            'null subject' => ['core/post-publish', 3, null, 'example:run:7'],
+            'empty subject' => ['core/post-publish', 3, '', 'example:run:7'],
             'empty scope' => ['core/post-publish', 3, 'app:key-1', ''],
         ];
     }
@@ -168,7 +168,7 @@ final class GrantsServiceTest extends TestCase
         [$service, $db, $sink] = $this->service();
         $db->rowReturn = $this->seededRow();
 
-        $grantId = $service->issue('core/post-publish', 3, 'app:key-1', 'senroflux:run:7', 5, 'step_1');
+        $grantId = $service->issue('core/post-publish', 3, 'app:key-1', 'example:run:7', 5, 'step_1');
 
         $this->assertNotNull($grantId);
         $this->assertSame('core/post-publish', $db->lastInsert['data']['verb']);
@@ -177,7 +177,7 @@ final class GrantsServiceTest extends TestCase
         $this->assertSame(GrantRecorder::EVENT_ISSUED, $record['reason']);
         $this->assertSame('grant', $record['decision']);
         $this->assertSame(GrantRecorder::PACK, $record['pack']);
-        $this->assertSame('senroflux:run:7', $record['correlation_id']);
+        $this->assertSame('example:run:7', $record['correlation_id']);
         $this->assertSame('core/post-publish', $record['ability']);
         $this->assertSame(3, $record['input']['count']);
         $this->assertSame('step_1', $record['input']['plan_step_id']);
@@ -203,7 +203,7 @@ final class GrantsServiceTest extends TestCase
         // must carry the accepting human's id or get nothing — and not even a
         // vouching filter can stand in for the missing name.
         $this->enable();
-        add_filter('agent_safety_can_grant', static fn (): bool => true);
+        add_filter('belayline_can_grant', static fn (): bool => true);
         [$service, $db, $sink] = $this->service();
 
         $this->assertNull($service->issue(self::VERB, 3, self::SUBJECT, self::SCOPE, $grantedBy, null));
@@ -231,7 +231,7 @@ final class GrantsServiceTest extends TestCase
         $this->enable();
         $seen = [];
         add_filter(
-            'agent_safety_can_grant',
+            'belayline_can_grant',
             static function (bool $default, int $by, string $verb, int $count, string $scope) use (&$seen): bool {
                 $seen = [$default, $by, $verb, $count, $scope];
 
@@ -274,7 +274,7 @@ final class GrantsServiceTest extends TestCase
         // filter that narrows (false) is honoured as written.
         $this->enable();
         $this->adminGrantor();
-        add_filter('agent_safety_can_grant', static fn (): mixed => $filtered);
+        add_filter('belayline_can_grant', static fn (): mixed => $filtered);
         [$service, $db, $sink] = $this->service();
 
         $this->assertNull($service->issue(self::VERB, 3, self::SUBJECT, self::SCOPE, 5, null));
@@ -307,7 +307,7 @@ final class GrantsServiceTest extends TestCase
     {
         $this->enable();
         $this->adminGrantor();
-        add_filter('agent_safety_grant_max_count', static fn (): int => 2);
+        add_filter('belayline_grant_max_count', static fn (): int => 2);
 
         [$service, $db, $sink] = $this->service();
         $this->assertNull($service->issue(self::VERB, 3, self::SUBJECT, self::SCOPE, 5, null));
@@ -341,7 +341,7 @@ final class GrantsServiceTest extends TestCase
     {
         $this->enable();
         $this->adminGrantor();
-        add_filter('agent_safety_grant_max_count', static fn (): mixed => $filtered);
+        add_filter('belayline_grant_max_count', static fn (): mixed => $filtered);
         $max = Grants::MAX_COUNT;
 
         [$service, $db] = $this->service();
@@ -363,12 +363,12 @@ final class GrantsServiceTest extends TestCase
         [$service, $db, $sink] = $this->service();
         $db->queryReturn = 3;
 
-        $this->assertSame(3, $service->revokeAll('senroflux:run:7'));
+        $this->assertSame(3, $service->revokeAll('example:run:7'));
         $this->assertCount(1, $sink->records);
         $record = $sink->records[0]->toArray();
         $this->assertSame(GrantRecorder::EVENT_REVOKED, $record['reason']);
         $this->assertSame(3, $record['input']['revoked_count']);
-        $this->assertSame('senroflux:run:7', $record['correlation_id']);
+        $this->assertSame('example:run:7', $record['correlation_id']);
     }
 
     public function testASecondRevokeAuditsNothing(): void
@@ -379,7 +379,7 @@ final class GrantsServiceTest extends TestCase
         [$service, $db, $sink] = $this->service();
         $db->queryReturn = 0;
 
-        $this->assertSame(0, $service->revokeAll('senroflux:run:7'));
+        $this->assertSame(0, $service->revokeAll('example:run:7'));
         $this->assertSame([], $sink->records);
     }
 
@@ -389,7 +389,7 @@ final class GrantsServiceTest extends TestCase
         [$service, $db, $sink] = $this->service();
         $db->queryReturn = 2;
 
-        $this->assertSame(2, $service->revokeAll('senroflux:run:7'));
+        $this->assertSame(2, $service->revokeAll('example:run:7'));
         $this->assertCount(1, $sink->records);
     }
 
@@ -411,9 +411,9 @@ final class GrantsServiceTest extends TestCase
         [$service] = $this->service();
 
         Container::init(null, $service);
-        $this->assertSame($service, agent_safety()?->grants());
+        $this->assertSame($service, belayline()?->grants());
 
         Container::init(null);
-        $this->assertNull(agent_safety()?->grants());
+        $this->assertNull(belayline()?->grants());
     }
 }

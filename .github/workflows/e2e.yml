@@ -69,9 +69,9 @@ jobs:
               core: process.env.WPENV_CORE,
               phpVersion: "8.3",
               mappings: {
-                "wp-content/plugins/senrogate": "./plugin",
+                "wp-content/plugins/belayline-agent-governance": "./plugin",
                 "wp-content/plugins/mcp-adapter": "../mcp-adapter",
-                "wp-content/mu-plugins/agsafe-smoke-fixture.php": "./dev/smoke/agsafe-smoke-fixture.php"
+                "wp-content/mu-plugins/belayline-smoke-fixture.php": "./dev/smoke/belayline-smoke-fixture.php"
               },
               config: { WP_DEBUG: true, WP_DEBUG_LOG: true }
             };
@@ -94,7 +94,7 @@ jobs:
           npx wp-env start
 
       - name: Activate plugins
-        run: npx wp-env run cli wp plugin activate senrogate mcp-adapter
+        run: npx wp-env run cli wp plugin activate belayline-agent-governance mcp-adapter
 
       - name: Install WooCommerce (Woo-on legs only)
         if: ${{ matrix.woo }}
@@ -104,8 +104,8 @@ jobs:
         run: |
           PW=$(npx wp-env run cli wp user application-password create admin e2e-smoke --porcelain | tail -1)
           UUID=$(npx wp-env run cli wp user application-password list admin --format=csv --fields=uuid,name | awk -F, 'tolower($2) == "e2e-smoke" {print $1}' | tr -d '\r')
-          npx wp-env run cli wp option update agsafe_pack_bindings "{\"app:$UUID\":\"site-readonly\"}" --format=json
-          echo "AGSAFE_SMOKE_APP_PASSWORD=$PW" >> "$GITHUB_ENV"
+          npx wp-env run cli wp option update belayline_pack_bindings "{\"app:$UUID\":\"site-readonly\"}" --format=json
+          echo "BELAYLINE_SMOKE_APP_PASSWORD=$PW" >> "$GITHUB_ENV"
 
       - uses: actions/setup-node@v4
         with:

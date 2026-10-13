@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Fakes;
+namespace Belayline\Plugin\Tests\Fakes;
 
-use Specflux\AgentSafety\Audit\AuditRecord;
-use Specflux\AgentSafety\Audit\AuditSink;
+use Belayline\Audit\AuditRecord;
+use Belayline\Audit\AuditSink;
 
 /**
  * Hand-rolled fake sink (house style: no mocking framework, see

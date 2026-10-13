@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\Woo;
+namespace Belayline\Plugin\Tests\Integrations\Woo;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Integrations\Woo\CustomerNoteElevationRule;
-use Specflux\AgentSafety\Plugin\Integrations\Woo\ForceDeleteElevationRule;
-use Specflux\AgentSafety\Plugin\Integrations\Woo\OrderFulfillmentElevationRule;
-use Specflux\AgentSafety\Plugin\Integrations\Woo\ProductPriceOrPublishElevationRule;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Plugin\Integrations\Woo\CustomerNoteElevationRule;
+use Belayline\Plugin\Integrations\Woo\ForceDeleteElevationRule;
+use Belayline\Plugin\Integrations\Woo\OrderFulfillmentElevationRule;
+use Belayline\Plugin\Integrations\Woo\ProductPriceOrPublishElevationRule;
+use Belayline\Policy\Tier;
 
 /**
  * The Woo rules elevate ONLY on their documented argument shape and never
  * touch anything else — same contract the core rules are held to in
- * {@see \Specflux\AgentSafety\Plugin\Tests\Integrations\Core\ElevationRulesTest}.
+ * {@see \Belayline\Plugin\Tests\Integrations\Core\ElevationRulesTest}.
  * The force-delete rule is the fail-closed one: only a CLEARLY false flag
  * keeps the base tier, every other shape elevates.
  */

@@ -2,41 +2,41 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Verdict;
+namespace Belayline\Plugin\Tests\Verdict;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Approval\ApprovalBinding;
-use Specflux\AgentSafety\Gate\Gate;
-use Specflux\AgentSafety\Gate\Outcome;
-use Specflux\AgentSafety\Packs\ArgumentCap;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Support\DecisionRecorder;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Support\ShadowMode;
-use Specflux\AgentSafety\Plugin\Support\ValueAccumulator;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeApprovalStore;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeIdentityProvider;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
-use Specflux\AgentSafety\Plugin\Verdict\Hints;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictMode;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Approval\ApprovalBinding;
+use Belayline\Gate\Gate;
+use Belayline\Gate\Outcome;
+use Belayline\Packs\ArgumentCap;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Support\DecisionRecorder;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Support\ShadowMode;
+use Belayline\Plugin\Support\ValueAccumulator;
+use Belayline\Plugin\Tests\Fakes\FakeApprovalStore;
+use Belayline\Plugin\Tests\Fakes\FakeIdentityProvider;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Plugin\Verdict\Hints;
+use Belayline\Plugin\Verdict\VerdictMode;
+use Belayline\Plugin\Verdict\VerdictPipeline;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 
 /**
  * The BEHAVIOUR suite for the governed-call decision: rate caps, argument
  * caps, shadow mode, the approval lifecycle, re-entrancy and the
  * annotation-hint rules, all driven through {@see VerdictPipeline::judge()}
- * and asserted on the returned {@see \Specflux\AgentSafety\Plugin\Verdict\Verdict}.
+ * and asserted on the returned {@see \Belayline\Plugin\Verdict\Verdict}.
  *
  * These used to be written twice — once per gate seam — because each seam
  * owned its own copy of the evaluation. Now that both seams are thin adapters
  * of this one pipeline (docs/adr/0001-single-verdict-pipeline.md), the
  * behaviour is proven ONCE here, and the seam tests
- * ({@see \Specflux\AgentSafety\Plugin\Tests\Hooks\AbilityPermissionGateTest},
- * {@see \Specflux\AgentSafety\Plugin\Tests\Hooks\PreToolCallGateTest}) only
+ * ({@see \Belayline\Plugin\Tests\Hooks\AbilityPermissionGateTest},
+ * {@see \Belayline\Plugin\Tests\Hooks\PreToolCallGateTest}) only
  * prove their own translation layer. Anything that differs between the seams
  * is a {@see VerdictMode} difference, so it is covered here in both modes
  * rather than in two files.
@@ -401,10 +401,10 @@ final class VerdictPipelineTest extends TestCase
         RequestContext::configure(new IdentityChain([
             new FakeIdentityProvider(currentTokens: ['user:2', 'role:shop_manager', 'wc:1']),
         ]));
-        $GLOBALS['wpas_test_options'][\Specflux\AgentSafety\Plugin\Support\PackResolver::BINDINGS_OPTION] = [
+        $GLOBALS['wpas_test_options'][\Belayline\Plugin\Support\PackResolver::BINDINGS_OPTION] = [
             'wc:1' => 'woo-default-agent',
         ];
-        $packResolver = new \Specflux\AgentSafety\Plugin\Support\PackResolver([
+        $packResolver = new \Belayline\Plugin\Support\PackResolver([
             new Pack(name: 'woo-default-agent', allow: ['demo/*'], approvalByClass: ['tier2' => true]),
         ]);
         RequestContext::configurePrincipalResolver([$packResolver, 'principal']);
@@ -574,7 +574,7 @@ final class VerdictPipelineTest extends TestCase
         $error = $pipeline->judge('demo/mystery', [], $pack, Hints::none(), VerdictMode::Claim)->error();
 
         $this->assertNotNull($error);
-        $this->assertSame('agent_safety_denied', $error->get_error_code());
+        $this->assertSame('belayline_denied', $error->get_error_code());
         $data = $error->get_error_data();
         $this->assertSame(403, $data['status']);
         $this->assertSame('demo/mystery', $data['verb']);

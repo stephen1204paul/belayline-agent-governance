@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\Core;
+namespace Belayline\Plugin\Integrations\Core;
 
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Policy\Tier;
 
 /**
  * OUR tier assignments for WordPress core verbs, contributed into the core
- * {@see \Specflux\AgentSafety\Policy\VerbCatalog} by {@see CoreIntegration::register()}.
- * Authoritative like {@see \Specflux\AgentSafety\Plugin\Integrations\Woo\WooVerbCatalog}:
+ * {@see \Belayline\Policy\VerbCatalog} by {@see CoreIntegration::register()}.
+ * Authoritative like {@see \Belayline\Plugin\Integrations\Woo\WooVerbCatalog}:
  * if a core ability self-reports read-only but appears here as a write, the
  * gate fails closed.
  *

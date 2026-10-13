@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Support\EnvironmentGuard;
-use Specflux\AgentSafety\Plugin\Support\Schema;
-use Specflux\AgentSafety\Plugin\Support\ShadowMode;
+use Belayline\Plugin\Support\EnvironmentGuard;
+use Belayline\Plugin\Support\Schema;
+use Belayline\Plugin\Support\ShadowMode;
 use wpdb;
 
 /**
@@ -73,10 +73,10 @@ final class SchemaTest extends TestCase
         Schema::install(new wpdb());
 
         $this->assertCount(4, $GLOBALS['wpas_test_dbdelta_queries']);
-        $this->assertStringContainsString('wp_agsafe_audit_log', $GLOBALS['wpas_test_dbdelta_queries'][0]);
-        $this->assertStringContainsString('wp_agsafe_approvals', $GLOBALS['wpas_test_dbdelta_queries'][1]);
-        $this->assertStringContainsString('wp_agsafe_grants', $GLOBALS['wpas_test_dbdelta_queries'][2]);
-        $this->assertStringContainsString('wp_agsafe_counters', $GLOBALS['wpas_test_dbdelta_queries'][3]);
+        $this->assertStringContainsString('wp_belayline_audit_log', $GLOBALS['wpas_test_dbdelta_queries'][0]);
+        $this->assertStringContainsString('wp_belayline_approvals', $GLOBALS['wpas_test_dbdelta_queries'][1]);
+        $this->assertStringContainsString('wp_belayline_grants', $GLOBALS['wpas_test_dbdelta_queries'][2]);
+        $this->assertStringContainsString('wp_belayline_counters', $GLOBALS['wpas_test_dbdelta_queries'][3]);
     }
 
     public function testTheCountersTableKeysByCounterKeyAndIndexesExpiry(): void
@@ -195,7 +195,7 @@ final class SchemaTest extends TestCase
 
         Schema::install($db);
 
-        $this->assertStringContainsString('wp_agsafe_grants', $GLOBALS['wpas_test_dbdelta_queries'][2]);
+        $this->assertStringContainsString('wp_belayline_grants', $GLOBALS['wpas_test_dbdelta_queries'][2]);
         $this->assertSame([], self::renameQueries($db), 'a fresh install has nothing to RENAME');
         $this->assertFalse($GLOBALS['wpas_test_options'][Schema::GRANTS_RENAME_CONFLICT_OPTION] ?? false);
     }
@@ -215,12 +215,12 @@ final class SchemaTest extends TestCase
         $db = new wpdb();
         // Legacy table found (SHOW TABLES LIKE echoes the name back); the new
         // name isn't there yet.
-        $db->varReturnQueue = ['wp_agent_safety_grants', null];
+        $db->varReturnQueue = ['wp_belayline_grants', null];
 
         Schema::maybeUpgrade($db);
 
         $this->assertSame(
-            ['RENAME TABLE wp_agent_safety_grants TO wp_agsafe_grants'],
+            ['RENAME TABLE wp_belayline_grants TO wp_belayline_grants'],
             self::renameQueries($db)
         );
         $this->assertSame(Schema::VERSION, $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
@@ -235,7 +235,7 @@ final class SchemaTest extends TestCase
         // nothing left to RENAME and no error.
         $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION] = '3';
         $db = new wpdb();
-        $db->varReturnQueue = ['wp_agent_safety_grants', null];
+        $db->varReturnQueue = ['wp_belayline_grants', null];
         Schema::maybeUpgrade($db);
 
         $this->assertSame(Schema::VERSION, $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
@@ -253,14 +253,14 @@ final class SchemaTest extends TestCase
         // A crashed earlier rename: both the legacy and the new table exist.
         $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION] = '3';
         $db = new wpdb();
-        $db->varReturnQueue = ['wp_agent_safety_grants', 'wp_agsafe_grants'];
+        $db->varReturnQueue = ['wp_belayline_grants', 'wp_belayline_grants'];
 
         Schema::maybeUpgrade($db);
 
         $this->assertSame([], self::renameQueries($db), 'neither table is touched when both exist');
         $this->assertTrue($GLOBALS['wpas_test_options'][Schema::GRANTS_RENAME_CONFLICT_OPTION]);
         // dbDelta still receives (and so maintains) the NEW table's name.
-        $this->assertStringContainsString('wp_agsafe_grants', $GLOBALS['wpas_test_dbdelta_queries'][2]);
+        $this->assertStringContainsString('wp_belayline_grants', $GLOBALS['wpas_test_dbdelta_queries'][2]);
     }
 
     public function testTheConflictFlagClearsOnceTheLegacyTableIsGone(): void
@@ -289,7 +289,7 @@ final class SchemaTest extends TestCase
         $notice = ob_get_clean();
 
         $this->assertStringContainsString('notice-warning', $notice);
-        $this->assertStringContainsString('agent_safety_grants', $notice);
+        $this->assertStringContainsString('belayline_grants', $notice);
     }
 
     public function testTheConflictNoticeIsHiddenFromUsersWithoutManageOptions(): void

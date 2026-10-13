@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Packs;
+namespace Belayline\Packs;
 
 /**
  * Pure evaluator for a Pack's rate/quota caps (backlog #16; the "Policy

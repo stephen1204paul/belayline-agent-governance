@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
 /**
  * Per-pack "log only" observation (roadmap 0.2 "shadow mode"): the gate
@@ -14,8 +14,8 @@ namespace Specflux\AgentSafety\Plugin\Support;
  *
  * This is the ONE feature in the plugin that deliberately loosens a verdict,
  * so its inputs are as explicit as the packs themselves: the
- * `agsafe_shadow_packs` option (set on the Agent Capability Packs screen by
- * an administrator) and the `agent_safety_shadow_packs` filter (site code).
+ * `belayline_shadow_packs` option (set on the Agent Capability Packs screen by
+ * an administrator) and the `belayline_shadow_packs` filter (site code).
  * Nothing a tool or agent self-reports can reach either.
  *
  * Shadowing EXPIRES. The option maps pack name => unix expiry timestamp, and a
@@ -35,9 +35,9 @@ namespace Specflux\AgentSafety\Plugin\Support;
  */
 final class ShadowMode
 {
-    public const OPTION = 'agsafe_shadow_packs';
+    public const OPTION = 'belayline_shadow_packs';
 
-    public const FILTER = 'agent_safety_shadow_packs';
+    public const FILTER = 'belayline_shadow_packs';
 
     /**
      * The longest a pack may stay shadowed from one toggle: seven days, the
@@ -51,7 +51,7 @@ final class ShadowMode
      * shadow, and when an admin does enable it on a production site the
      * window is much shorter than {@see MAX_TTL} — 24 hours, not 7 days. This
      * bounds EVERY read of the shadow set on a production site: the stored
-     * option, the `agent_safety_shadow_packs` filter's output, and a fresh
+     * option, the `belayline_shadow_packs` filter's output, and a fresh
      * toggle from the admin form alike. An environment flip (production =>
      * not, or back) changes which ceiling the very next read uses; nothing is
      * re-written, so an entry that is now beyond the new ceiling simply stops
@@ -96,7 +96,7 @@ final class ShadowMode
 
     /**
      * Pack name => unix expiry for every pack currently shadowed, after the
-     * `agent_safety_shadow_packs` filter and with the filter's output held to
+     * `belayline_shadow_packs` filter and with the filter's output held to
      * the same rule as the stored option.
      *
      * @return array<string, int>
@@ -104,7 +104,7 @@ final class ShadowMode
     public function expiries(): array
     {
         $now = time();
-        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- self::FILTER is the literal, prefixed 'agent_safety_shadow_packs' constant; PHPCS can't resolve a class constant statically.
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- self::FILTER is the literal, prefixed 'belayline_shadow_packs' constant; PHPCS can't resolve a class constant statically.
         $filtered = apply_filters(self::FILTER, $this->stored($now));
 
         return $this->validate(is_array($filtered) ? $filtered : [], $now);

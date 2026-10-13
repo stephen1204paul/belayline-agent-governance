@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\Self;
+namespace Belayline\Plugin\Tests\Integrations\Self;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Integrations\Self\CheckApprovalAbility;
-use Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder;
-use Specflux\AgentSafety\Plugin\Support\PauseSwitch;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeIdentityProvider;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Plugin\Audit\WpdbApprovalStore;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Integrations\Self\CheckApprovalAbility;
+use Belayline\Plugin\Support\AdminChangeRecorder;
+use Belayline\Plugin\Support\PauseSwitch;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\FakeIdentityProvider;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
 use wpdb;
 
 /**
  * AS-8 (§3.5): the actual poll logic the Verdict pipeline's exemption
- * ({@see \Specflux\AgentSafety\Plugin\Tests\Verdict\VerdictPipelineCheckApprovalTest})
+ * ({@see \Belayline\Plugin\Tests\Verdict\VerdictPipelineCheckApprovalTest})
  * deliberately skips — scoping, the public status/next_action table (§3.11),
  * the forbidden-field allow-list, the paused prefix, the ability's own rate
  * limit, and the `approval.probe` audit rule.
@@ -217,7 +217,7 @@ final class CheckApprovalAbilityTest extends TestCase
 
         $this->assertTrue($body['paused']);
         $this->assertSame(
-            'SenroGate is paused on this site, so retrying won\'t work until an administrator resumes it. '
+            'Belayline Agent Governance is paused on this site, so retrying won\'t work until an administrator resumes it. '
             . 'Waiting for a human. Check again in 30 seconds or more, and stop at pending_expires_at.',
             $body['next_action']
         );
@@ -301,7 +301,7 @@ final class CheckApprovalAbilityTest extends TestCase
         $this->assertCount(1, $this->sink->records);
         $record = $this->sink->records[0]->toArray();
         $this->assertSame('approval.probe', $record['reason']);
-        $this->assertSame('agent-safety/check-approval', $record['ability']);
+        $this->assertSame('belayline/check-approval', $record['ability']);
     }
 
     public function testTheEleventhCallInAMinuteIsRateLimitedWithRetryAfterAndAudited(): void

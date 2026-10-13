@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 /**
  * A wpdb stand-in that actually behaves like the audit-log table for the
- * queries {@see \Specflux\AgentSafety\Plugin\Privacy\PrivacyAuditReader} and
- * {@see \Specflux\AgentSafety\Plugin\Audit\AuditReader} issue against it,
+ * queries {@see \Belayline\Plugin\Privacy\PrivacyAuditReader} and
+ * {@see \Belayline\Plugin\Audit\AuditReader} issue against it,
  * instead of the base test stub's canned-return behaviour (tests/stubs/wpdb.php).
  * Both classes issue only a handful of recognisable query shapes, so this
  * fake recognises them from the rendered SQL string (wpdb::prepare() already

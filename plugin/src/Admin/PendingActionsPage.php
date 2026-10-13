@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Admin;
+namespace Belayline\Plugin\Admin;
 
-use Specflux\AgentSafety\Plugin\Api\Approvals;
-use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
-use Specflux\AgentSafety\Plugin\Support\ApprovalNotifier;
-use Specflux\AgentSafety\Plugin\Support\ShadowMode;
-use Specflux\AgentSafety\Plugin\Support\SummaryMarkup;
+use Belayline\Plugin\Api\Approvals;
+use Belayline\Plugin\Audit\WpdbApprovalStore;
+use Belayline\Plugin\Support\ApprovalNotifier;
+use Belayline\Plugin\Support\ShadowMode;
+use Belayline\Plugin\Support\SummaryMarkup;
 
 /**
  * Tools → "Pending Agent Actions": the human side of the approval flow.
@@ -26,16 +26,16 @@ use Specflux\AgentSafety\Plugin\Support\SummaryMarkup;
  */
 final class PendingActionsPage
 {
-    private const SLUG = 'agent-safety-pending';
+    private const SLUG = 'belayline-pending';
     private const CAP = 'manage_options';
-    private const APPROVE = 'agsafe_approve_action';
-    private const REJECT = 'agsafe_reject_action';
-    private const NOTIFY = 'agsafe_save_notifications';
-    // Public: named by {@see \Specflux\AgentSafety\Plugin\Support\UninstallManifest}
+    private const APPROVE = 'belayline_approve_action';
+    private const REJECT = 'belayline_reject_action';
+    private const NOTIFY = 'belayline_save_notifications';
+    // Public: named by {@see \Belayline\Plugin\Support\UninstallManifest}
     // as the transient-key prefixes an opted-in uninstall must sweep — these
     // transients are keyed per-approver, so no fixed list of full names exists.
-    public const FLASH = 'agsafe_minted_token_';
-    public const STALE_FLASH = 'agsafe_stale_notice_';
+    public const FLASH = 'belayline_minted_token_';
+    public const STALE_FLASH = 'belayline_stale_notice_';
 
     public function __construct(
         private readonly WpdbApprovalStore $store,
@@ -55,8 +55,8 @@ final class PendingActionsPage
     public function menu(): void
     {
         add_management_page(
-            __('Pending Agent Actions', 'senrogate'),
-            __('Pending Agent Actions', 'senrogate'),
+            __('Pending Agent Actions', 'belayline-agent-governance'),
+            __('Pending Agent Actions', 'belayline-agent-governance'),
             self::CAP,
             self::SLUG,
             [$this, 'render']
@@ -72,8 +72,8 @@ final class PendingActionsPage
         $rows = $this->store->pending();
 
         echo '<div class="wrap">';
-        echo '<h1>' . esc_html__('Pending Agent Actions', 'senrogate') . '</h1>';
-        echo '<p>' . esc_html__('Irreversible agent actions blocked pending human approval. Approving mints a single-use token bound to the exact verb + arguments.', 'senrogate') . '</p>';
+        echo '<h1>' . esc_html__('Pending Agent Actions', 'belayline-agent-governance') . '</h1>';
+        echo '<p>' . esc_html__('Irreversible agent actions blocked pending human approval. Approving mints a single-use token bound to the exact verb + arguments.', 'belayline-agent-governance') . '</p>';
 
         EnvironmentLabel::render($this->shadow);
 
@@ -87,7 +87,7 @@ final class PendingActionsPage
         echo '</tr></thead><tbody>';
 
         if (!$rows) {
-            echo '<tr><td colspan="8">' . esc_html__('No pending actions. The agent has nothing awaiting review.', 'senrogate') . '</td></tr>';
+            echo '<tr><td colspan="8">' . esc_html__('No pending actions. The agent has nothing awaiting review.', 'belayline-agent-governance') . '</td></tr>';
         }
 
         foreach ($rows as $r) {
@@ -96,7 +96,7 @@ final class PendingActionsPage
             // no state check at all, so the queue says so rather than
             // implying every row is equally protected.
             $kind = $r['fingerprint_kind'] ?? null;
-            $stateLabel = ($kind === null || $kind === 'none' || $kind === '') ? __('state not checked', 'senrogate') : '';
+            $stateLabel = ($kind === null || $kind === 'none' || $kind === '') ? __('state not checked', 'belayline-agent-governance') : '';
             echo '<tr>';
             echo '<td>' . esc_html((string) ($r['created_ts'] ?? '')) . '</td>';
             echo '<td>' . esc_html((string) ($r['pending_expires_ts'] ?? '')) . '</td>';
@@ -122,42 +122,42 @@ final class PendingActionsPage
      */
     private function renderNotificationSettings(): void
     {
-        echo '<h2>' . esc_html__('Notifications', 'senrogate') . '</h2>';
-        echo '<p>' . esc_html__('Each NEW pending action sends an email (with a link to this screen) and, if a webhook URL is set, an identifiers-only JSON POST — no call arguments leave the site.', 'senrogate') . '</p>';
+        echo '<h2>' . esc_html__('Notifications', 'belayline-agent-governance') . '</h2>';
+        echo '<p>' . esc_html__('Each NEW pending action sends an email (with a link to this screen) and, if a webhook URL is set, an identifiers-only JSON POST — no call arguments leave the site.', 'belayline-agent-governance') . '</p>';
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
         echo '<input type="hidden" name="action" value="' . esc_attr(self::NOTIFY) . '">';
         echo wp_nonce_field(self::NOTIFY, '_wpnonce', true, false); // phpcs:ignore WordPress.Security.EscapeOutput -- core-built hidden fields.
         echo '<table class="form-table"><tbody>';
         printf(
-            '<tr><th scope="row"><label for="agsafe_notify_email">%s</label></th>'
-            . '<td><input type="email" id="agsafe_notify_email" name="agsafe_notify_email" class="regular-text" value="%s" placeholder="%s"></td></tr>',
-            esc_html__('Notification email', 'senrogate'),
+            '<tr><th scope="row"><label for="belayline_notify_email">%s</label></th>'
+            . '<td><input type="email" id="belayline_notify_email" name="belayline_notify_email" class="regular-text" value="%s" placeholder="%s"></td></tr>',
+            esc_html__('Notification email', 'belayline-agent-governance'),
             esc_attr((string) get_option(ApprovalNotifier::EMAIL_OPTION, '')),
-            esc_attr__('Site admin email (default)', 'senrogate'),
+            esc_attr__('Site admin email (default)', 'belayline-agent-governance'),
         );
         printf(
-            '<tr><th scope="row"><label for="agsafe_webhook_url">%s</label></th>'
-            . '<td><input type="url" id="agsafe_webhook_url" name="agsafe_webhook_url" class="regular-text" value="%s" placeholder="https://"></td></tr>',
-            esc_html__('Webhook URL', 'senrogate'),
+            '<tr><th scope="row"><label for="belayline_webhook_url">%s</label></th>'
+            . '<td><input type="url" id="belayline_webhook_url" name="belayline_webhook_url" class="regular-text" value="%s" placeholder="https://"></td></tr>',
+            esc_html__('Webhook URL', 'belayline-agent-governance'),
             esc_attr((string) get_option(ApprovalNotifier::WEBHOOK_OPTION, '')),
         );
         echo '</tbody></table>';
-        echo '<p><button type="submit" class="button button-primary">' . esc_html__('Save notification settings', 'senrogate') . '</button></p>';
+        echo '<p><button type="submit" class="button button-primary">' . esc_html__('Save notification settings', 'belayline-agent-governance') . '</button></p>';
         echo '</form>';
     }
 
     public function saveNotifications(): void
     {
         if (!current_user_can(self::CAP)) {
-            wp_die(esc_html__('Insufficient permissions.', 'senrogate'));
+            wp_die(esc_html__('Insufficient permissions.', 'belayline-agent-governance'));
         }
         check_admin_referer(self::NOTIFY);
 
-        $email = isset($_POST['agsafe_notify_email'])
-            ? sanitize_email(wp_unslash($_POST['agsafe_notify_email']))
+        $email = isset($_POST['belayline_notify_email'])
+            ? sanitize_email(wp_unslash($_POST['belayline_notify_email']))
             : '';
-        $webhook = isset($_POST['agsafe_webhook_url'])
-            ? esc_url_raw(wp_unslash($_POST['agsafe_webhook_url']), ['https', 'http'])
+        $webhook = isset($_POST['belayline_webhook_url'])
+            ? esc_url_raw(wp_unslash($_POST['belayline_webhook_url']), ['https', 'http'])
             : '';
 
         update_option(ApprovalNotifier::EMAIL_OPTION, $email);
@@ -209,7 +209,7 @@ final class PendingActionsPage
 
         printf(
             '<div class="notice notice-warning"><p>%s</p></div>',
-            esc_html__('The target of this request changed since it was filed. It cannot be approved as-is; if it is still needed, ask the agent to retry the call.', 'senrogate')
+            esc_html__('The target of this request changed since it was filed. It cannot be approved as-is; if it is still needed, ask the agent to retry the call.', 'belayline-agent-governance')
         );
     }
 
@@ -224,10 +224,10 @@ final class PendingActionsPage
 
         printf(
             '<div class="notice notice-success"><p><strong>%s</strong></p><p>%s</p><p><code style="font-size:13px;user-select:all;">%s</code></p><p>%s</p></div>',
-            esc_html__('Approved.', 'senrogate'),
-            esc_html(sprintf(/* translators: %s approval id */ __('Approval %s is now granted. The same agent (same API key) can simply re-issue the exact same call and it will run — no token needed. To delegate the action to a different actor, hand them the single-use token below as the _approval argument instead.', 'senrogate'), (string) $flash['approval_id'])),
+            esc_html__('Approved.', 'belayline-agent-governance'),
+            esc_html(sprintf(/* translators: %s approval id */ __('Approval %s is now granted. The same agent (same API key) can simply re-issue the exact same call and it will run — no token needed. To delegate the action to a different actor, hand them the single-use token below as the _approval argument instead.', 'belayline-agent-governance'), (string) $flash['approval_id'])),
             esc_html((string) $flash['token']),
-            esc_html__('Valid once, for 15 minutes, bound to that exact verb + arguments. Shown only now and never stored in the clear.', 'senrogate')
+            esc_html__('Valid once, for 15 minutes, bound to that exact verb + arguments. Shown only now and never stored in the clear.', 'belayline-agent-governance')
         );
     }
 
@@ -235,14 +235,14 @@ final class PendingActionsPage
     private static function columnHeaders(): array
     {
         return [
-            __('Requested (UTC)', 'senrogate'),
-            __('Expires (UTC)', 'senrogate'),
-            __('Correlation', 'senrogate'),
-            __('Verb', 'senrogate'),
-            __('Summary', 'senrogate'),
-            __('State', 'senrogate'),
-            __('Approval ID', 'senrogate'),
-            __('Action', 'senrogate'),
+            __('Requested (UTC)', 'belayline-agent-governance'),
+            __('Expires (UTC)', 'belayline-agent-governance'),
+            __('Correlation', 'belayline-agent-governance'),
+            __('Verb', 'belayline-agent-governance'),
+            __('Summary', 'belayline-agent-governance'),
+            __('State', 'belayline-agent-governance'),
+            __('Approval ID', 'belayline-agent-governance'),
+            __('Action', 'belayline-agent-governance'),
         ];
     }
 
@@ -256,7 +256,7 @@ final class PendingActionsPage
      * administrator is about to act on.
      *
      * Only a summary a site integration actually rewrote through the
-     * `agent_safety_approval_summary` filter is host-authored — the recorder tags
+     * `belayline_approval_summary` filter is host-authored — the recorder tags
      * exactly those ({@see SummaryMarkup}) — and only those are rendered as markup,
      * through wp_kses with an allow-list of exactly one element (`<a href="...">`).
      * Fail-closed: an untagged, legacy or unrecognised value is escaped.
@@ -275,8 +275,8 @@ final class PendingActionsPage
     private function actionButtons(string $approvalId): string
     {
         $out = '';
-        $out .= $this->actionButton($approvalId, self::APPROVE, 'primary', __('Approve', 'senrogate'));
-        $out .= $this->actionButton($approvalId, self::REJECT, 'secondary', __('Reject', 'senrogate'));
+        $out .= $this->actionButton($approvalId, self::APPROVE, 'primary', __('Approve', 'belayline-agent-governance'));
+        $out .= $this->actionButton($approvalId, self::REJECT, 'secondary', __('Reject', 'belayline-agent-governance'));
 
         return $out;
     }
@@ -302,7 +302,7 @@ final class PendingActionsPage
     private function guard(string $action): string
     {
         if (!current_user_can(self::CAP)) {
-            wp_die(esc_html__('Insufficient permissions.', 'senrogate'));
+            wp_die(esc_html__('Insufficient permissions.', 'belayline-agent-governance'));
         }
         $approvalId = isset($_POST['approval_id']) ? sanitize_text_field(wp_unslash($_POST['approval_id'])) : '';
         check_admin_referer($action . $approvalId);

@@ -11,7 +11,7 @@
  * `wp db query` — the misreport-on-update/delete gotcha), an mcp() JSON-RPC
  * fetch helper with Connection: close, a wp() exec wrapper filtering
  * Deprecated/Notice/Warning lines, and a final summary + process.exit(1) on
- * any failure. Writes /tmp/agsafe-release-0.4-proof/results.json with one
+ * any failure. Writes /tmp/belayline-release-0.4-proof/results.json with one
  * boolean per row for release-0.4.sh to fold into its final table.
  *
  * Run: node run.js   (after release-0.4.sh has written state.json)
@@ -20,8 +20,8 @@ const { execSync, execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const STATE_PATH = process.env.AGSAFE_STATE_PATH || '/tmp/agsafe-release-0.4-proof/state.json';
-const RESULTS_PATH = process.env.AGSAFE_RESULTS_PATH || '/tmp/agsafe-release-0.4-proof/results.json';
+const STATE_PATH = process.env.BELAYLINE_STATE_PATH || '/tmp/belayline-release-0.4-proof/state.json';
+const RESULTS_PATH = process.env.BELAYLINE_RESULTS_PATH || '/tmp/belayline-release-0.4-proof/results.json';
 const state = JSON.parse(fs.readFileSync(STATE_PATH, 'utf8'));
 const BASE = state.baseUrl;
 const CLI = `docker exec --user www-data ${state.cliContainer}`;
@@ -59,7 +59,7 @@ function wp(cmd) {
 function dbRows(query) {
   const raw = execFileSync(
     'docker',
-    ['exec', '-e', `AGSAFE_SQL=${query}`, '--user', 'www-data', state.cliContainer, 'wp', 'eval-file', '/tmp/agsafe-query.php'],
+    ['exec', '-e', `BELAYLINE_SQL=${query}`, '--user', 'www-data', state.cliContainer, 'wp', 'eval-file', '/tmp/belayline-query.php'],
     { encoding: 'utf8' }
   );
   const line = raw.trim().split('\n').filter(Boolean).pop() || '[]';
@@ -73,9 +73,9 @@ function dbCount(query) {
 /** Copies a small inline PHP script into the container's /tmp and returns its container path. */
 let tmpScriptSeq = 0;
 function copyInlineScript(name, phpSource) {
-  const localPath = path.join('/tmp', `agsafe-r04-${name}-${process.pid}-${tmpScriptSeq++}.php`);
+  const localPath = path.join('/tmp', `belayline-r04-${name}-${process.pid}-${tmpScriptSeq++}.php`);
   fs.writeFileSync(localPath, phpSource);
-  const containerPath = `/tmp/agsafe-${name}.php`;
+  const containerPath = `/tmp/belayline-${name}.php`;
   execFileSync('docker', ['cp', localPath, `${state.cliContainer}:${containerPath}`]);
   fs.unlinkSync(localPath);
   return containerPath;
@@ -127,7 +127,7 @@ const toolFor = (verb) => verb.replace('/', '-');
 async function handshake(url, headers) {
   const init = await mcp(url, headers, {
     jsonrpc: '2.0', id: 1, method: 'initialize',
-    params: { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: { name: 'agsafe-release-0.4-smoke', version: '0.1.0' } },
+    params: { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: { name: 'belayline-release-0.4-smoke', version: '0.1.0' } },
   });
   const sessionId = init.headers['mcp-session-id'];
   await mcp(url, headers, { jsonrpc: '2.0', method: 'notifications/initialized' }, sessionId);
@@ -141,7 +141,7 @@ async function toolsList(url, headers, sessionId) {
 
 async function provisionFreshProduct(name) {
   const raw = execSync(
-    `${CLI} bash -lc "AGSAFE_PRODUCT_NAME='${name}' wp eval-file /tmp/agsafe-provision-woo.php"`,
+    `${CLI} bash -lc "BELAYLINE_PRODUCT_NAME='${name}' wp eval-file /tmp/belayline-provision-woo.php"`,
     { encoding: 'utf8' }
   );
   const line = raw.trim().split('\n').filter(Boolean).pop();
@@ -242,14 +242,14 @@ function readDebugLog() {
 function debugLogLineCount() {
   return readDebugLog().split('\n').length;
 }
-function agsafeIssuesSince(startLineCount) {
+function belaylineIssuesSince(startLineCount) {
   const lines = readDebugLog().split('\n');
   const newLines = lines.slice(startLineCount);
-  return newLines.filter((l) => /PHP (Warning|Notice|Deprecated)/i.test(l) && /agent-safety|Specflux\\AgentSafety/i.test(l));
+  return newLines.filter((l) => /PHP (Warning|Notice|Deprecated)/i.test(l) && /belayline|Belayline\\/i.test(l));
 }
 
 /**
- * Asserts `pack` is NOT currently in `agsafe_shadow_packs` before a row
+ * Asserts `pack` is NOT currently in `belayline_shadow_packs` before a row
  * relies on enforcement (not just a dry-run audit) for its own governed
  * call. Added post-review after a confirmed root cause: P3/P4's own
  * products-delete{force} calls were being correctly evaluated as
@@ -262,27 +262,27 @@ function agsafeIssuesSince(startLineCount) {
  * ever shadows a pack another row still needs enforced.
  */
 function assertPackNotShadowed(pack, tablePrefixArg) {
-  const row = dbRows(`SELECT option_value FROM ${tablePrefixArg}options WHERE option_name='agsafe_shadow_packs'`)[0];
+  const row = dbRows(`SELECT option_value FROM ${tablePrefixArg}options WHERE option_name='belayline_shadow_packs'`)[0];
   const shadowed = !!row && String(row.option_value).includes(`"${pack}"`);
   check(`precondition: ${pack} is not shadowed before this row's governed call`, !shadowed, JSON.stringify(row));
 }
 
 (async () => {
   const tablePrefix = wp('config get table_prefix').trim();
-  const auditTable = `${tablePrefix}agsafe_audit_log`;
-  const approvalsTable = `${tablePrefix}agsafe_approvals`;
-  const grantsTable = `${tablePrefix}agsafe_grants`;
+  const auditTable = `${tablePrefix}belayline_audit_log`;
+  const approvalsTable = `${tablePrefix}belayline_approvals`;
+  const grantsTable = `${tablePrefix}belayline_grants`;
 
   // =========================================================================
   // P2 — upgrade: schema version, grant row, audit event, chain-intact page.
   // =========================================================================
   section('P2');
   let p2Start = debugLogLineCount();
-  const schemaVersion = wp(`option get agsafe_schema_version`).trim();
+  const schemaVersion = wp(`option get belayline_schema_version`).trim();
   check('P2 schema version is 4', schemaVersion === '4', schemaVersion);
 
-  const grantRow = dbRows(`SELECT id FROM ${grantsTable} WHERE correlation_id='agsafe-p2-e2e' LIMIT 1`)[0];
-  check('P2 grant row present in agsafe_grants', !!grantRow, JSON.stringify(grantRow));
+  const grantRow = dbRows(`SELECT id FROM ${grantsTable} WHERE correlation_id='belayline-p2-e2e' LIMIT 1`)[0];
+  check('P2 grant row present in belayline_grants', !!grantRow, JSON.stringify(grantRow));
 
   const p2PendingRow = state.p2_pending_approval_id
     ? dbRows(`SELECT status FROM ${approvalsTable} WHERE approval_id='${state.p2_pending_approval_id}'`)[0]
@@ -293,19 +293,19 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
   check('P2 pending approval row survived the upgrade', !!p2PendingRow && p2PendingRow.status === 'pending', JSON.stringify(p2PendingRow));
   check('P2 approved approval row survived the upgrade', !!p2ApprovedRow && p2ApprovedRow.status === 'approved', JSON.stringify(p2ApprovedRow));
 
-  // NOTE: `ability` on this row is the OPTION name (agsafe_site_binding),
+  // NOTE: `ability` on this row is the OPTION name (belayline_site_binding),
   // not the event name — AdminChangeRecorder::append(event, option, input)
   // stores $option as `ability` and $event only inside record_json's
   // "reason" key (confirmed against AdminChangeRecorder.php, WpdbAuditSink.php
   // and AuditRecord::toArray()). Match on record_json, not ability.
-  const boundEvent = dbCount(`SELECT COUNT(*) FROM ${auditTable} WHERE ability='agsafe_site_binding' AND record_json LIKE '%"reason":"environment.bound"%'`);
+  const boundEvent = dbCount(`SELECT COUNT(*) FROM ${auditTable} WHERE ability='belayline_site_binding' AND record_json LIKE '%"reason":"environment.bound"%'`);
   check('P2 one environment.bound audit event exists', boundEvent >= 1, `count=${boundEvent}`);
 
   const adminJar1 = await adminLogin('admin', state.admin_password);
-  const chainPage1 = await getAuthed(adminJar1, '/wp-admin/tools.php?page=agent-safety-audit');
+  const chainPage1 = await getAuthed(adminJar1, '/wp-admin/tools.php?page=belayline-audit');
   check('P2 audit page shows Chain intact.', chainPage1.body.includes('Chain intact.'), chainPage1.body.slice(0, 300));
 
-  check('P2 debug.log clean', agsafeIssuesSince(p2Start).length === 0, agsafeIssuesSince(p2Start).slice(0, 5).join(' | '));
+  check('P2 debug.log clean', belaylineIssuesSince(p2Start).length === 0, belaylineIssuesSince(p2Start).slice(0, 5).join(' | '));
 
   // =========================================================================
   // P3 — stale: retry after target changed returns approval_required again
@@ -318,11 +318,11 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
     // principal and its pack binding right before use, so a future gating
     // bypass is diagnosable from this run's own log instead of needing a
     // live re-run to investigate.
-    const p3BindingRow = dbRows(`SELECT option_value FROM ${tablePrefix}options WHERE option_name='agsafe_pack_bindings'`)[0];
-    console.log('P3 diagnostic: wc_key_id=' + state.wc_key_id + ' agsafe_pack_bindings=' + JSON.stringify(p3BindingRow));
+    const p3BindingRow = dbRows(`SELECT option_value FROM ${tablePrefix}options WHERE option_name='belayline_pack_bindings'`)[0];
+    console.log('P3 diagnostic: wc_key_id=' + state.wc_key_id + ' belayline_pack_bindings=' + JSON.stringify(p3BindingRow));
     assertPackNotShadowed('woo-default-agent', tablePrefix);
 
-    const p3 = await provisionFreshProduct(`agsafe-p3-${Date.now()}`);
+    const p3 = await provisionFreshProduct(`belayline-p3-${Date.now()}`);
     const ck = state.wc_consumer_key, cs = state.wc_consumer_secret;
 
     const { sessionId } = await handshake(WOO_MCP, wooAuth(ck, cs));
@@ -338,11 +338,11 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
     const approvalId1 = pending1?.approval_id;
 
     // Approve via admin-post, scraping the per-row nonce from Pending Actions.
-    const pendingPage = await getAuthed(adminJar1, '/wp-admin/tools.php?page=agent-safety-pending');
+    const pendingPage = await getAuthed(adminJar1, '/wp-admin/tools.php?page=belayline-pending');
     const nonce1 = scrapeNonceForApprovalForm(pendingPage.body, approvalId1);
     check('P3 scraped an approve nonce for the pending row', !!nonce1, pendingPage.body.slice(0, 200));
     const approveRes = await postAuthed(adminJar1, '/wp-admin/admin-post.php', {
-      action: 'agsafe_approve_action',
+      action: 'belayline_approve_action',
       approval_id: approvalId1,
       _wpnonce: nonce1,
     });
@@ -378,7 +378,7 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
   } catch (e) {
     check('P3 section completed without throwing', false, String(e && e.stack || e));
   }
-  check('P3 debug.log clean', agsafeIssuesSince(p3Start).length === 0, agsafeIssuesSince(p3Start).slice(0, 5).join(' | '));
+  check('P3 debug.log clean', belaylineIssuesSince(p3Start).length === 0, belaylineIssuesSince(p3Start).slice(0, 5).join(' | '));
 
   // =========================================================================
   // P4 — site moved: environment.mismatch audit row, approval voided,
@@ -402,7 +402,7 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
     originalSiteurl = wp('config get WP_SITEURL').trim();
     assertPackNotShadowed('woo-default-agent', tablePrefix);
 
-    const p4 = await provisionFreshProduct(`agsafe-p4-${Date.now()}`);
+    const p4 = await provisionFreshProduct(`belayline-p4-${Date.now()}`);
     const ck = state.wc_consumer_key, cs = state.wc_consumer_secret;
     const { sessionId } = await handshake(WOO_MCP, wooAuth(ck, cs));
 
@@ -416,10 +416,10 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
     const approvalId = pendingRow?.approval_id;
     check('P4 pending approval filed', !!approvalId, JSON.stringify(pendingRow));
 
-    const pendingPage = await getAuthed(adminJar1, '/wp-admin/tools.php?page=agent-safety-pending');
+    const pendingPage = await getAuthed(adminJar1, '/wp-admin/tools.php?page=belayline-pending');
     const nonce = scrapeNonceForApprovalForm(pendingPage.body, approvalId);
     await postAuthed(adminJar1, '/wp-admin/admin-post.php', {
-      action: 'agsafe_approve_action',
+      action: 'belayline_approve_action',
       approval_id: approvalId,
       _wpnonce: nonce,
     });
@@ -427,10 +427,10 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
     check('P4 approval is approved-unclaimed', approvedRow?.status === 'approved', JSON.stringify(approvedRow));
 
     // Seed a shadow window (real .php temp file + docker cp, never `wp eval`).
-    const shadowScript = `<?php\ndefined('ABSPATH') || exit;\nupdate_option('agsafe_shadow_packs', array_merge((array) get_option('agsafe_shadow_packs', []), ['readonly-analyst' => time() + 3600]), false);\n`;
+    const shadowScript = `<?php\ndefined('ABSPATH') || exit;\nupdate_option('belayline_shadow_packs', array_merge((array) get_option('belayline_shadow_packs', []), ['readonly-analyst' => time() + 3600]), false);\n`;
     const shadowPath = copyInlineScript('p4-shadow', shadowScript);
     wp(`eval-file ${shadowPath}`);
-    const shadowBefore = dbRows(`SELECT option_value FROM ${tablePrefix}options WHERE option_name='agsafe_shadow_packs'`)[0];
+    const shadowBefore = dbRows(`SELECT option_value FROM ${tablePrefix}options WHERE option_name='belayline_shadow_packs'`)[0];
     check('P4 shadow window seeded', !!shadowBefore && String(shadowBefore.option_value).includes('readonly-analyst'), JSON.stringify(shadowBefore));
 
     // Move the site (via the constants home_url()/site_url() actually
@@ -450,13 +450,13 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
 
     // Same correction as the P2 environment.bound check above: match the
     // event name inside record_json's "reason" key, not the `ability` column.
-    const mismatchCount = dbCount(`SELECT COUNT(*) FROM ${auditTable} WHERE ability='agsafe_site_binding' AND record_json LIKE '%"reason":"environment.mismatch"%'`);
+    const mismatchCount = dbCount(`SELECT COUNT(*) FROM ${auditTable} WHERE ability='belayline_site_binding' AND record_json LIKE '%"reason":"environment.mismatch"%'`);
     check('P4 environment.mismatch audit row exists', mismatchCount >= 1, `count=${mismatchCount}`);
 
     const voidedRow = dbRows(`SELECT status FROM ${approvalsTable} WHERE approval_id='${approvalId}'`)[0];
     check('P4 approval is now void_environment', voidedRow?.status === 'void_environment', JSON.stringify(voidedRow));
 
-    const shadowAfter = dbRows(`SELECT option_value FROM ${tablePrefix}options WHERE option_name='agsafe_shadow_packs'`)[0];
+    const shadowAfter = dbRows(`SELECT option_value FROM ${tablePrefix}options WHERE option_name='belayline_shadow_packs'`)[0];
     const shadowAfterEmpty = !shadowAfter || !String(shadowAfter.option_value).includes('readonly-analyst');
     check('P4 shadow option no longer holds readonly-analyst', shadowAfterEmpty, JSON.stringify(shadowAfter));
 
@@ -467,7 +467,7 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
     // it here silently redirected to wp-login.php instead of the packs
     // page. Re-login fresh, now that the site has moved.
     const adminJar2 = await adminLogin('admin', state.admin_password);
-    const noticePage = await getAuthed(adminJar2, '/wp-admin/tools.php?page=agent-safety-packs');
+    const noticePage = await getAuthed(adminJar2, '/wp-admin/tools.php?page=belayline-packs');
     check(
       'P4 mismatch notice text appears',
       // esc_html__() encodes the apostrophe in "site's" as &#039;.
@@ -476,17 +476,17 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
     );
 
     // Rebind (no id suffix on this nonce action).
-    const rebindNonce = scrapeNonceNear(noticePage.body, 'value="agsafe_rebind_environment"');
+    const rebindNonce = scrapeNonceNear(noticePage.body, 'value="belayline_rebind_environment"');
     check('P4 scraped a rebind nonce', !!rebindNonce, noticePage.body.slice(0, 200));
     await postAuthed(adminJar2, '/wp-admin/admin-post.php', {
-      action: 'agsafe_rebind_environment',
+      action: 'belayline_rebind_environment',
       _wpnonce: rebindNonce,
     });
 
     const afterRebindApproval = dbRows(`SELECT status FROM ${approvalsTable} WHERE approval_id='${approvalId}'`)[0];
     check('P4 approval STILL void_environment after rebind (not restored)', afterRebindApproval?.status === 'void_environment', JSON.stringify(afterRebindApproval));
 
-    const afterRebindShadow = dbRows(`SELECT option_value FROM ${tablePrefix}options WHERE option_name='agsafe_shadow_packs'`)[0];
+    const afterRebindShadow = dbRows(`SELECT option_value FROM ${tablePrefix}options WHERE option_name='belayline_shadow_packs'`)[0];
     const afterRebindEmpty = !afterRebindShadow || !String(afterRebindShadow.option_value).includes('readonly-analyst');
     check('P4 shadow STILL empty after rebind (not restored)', afterRebindEmpty, JSON.stringify(afterRebindShadow));
   } catch (e) {
@@ -495,7 +495,7 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
     if (originalHome) wp(`config set WP_HOME '${originalHome}' --type=constant`);
     if (originalSiteurl) wp(`config set WP_SITEURL '${originalSiteurl}' --type=constant`);
   }
-  check('P4 debug.log clean', agsafeIssuesSince(p4Start).length === 0, agsafeIssuesSince(p4Start).slice(0, 5).join(' | '));
+  check('P4 debug.log clean', belaylineIssuesSince(p4Start).length === 0, belaylineIssuesSince(p4Start).slice(0, 5).join(' | '));
 
   // =========================================================================
   // P5 — check-approval on the default mcp-adapter server: pending/
@@ -510,11 +510,11 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
     // mcp-adapter-execute-ability) and in source
     // (research/mcp-adapter@07c9912: includes/Servers/DefaultServerFactory.php,
     // includes/Abilities/ExecuteAbilityAbility.php). Every ability — Woo's,
-    // Agent Safety's own — is reached through ONE generic tool,
+    // Belayline's own — is reached through ONE generic tool,
     // `mcp-adapter-execute-ability`, with `{ability_name, parameters}`.
     // `ExecuteAbilityAbility::execute()` calls `$ability->execute($parameters)`
     // directly, and WordPress core's own `WP_Ability::execute()` still runs
-    // the ability's permission_callback first — so Agent Safety's
+    // the ability's permission_callback first — so Belayline's
     // `wp_register_ability_args`-wrapped permission_callback still governs
     // this path exactly like any other transport; only the RESPONSE shape
     // differs (a WP_Error collapses to `{success:false, error:<message>}`,
@@ -550,7 +550,7 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
     // correctly keep the plural name (they go through Woo's OWN transport);
     // this row must use the singular one everywhere it talks to
     // execute-ability, including the retry below.
-    const p5 = await provisionFreshProduct(`agsafe-p5-${Date.now()}`);
+    const p5 = await provisionFreshProduct(`belayline-p5-${Date.now()}`);
     const del = await executeAbility(authA, sessA, 'woocommerce/product-delete', { id: p5.product_id, force: true });
     // BUG FOUND AND FIXED (post-review): confirmed live that mcp-adapter
     // surfaces a DENIED execute-ability call (WP_Error from the target
@@ -568,7 +568,7 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
     check('P5 pending approval id obtained', !!realApprovalId, JSON.stringify(pendingRow));
 
     if (realApprovalId) {
-      const pollPending = await executeAbility(authA, sessA, 'agent-safety/check-approval', { approval_id: realApprovalId });
+      const pollPending = await executeAbility(authA, sessA, 'belayline/check-approval', { approval_id: realApprovalId });
       check('P5 poll while pending: status pending', pollPending.parsed?.data?.status === 'pending', pollPending.text.slice(0, 300));
       check(
         'P5 poll while pending: next_action matches §3.11',
@@ -576,11 +576,11 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
         pollPending.text.slice(0, 300)
       );
 
-      const pendingPage = await getAuthed(adminJar1, '/wp-admin/tools.php?page=agent-safety-pending');
+      const pendingPage = await getAuthed(adminJar1, '/wp-admin/tools.php?page=belayline-pending');
       const nonce = scrapeNonceForApprovalForm(pendingPage.body, realApprovalId);
-      await postAuthed(adminJar1, '/wp-admin/admin-post.php', { action: 'agsafe_approve_action', approval_id: realApprovalId, _wpnonce: nonce });
+      await postAuthed(adminJar1, '/wp-admin/admin-post.php', { action: 'belayline_approve_action', approval_id: realApprovalId, _wpnonce: nonce });
 
-      const pollApproved = await executeAbility(authA, sessA, 'agent-safety/check-approval', { approval_id: realApprovalId });
+      const pollApproved = await executeAbility(authA, sessA, 'belayline/check-approval', { approval_id: realApprovalId });
       check('P5 poll after approve: status approved', pollApproved.parsed?.data?.status === 'approved', pollApproved.text.slice(0, 300));
       check(
         'P5 poll after approve: next_action matches §3.11',
@@ -594,7 +594,7 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
       // DIFFERENT verb's approval row entirely.
       await executeAbility(authA, sessA, 'woocommerce/product-delete', { id: p5.product_id, force: true });
 
-      const pollUsed = await executeAbility(authA, sessA, 'agent-safety/check-approval', { approval_id: realApprovalId });
+      const pollUsed = await executeAbility(authA, sessA, 'belayline/check-approval', { approval_id: realApprovalId });
       check('P5 poll after retry: status used', pollUsed.parsed?.data?.status === 'used', pollUsed.text.slice(0, 300));
       check(
         'P5 poll after retry: next_action matches §3.11',
@@ -606,11 +606,11 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
     }
 
     // Second principal: a brand new WP user + application password. The Self
-    // integration governs `agent-safety/*` at tier 0 unconditionally (§3.5
+    // integration governs `belayline/*` at tier 0 unconditionally (§3.5
     // item 3), so no pack binding is needed for principal B to CALL
     // check-approval — only the row-scoping check inside the ability cares
     // whether principal B's resolved identity equals the row's key_id.
-    const secondUsername = 'agsafe_second_principal';
+    const secondUsername = 'belayline_second_principal';
     if (!wp(`user list --field=user_login`).split('\n').includes(secondUsername)) {
       wp(`user create ${secondUsername} second@example.test --role=subscriber --porcelain`);
     }
@@ -622,8 +622,8 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
     const unknownId2 = 'apr_zz00000000000000';
 
     if (realApprovalId) {
-      const pollAsB = await executeAbility(authB, sessB, 'agent-safety/check-approval', { approval_id: realApprovalId });
-      const pollUnknownAsB = await executeAbility(authB, sessB, 'agent-safety/check-approval', { approval_id: unknownId2 });
+      const pollAsB = await executeAbility(authB, sessB, 'belayline/check-approval', { approval_id: realApprovalId });
+      const pollUnknownAsB = await executeAbility(authB, sessB, 'belayline/check-approval', { approval_id: unknownId2 });
       check(
         'P5 second principal body byte-identical to an unknown id response',
         pollAsB.text === pollUnknownAsB.text,
@@ -636,14 +636,14 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
     // Rate limit: 11 rapid polls in one minute against a known-unknown id.
     let lastRate = null;
     for (let i = 0; i < 11; i++) {
-      lastRate = await executeAbility(authA, sessA, 'agent-safety/check-approval', { approval_id: unknownId1 });
+      lastRate = await executeAbility(authA, sessA, 'belayline/check-approval', { approval_id: unknownId1 });
     }
     check('P5 11th poll in a minute is rate_limited', lastRate?.parsed?.data?.status === 'rate_limited', String(lastRate?.text).slice(0, 300));
     check('P5 rate_limited response carries retry_after', typeof lastRate?.parsed?.data?.retry_after !== 'undefined', String(lastRate?.text).slice(0, 300));
   } catch (e) {
     check('P5 section completed without throwing', false, String(e && e.stack || e));
   }
-  check('P5 debug.log clean', agsafeIssuesSince(p5Start).length === 0, agsafeIssuesSince(p5Start).slice(0, 5).join(' | '));
+  check('P5 debug.log clean', belaylineIssuesSince(p5Start).length === 0, belaylineIssuesSince(p5Start).slice(0, 5).join(' | '));
 
   // =========================================================================
   // P6 — production shadow via the real admin HTTP form.
@@ -661,7 +661,7 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
     // shadow entry gets silently wiped or renewed depending on which pack the
     // test happens to pick, not the pack THIS row actually submits). Reset to
     // a known-empty baseline via the same option this class itself documents.
-    const clearShadowScript = `<?php\ndefined('ABSPATH') || exit;\ndelete_option('agsafe_shadow_packs');\n`;
+    const clearShadowScript = `<?php\ndefined('ABSPATH') || exit;\ndelete_option('belayline_shadow_packs');\n`;
     wp(`eval-file ${copyInlineScript('p6-clear-shadow', clearShadowScript)}`);
 
     const envTypeScript = `<?php\ndefined('ABSPATH') || exit;\necho function_exists('wp_get_environment_type') ? wp_get_environment_type() : 'unknown';\n`;
@@ -669,14 +669,14 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
     const envType = wp(`eval-file ${envTypePath}`).trim();
     check('P6 WP_ENVIRONMENT_TYPE unset defaults to production', envType === 'production', envType);
 
-    const packsPage = await getAuthed(adminJar1, '/wp-admin/tools.php?page=agent-safety-packs');
-    const shadowNonce1 = scrapeNonceNear(packsPage.body, 'value="agsafe_save_shadow_packs"');
+    const packsPage = await getAuthed(adminJar1, '/wp-admin/tools.php?page=belayline-packs');
+    const shadowNonce1 = scrapeNonceNear(packsPage.body, 'value="belayline_save_shadow_packs"');
     check('P6 scraped a shadow-save nonce', !!shadowNonce1, packsPage.body.slice(0, 200));
 
     const packNames = [...packsPage.body.matchAll(/name="shadow\[\]" value="([^"]+)"/g)].map((m) => m[1]);
     check('P6 packs page lists at least one pack', packNames.length > 0, packNames.join(','));
 
-    const shadowOptionRow = () => dbRows(`SELECT option_value FROM ${tablePrefix}options WHERE option_name='agsafe_shadow_packs'`)[0];
+    const shadowOptionRow = () => dbRows(`SELECT option_value FROM ${tablePrefix}options WHERE option_name='belayline_shadow_packs'`)[0];
     const isShadowed = (name) => {
       const row = shadowOptionRow();
       return !!row && String(row.option_value).includes(`"${name}"`);
@@ -686,7 +686,7 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
 
     // 1. Submit WITHOUT the typed confirmation.
     await postAuthed(adminJar1, '/wp-admin/admin-post.php', {
-      action: 'agsafe_save_shadow_packs',
+      action: 'belayline_save_shadow_packs',
       _wpnonce: shadowNonce1,
       'shadow[]': pack,
       shadow_days: '1',
@@ -694,11 +694,11 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
     check('P6 unconfirmed submit does NOT shadow the pack', !isShadowed(pack), JSON.stringify(shadowOptionRow()));
 
     // 2. Submit WITH the typed confirmation (fresh nonce).
-    const packsPage2 = await getAuthed(adminJar1, '/wp-admin/tools.php?page=agent-safety-packs');
-    const shadowNonce2 = scrapeNonceNear(packsPage2.body, 'value="agsafe_save_shadow_packs"');
+    const packsPage2 = await getAuthed(adminJar1, '/wp-admin/tools.php?page=belayline-packs');
+    const shadowNonce2 = scrapeNonceNear(packsPage2.body, 'value="belayline_save_shadow_packs"');
     const before = Math.floor(Date.now() / 1000);
     await postAuthed(adminJar1, '/wp-admin/admin-post.php', {
-      action: 'agsafe_save_shadow_packs',
+      action: 'belayline_save_shadow_packs',
       _wpnonce: shadowNonce2,
       'shadow[]': pack,
       [`shadow_confirm[${pack}]`]: pack,
@@ -715,7 +715,7 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
   } catch (e) {
     check('P6 section completed without throwing', false, String(e && e.stack || e));
   }
-  check('P6 debug.log clean', agsafeIssuesSince(p6Start).length === 0, agsafeIssuesSince(p6Start).slice(0, 5).join(' | '));
+  check('P6 debug.log clean', belaylineIssuesSince(p6Start).length === 0, belaylineIssuesSince(p6Start).slice(0, 5).join(' | '));
 
   // =========================================================================
   // P7 — privacy: exporter/eraser called directly, audit page chain intact.
@@ -723,7 +723,7 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
   section('P7');
   let p7Start = debugLogLineCount();
   try {
-    const shopManagerEmail = state.shop_manager_email || 'agsafe_shop_manager@example.test';
+    const shopManagerEmail = state.shop_manager_email || 'belayline_shop_manager@example.test';
 
     // Drive at least one governed call for the Shop Manager so there is an
     // audit row to retain, in case nothing earlier in the run left one.
@@ -739,17 +739,17 @@ function assertPackNotShadowed(pack, tablePrefixArg) {
     const privacyScript = `<?php
 defined('ABSPATH') || exit;
 global \$wpdb;
-\$reader = new \\Specflux\\AgentSafety\\Plugin\\Privacy\\PrivacyAuditReader(\$wpdb);
-\$exporter = new \\Specflux\\AgentSafety\\Plugin\\Privacy\\PersonalDataExporter(\$reader);
-\$eraser = new \\Specflux\\AgentSafety\\Plugin\\Privacy\\PersonalDataEraser(\$reader);
-\$email = getenv('AGSAFE_PRIVACY_EMAIL');
+\$reader = new \\Belayline\\Plugin\\Privacy\\PrivacyAuditReader(\$wpdb);
+\$exporter = new \\Belayline\\Plugin\\Privacy\\PersonalDataExporter(\$reader);
+\$eraser = new \\Belayline\\Plugin\\Privacy\\PersonalDataEraser(\$reader);
+\$email = getenv('BELAYLINE_PRIVACY_EMAIL');
 \$exportResult = \$exporter->export(\$email, 1);
 \$eraseResult = \$eraser->erase(\$email, 1);
 echo json_encode(['export' => \$exportResult, 'erase' => \$eraseResult]) . "\\n";
 `;
     const privacyPath = copyInlineScript('p7-privacy', privacyScript);
     const raw = execSync(
-      `${CLI} bash -lc "AGSAFE_PRIVACY_EMAIL='${shopManagerEmail}' wp eval-file ${privacyPath}"`,
+      `${CLI} bash -lc "BELAYLINE_PRIVACY_EMAIL='${shopManagerEmail}' wp eval-file ${privacyPath}"`,
       { encoding: 'utf8' }
     );
     const line = raw.trim().split('\n').filter(Boolean).pop();
@@ -763,41 +763,41 @@ echo json_encode(['export' => \$exportResult, 'erase' => \$eraseResult]) . "\\n"
       JSON.stringify(privacy.erase?.messages)
     );
 
-    const auditPage = await getAuthed(adminJar1, '/wp-admin/tools.php?page=agent-safety-audit');
+    const auditPage = await getAuthed(adminJar1, '/wp-admin/tools.php?page=belayline-audit');
     check('P7 audit page still shows Chain intact.', auditPage.body.includes('Chain intact.'), auditPage.body.slice(0, 300));
   } catch (e) {
     check('P7 section completed without throwing', false, String(e && e.stack || e));
   }
-  check('P7 debug.log clean', agsafeIssuesSince(p7Start).length === 0, agsafeIssuesSince(p7Start).slice(0, 5).join(' | '));
+  check('P7 debug.log clean', belaylineIssuesSince(p7Start).length === 0, belaylineIssuesSince(p7Start).slice(0, 5).join(' | '));
 
   // =========================================================================
-  // P8 — uninstall: no agsafe_% options, no agsafe_% tables, no cron, no
-  // transients. Run near the end because it deletes all Agent Safety data.
+  // P8 — uninstall: no belayline_% options, no belayline_% tables, no cron, no
+  // transients. Run near the end because it deletes all Belayline data.
   // =========================================================================
   section('P8');
   let p8Start = debugLogLineCount();
   try {
-    wp('config set AGSAFE_REMOVE_DATA true --raw');
+    wp('config set BELAYLINE_REMOVE_DATA true --raw');
     wp('plugin uninstall agent-safety --deactivate');
 
-    const optionsLeft = dbCount(`SELECT COUNT(*) FROM ${tablePrefix}options WHERE option_name LIKE 'agsafe%'`);
-    check('P8 no agsafe_% options remain', optionsLeft === 0, `count=${optionsLeft}`);
+    const optionsLeft = dbCount(`SELECT COUNT(*) FROM ${tablePrefix}options WHERE option_name LIKE 'belayline%'`);
+    check('P8 no belayline_% options remain', optionsLeft === 0, `count=${optionsLeft}`);
 
-    const tablesLeft = dbCount(`SHOW TABLES LIKE '${tablePrefix}agsafe%'`);
-    check('P8 no agsafe_% tables remain', tablesLeft === 0, `count=${tablesLeft}`);
+    const tablesLeft = dbCount(`SHOW TABLES LIKE '${tablePrefix}belayline%'`);
+    check('P8 no belayline_% tables remain', tablesLeft === 0, `count=${tablesLeft}`);
 
     const cronRaw = wp('cron event list --format=json');
     let cronEvents = [];
     try { cronEvents = JSON.parse(cronRaw); } catch (e) { /* leave empty on parse issues */ }
-    const agsafeCron = cronEvents.filter((e) => /agsafe|agent[-_]safety/i.test(e.hook || ''));
-    check('P8 no Agent Safety cron event remains', agsafeCron.length === 0, JSON.stringify(agsafeCron));
+    const belaylineCron = cronEvents.filter((e) => /belayline|agent[-_]safety/i.test(e.hook || ''));
+    check('P8 no Belayline cron event remains', belaylineCron.length === 0, JSON.stringify(belaylineCron));
 
-    const transientsLeft = dbCount(`SELECT COUNT(*) FROM ${tablePrefix}options WHERE option_name LIKE '%transient_agsafe%'`);
-    check('P8 no _transient_agsafe_% option rows remain', transientsLeft === 0, `count=${transientsLeft}`);
+    const transientsLeft = dbCount(`SELECT COUNT(*) FROM ${tablePrefix}options WHERE option_name LIKE '%transient_belayline%'`);
+    check('P8 no _transient_belayline_% option rows remain', transientsLeft === 0, `count=${transientsLeft}`);
   } catch (e) {
     check('P8 section completed without throwing', false, String(e && e.stack || e));
   }
-  check('P8 debug.log clean', agsafeIssuesSince(p8Start).length === 0, agsafeIssuesSince(p8Start).slice(0, 5).join(' | '));
+  check('P8 debug.log clean', belaylineIssuesSince(p8Start).length === 0, belaylineIssuesSince(p8Start).slice(0, 5).join(' | '));
 
   // --------------------------------------------------------------------------
   const failed = results.filter((r) => !r.pass);

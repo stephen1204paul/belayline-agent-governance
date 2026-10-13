@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Admin;
+namespace Belayline\Plugin\Tests\Admin;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Admin\AuditLogPage;
-use Specflux\AgentSafety\Plugin\Audit\AuditReader;
+use Belayline\Plugin\Admin\AuditLogPage;
+use Belayline\Plugin\Audit\AuditReader;
 use wpdb;
 
 /**
@@ -53,7 +53,7 @@ final class AuditLogPageTest extends TestCase
             'ts' => '2026-01-01T00:00:00Z',
             'correlation_id' => 'sess_1',
             'pack' => 'admin',
-            'ability' => 'agsafe_shadow_packs',
+            'ability' => 'belayline_shadow_packs',
             'tier' => null,
             'decision' => 'admin',
             'result' => null,
@@ -71,6 +71,6 @@ final class AuditLogPageTest extends TestCase
         $this->assertStringContainsString('background:#50575e', $out, 'admin rows get their own colour, not the unknown-value grey');
         $this->assertStringContainsString('>admin</span>', $out);
         $this->assertStringContainsString('shadow.enabled', $out);
-        $this->assertStringContainsString('agsafe_shadow_packs', $out);
+        $this->assertStringContainsString('belayline_shadow_packs', $out);
     }
 }

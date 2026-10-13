@@ -1,5 +1,5 @@
 /**
- * Live wp-env smoke for Agent Safety 0.3 stage 4 — the WordPress-core module,
+ * Live wp-env smoke for Belayline 0.3 stage 4 — the WordPress-core module,
  * Woo OFF. Drives mcp-adapter's HTTP transport end to end:
  *
  *   1. tools/call core-get-site-info  -> 200, audit row allowed / core/get-site-info
@@ -10,23 +10,23 @@
  *   4. Audit Log page reports "Chain intact" after all of the above.
  *
  * Prereqs (reset-core.sh): wp-env running from the planning dir; an admin app
- * password bound to the site-readonly pack via agsafe_pack_bindings.
+ * password bound to the site-readonly pack via belayline_pack_bindings.
  *
- * Run: AGSAFE_SMOKE_APP_PASSWORD=xxxx node smoke-core.js
+ * Run: BELAYLINE_SMOKE_APP_PASSWORD=xxxx node smoke-core.js
  */
 const { chromium, request } = require('playwright');
 const { execSync } = require('child_process');
 const fs = require('fs');
 
-const BASE = process.env.AGSAFE_SMOKE_BASE || 'http://localhost:8888';
+const BASE = process.env.BELAYLINE_SMOKE_BASE || 'http://localhost:8888';
 // The wp-env CLI container name embeds an unstable content hash — discover it.
-const CLI = process.env.AGSAFE_SMOKE_CLI || `docker exec --user www-data ${
+const CLI = process.env.BELAYLINE_SMOKE_CLI || `docker exec --user www-data ${
   execSync("docker ps --format '{{.Names}}'", { encoding: 'utf8' })
     .split('\n').find((n) => n.trim().endsWith('-cli-1') && !n.includes('tests')).trim()
 }`;
 const MCP = BASE + '/wp-json/mcp/mcp-adapter-default-server';
-const APP_PASSWORD = process.env.AGSAFE_SMOKE_APP_PASSWORD || '';
-const ADMIN_EMAIL = process.env.AGSAFE_SMOKE_ADMIN_EMAIL || 'wordpress@admin';
+const APP_PASSWORD = process.env.BELAYLINE_SMOKE_APP_PASSWORD || '';
+const ADMIN_EMAIL = process.env.BELAYLINE_SMOKE_ADMIN_EMAIL || 'wordpress@admin';
 const PROTOCOL = '2025-06-18';
 const SHOTS = __dirname + '/shots';
 fs.mkdirSync(SHOTS, { recursive: true });
@@ -73,7 +73,7 @@ function resultText(callResult) {
 
 (async () => {
   if (!APP_PASSWORD) {
-    console.error('Set AGSAFE_SMOKE_APP_PASSWORD (see reset-core.sh step 4)');
+    console.error('Set BELAYLINE_SMOKE_APP_PASSWORD (see reset-core.sh step 4)');
     process.exit(2);
   }
   const AUTH = 'Basic ' + Buffer.from('admin:' + APP_PASSWORD).toString('base64');
@@ -82,7 +82,7 @@ function resultText(callResult) {
   // ---------- MCP handshake ----------
   const init = await mcp(ctx, AUTH, {
     jsonrpc: '2.0', id: 1, method: 'initialize',
-    params: { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: { name: 'agsafe-smoke', version: '0.1.0' } },
+    params: { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: { name: 'belayline-smoke', version: '0.1.0' } },
   });
   check('MCP initialize accepted', init.status === 200 && init.json && !init.json.error, JSON.stringify(init.json).slice(0, 200));
   const sessionId = init.headers['mcp-session-id'];
@@ -97,7 +97,7 @@ function resultText(callResult) {
   }
 
   // ---------- D29 assertion 1: governed allowed call ----------
-  const beforeAllowed = parseInt(sql(`SELECT COUNT(*) FROM wp_agsafe_audit_log WHERE ability='core/get-site-info' AND decision='allowed'`), 10);
+  const beforeAllowed = parseInt(sql(`SELECT COUNT(*) FROM wp_belayline_audit_log WHERE ability='core/get-site-info' AND decision='allowed'`), 10);
   const siteInfo = await mcp(ctx, AUTH, {
     jsonrpc: '2.0', id: 3, method: 'tools/call',
     params: { name: 'core-get-site-info', arguments: {} },
@@ -105,22 +105,22 @@ function resultText(callResult) {
   check('core-get-site-info HTTP 200', siteInfo.status === 200, siteInfo.status);
   const siteCallOk = siteInfo.json?.result && !siteInfo.json.result.isError;
   check('core-get-site-info executes without error', siteCallOk, JSON.stringify(siteInfo.json).slice(0, 400));
-  const afterAllowed = parseInt(sql(`SELECT COUNT(*) FROM wp_agsafe_audit_log WHERE ability='core/get-site-info' AND decision='allowed'`), 10);
+  const afterAllowed = parseInt(sql(`SELECT COUNT(*) FROM wp_belayline_audit_log WHERE ability='core/get-site-info' AND decision='allowed'`), 10);
   check('audit row(s) allowed for core/get-site-info', afterAllowed > beforeAllowed, `before=${beforeAllowed} after=${afterAllowed}`);
 
   // ---------- D29 assertion 2: unknown verb in a governed namespace ----------
-  const nopeBefore = sql(`SELECT COUNT(*) FROM wp_agsafe_audit_log WHERE ability='core/nope'`);
-  const nopeExecBefore = evalPhp(`echo (int) get_option("agsafe_smoke_exec_nope", 0);`);
+  const nopeBefore = sql(`SELECT COUNT(*) FROM wp_belayline_audit_log WHERE ability='core/nope'`);
+  const nopeExecBefore = evalPhp(`echo (int) get_option("belayline_smoke_exec_nope", 0);`);
   const nope = await mcp(ctx, AUTH, {
     jsonrpc: '2.0', id: 4, method: 'tools/call',
     params: { name: 'core-nope', arguments: {} },
   }, sessionId);
   check('core-nope denied (isError result)', nope.json?.result?.isError === true, JSON.stringify(nope.json).slice(0, 400));
-  const nopeAfter = sql(`SELECT COUNT(*) FROM wp_agsafe_audit_log WHERE ability='core/nope'`);
+  const nopeAfter = sql(`SELECT COUNT(*) FROM wp_belayline_audit_log WHERE ability='core/nope'`);
   check('audit row written for core/nope attempt', parseInt(nopeAfter, 10) > parseInt(nopeBefore, 10), `before=${nopeBefore} after=${nopeAfter}`);
-  const unknownReason = sql(`SELECT COUNT(*) FROM wp_agsafe_audit_log WHERE ability='core/nope' AND decision='denied' AND record_json LIKE '%unknown_verb%'`);
+  const unknownReason = sql(`SELECT COUNT(*) FROM wp_belayline_audit_log WHERE ability='core/nope' AND decision='denied' AND record_json LIKE '%unknown_verb%'`);
   check('denial reason is unknown_verb', parseInt(unknownReason, 10) >= 1, `rows=${unknownReason}`);
-  check('core-nope never executed', evalPhp(`echo (int) get_option("agsafe_smoke_exec_nope", 0);`) === nopeExecBefore);
+  check('core-nope never executed', evalPhp(`echo (int) get_option("belayline_smoke_exec_nope", 0);`) === nopeExecBefore);
 
   // ---------- D29 assertion 3: user PII masked on the read path ----------
   const userInfo = await mcp(ctx, AUTH, {
@@ -151,7 +151,7 @@ function resultText(callResult) {
   await page.context().request.post(BASE + '/wp-login.php', {
     form: { log: 'admin', pwd: 'password', 'wp-submit': 'Log In', redirect_to: BASE + '/wp-admin/', testcookie: '1' },
   });
-  await page.goto(BASE + '/wp-admin/tools.php?page=agent-safety-audit');
+  await page.goto(BASE + '/wp-admin/tools.php?page=belayline-audit');
   const auditText = await page.textContent('body');
   check('audit page shows Chain intact', auditText.includes('Chain intact'), auditText.slice(0, 500));
   check('audit page lists a core/get-site-info event', auditText.includes('core/get-site-info'), '');
@@ -160,7 +160,7 @@ function resultText(callResult) {
   await page.screenshot({ path: SHOTS + '/08-core-module-audit.png', timeout: 8000 });
 
   // Packs screen shows the core preset (bootstrap merge, Woo off).
-  await page.goto(BASE + '/wp-admin/tools.php?page=agent-safety-packs');
+  await page.goto(BASE + '/wp-admin/tools.php?page=belayline-packs');
   const packsText = await page.textContent('body');
   for (const p of ['site-readonly']) {
     check(`packs page lists ${p} (Woo off)`, packsText.includes(p), '');

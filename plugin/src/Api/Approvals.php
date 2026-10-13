@@ -2,31 +2,31 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Api;
+namespace Belayline\Plugin\Api;
 
-use Specflux\AgentSafety\Audit\AuditDecision;
-use Specflux\AgentSafety\Audit\AuditRecord;
-use Specflux\AgentSafety\Audit\AuditSink;
-use Specflux\AgentSafety\Plugin\Approval\StateFingerprint;
-use Specflux\AgentSafety\Plugin\Approval\StateProbe;
-use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
+use Belayline\Audit\AuditDecision;
+use Belayline\Audit\AuditRecord;
+use Belayline\Audit\AuditSink;
+use Belayline\Plugin\Approval\StateFingerprint;
+use Belayline\Plugin\Approval\StateProbe;
+use Belayline\Plugin\Audit\WpdbApprovalStore;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
 
 /**
  * The programmatic approvals API (backlog AS-10). Before this service, the
  * ONLY way to grant/deny a pending approval was the wp-admin form
- * ({@see \Specflux\AgentSafety\Plugin\Admin\PendingActionsPage}); consumers
+ * ({@see \Belayline\Plugin\Admin\PendingActionsPage}); consumers
  * that meet the human somewhere else — an inline "Approve" card in a chat UI,
  * a CLI, a future REST route — had no seam to call.
  *
  * THE invariant: every caller funnels through HERE, so a resolution is one
  * code path no matter its origin —
  *  1. capability gate (`manage_options`, overridable only WIDER-or-narrower
- *     via the `agent_safety_can_approve` filter),
+ *     via the `belayline_can_approve` filter),
  *  2. the store's conditional UPDATE (a row approved/rejected at most once),
  *  3. the same hash-chained audit reconciliation row the admin form writes,
- *  4. the `agent_safety_approval_resolved` action.
+ *  4. the `belayline_approval_resolved` action.
  *
  * The wp-admin page itself delegates here (it keeps nonce + flash-token UX on
  * top), which makes "same audit as admin-post" true by construction.
@@ -76,7 +76,7 @@ final class Approvals
         $token = $this->store->approve($id, $byUserId);
         if ($token !== null) {
             $this->reconcile($id, AuditDecision::Approved, $byUserId);
-            do_action('agent_safety_approval_resolved', $id, 'approved', $byUserId);
+            do_action('belayline_approval_resolved', $id, 'approved', $byUserId);
         }
 
         return $token;
@@ -91,7 +91,7 @@ final class Approvals
 
         if ($this->store->reject($id, $byUserId)) {
             $this->reconcile($id, AuditDecision::Rejected, $byUserId);
-            do_action('agent_safety_approval_resolved', $id, 'rejected', $byUserId);
+            do_action('belayline_approval_resolved', $id, 'rejected', $byUserId);
 
             return true;
         }
@@ -177,7 +177,7 @@ final class Approvals
     {
         /** @var mixed $filtered */
         $filtered = apply_filters(
-            'agent_safety_can_approve',
+            'belayline_can_approve',
             current_user_can('manage_options'),
             $id,
             $byUserId,

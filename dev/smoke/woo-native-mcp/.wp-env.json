@@ -8,8 +8,8 @@
         "https://downloads.wordpress.org/plugin/woocommerce.11.1.0.zip"
     ],
     "mappings": {
-        "wp-content/plugins/senrogate": "../../../plugin",
-        "wp-content/mu-plugins/agsafe-woo-mcp-fixture.php": "./agsafe-woo-mcp-fixture.php"
+        "wp-content/plugins/belayline-agent-governance": "../../../plugin",
+        "wp-content/mu-plugins/belayline-woo-mcp-fixture.php": "./belayline-woo-mcp-fixture.php"
     },
     "config": {
         "WP_DEBUG": true,

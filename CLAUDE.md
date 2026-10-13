@@ -4,7 +4,7 @@ Guidance for Claude Code when working in this repository.
 
 ## What this is
 
-**Agent Safety** — a WordPress plugin adding a governed safety/audit layer for AI agent tool
+**Belayline** — a WordPress plugin adding a governed safety/audit layer for AI agent tool
 calls (Abilities API / MCP): capability packs, a deny-by-default gate, human approvals, and a
 hash-chained audit log. WooCommerce is supported via a capability-pack integration module;
 the core is WordPress-general.
@@ -15,17 +15,17 @@ never widen it — underlying WordPress capability checks still apply.
 
 ## Layout (two composer packages)
 
-- **Root** — framework-agnostic core library (`specflux/agent-safety-core`, PHP >=8.1).
+- **Root** — framework-agnostic core library (`stephen1204paul/belayline-core`, PHP >=8.1).
   **No WordPress function calls allowed anywhere in `src/`** (Approval, Audit, Gate, Packs,
   Policy). Tests: PHPUnit ^10.5 in `tests/`.
-- **`plugin/`** — the WordPress plugin host (`specflux/agent-safety`, main file
-  `plugin/senrogate.php`), depending on the core via a composer **path repo that COPIES,
+- **`plugin/`** — the WordPress plugin host (`stephen1204paul/belayline-agent-governance`, main file
+  `plugin/belayline-agent-governance.php`), depending on the core via a composer **path repo that COPIES,
   not symlinks** — after any change under root `src/`, run
-  `cd plugin && composer reinstall specflux/agent-safety-core` (or `composer install`).
+  `cd plugin && composer reinstall stephen1204paul/belayline-core` (or `composer install`).
 - All WooCommerce coupling lives in `plugin/src/Integrations/Woo/`. Identity is a provider
   chain in `plugin/src/Identity/` (application passwords, user/role, WC keys via the Woo
   module). The gate governs only namespaces contributed by integrations or the
-  `agent_safety_governed_namespaces` filter.
+  `belayline_governed_namespaces` filter.
 
 ## Commands
 

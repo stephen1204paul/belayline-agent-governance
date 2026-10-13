@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
-use Specflux\AgentSafety\Packs\ArgumentCap;
-use Specflux\AgentSafety\Packs\ArgumentCapCheck;
-use Specflux\AgentSafety\Packs\ArgumentCapPolicy;
-use Specflux\AgentSafety\Packs\Pack;
+use Belayline\Packs\ArgumentCap;
+use Belayline\Packs\ArgumentCapCheck;
+use Belayline\Packs\ArgumentCapPolicy;
+use Belayline\Packs\Pack;
 
 /**
  * Glues the core's pure {@see ArgumentCapPolicy} to the host's

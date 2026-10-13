@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Admin;
+namespace Belayline\Plugin\Tests\Admin;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Approval\ApprovalBinding;
-use Specflux\AgentSafety\Plugin\Admin\PendingActionsPage;
-use Specflux\AgentSafety\Plugin\Api\Approvals;
-use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
-use Specflux\AgentSafety\Plugin\Support\DecisionRecorder;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Support\SummaryMarkup;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeApprovalStore;
+use Belayline\Approval\ApprovalBinding;
+use Belayline\Plugin\Admin\PendingActionsPage;
+use Belayline\Plugin\Api\Approvals;
+use Belayline\Plugin\Audit\WpdbApprovalStore;
+use Belayline\Plugin\Support\DecisionRecorder;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Support\SummaryMarkup;
+use Belayline\Plugin\Tests\Fakes\FakeApprovalStore;
 
 /**
  * AS-11: the approval summary filter + the wp_kses rendering contract.
  *
- * The filter lets a host enrich the human-facing summary (SenroFlux's rich
+ * The filter lets a host enrich the human-facing summary (Site Agent's rich
  * publish rows); the Pending Actions screen then renders that summary through
  * wp_kses with exactly one allowed element (`<a href>`), so a filter can add a
  * link but never script or markup. The filter fires once per persisted row,
@@ -27,7 +27,7 @@ final class ApprovalSummaryTest extends TestCase
 {
     protected function tearDown(): void
     {
-        remove_all_filters('agent_safety_approval_summary');
+        remove_all_filters('belayline_approval_summary');
         RequestContext::reset();
         $GLOBALS['wpas_test_user_caps'] = [];
     }
@@ -40,7 +40,7 @@ final class ApprovalSummaryTest extends TestCase
         $input = ['id' => 42];
 
         $calls = [];
-        add_filter('agent_safety_approval_summary', static function ($summary, $verb, $in) use (&$calls) {
+        add_filter('belayline_approval_summary', static function ($summary, $verb, $in) use (&$calls) {
             $calls[] = ['summary' => $summary, 'verb' => $verb, 'input' => $in];
 
             return 'Publish "Pricing" — <a href="/preview">preview</a>';
@@ -82,7 +82,7 @@ final class ApprovalSummaryTest extends TestCase
     {
         $store = new FakeApprovalStore();
         $recorder = new DecisionRecorder(null, $store);
-        add_filter('agent_safety_approval_summary', static fn () => ['not' => 'a string'], 10, 3);
+        add_filter('belayline_approval_summary', static fn () => ['not' => 'a string'], 10, 3);
 
         $recorder->requestApproval('orders/refund', ['id' => 1], 'evt_1');
 
@@ -93,7 +93,7 @@ final class ApprovalSummaryTest extends TestCase
     {
         $store = new FakeApprovalStore();
         $recorder = new DecisionRecorder(null, $store);
-        add_filter('agent_safety_approval_summary', static fn ($summary) => $summary, 10, 3);
+        add_filter('belayline_approval_summary', static fn ($summary) => $summary, 10, 3);
 
         $recorder->requestApproval('orders/refund', ['id' => 1], 'evt_1');
 
@@ -179,7 +179,7 @@ final class ApprovalSummaryTest extends TestCase
     public function testRenderKeepsAHostEnrichedLinkInTheSummaryCell(): void
     {
         add_filter(
-            'agent_safety_approval_summary',
+            'belayline_approval_summary',
             static fn () => 'Publish "Pricing" — <a href="/preview" onclick="evil()">preview</a>',
             10,
             3

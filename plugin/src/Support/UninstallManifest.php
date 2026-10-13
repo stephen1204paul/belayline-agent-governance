@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
-use Specflux\AgentSafety\Plugin\Admin\PendingActionsPage;
+use Belayline\Plugin\Admin\PendingActionsPage;
 
 /**
  * The single, explicit list of everything an opted-in uninstall
- * (`plugin/uninstall.php`, gated on `AGSAFE_REMOVE_DATA === true`) must
+ * (`plugin/uninstall.php`, gated on `BELAYLINE_REMOVE_DATA === true`) must
  * remove: every option, cron hook and transient-key prefix the plugin ever
  * writes.
  *
@@ -17,7 +17,7 @@ use Specflux\AgentSafety\Plugin\Admin\PendingActionsPage;
  * `update_option()`/`wp_schedule_event()`/`set_transient()` can never
  * silently disagree about what a name IS, only about whether this list has
  * been kept in sync. A static-scan test
- * ({@see \Specflux\AgentSafety\Plugin\Tests\Support\UninstallManifestCoverageTest})
+ * ({@see \Belayline\Plugin\Tests\Support\UninstallManifestCoverageTest})
  * catches the second kind of drift: it walks every file under `plugin/src`
  * for option/cron/transient call sites, resolves any class-constant
  * argument by reflection, and fails naming anything found that is not

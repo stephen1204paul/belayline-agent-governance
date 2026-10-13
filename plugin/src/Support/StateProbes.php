@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
-use Specflux\AgentSafety\Plugin\Approval\StateProbe;
+use Belayline\Plugin\Approval\StateProbe;
 
 /**
  * The host-side seam for contributing state probes (AS-6).
@@ -12,7 +12,7 @@ use Specflux\AgentSafety\Plugin\Approval\StateProbe;
  * Until now the only way a verb got a {@see StateProbe} was to ship one
  * inside an integration module (WooCommerce's product/order probes) — there
  * was no way for a site to add one of its own for a verb it governs through
- * `agent_safety_governed_namespaces`/`agent_safety_verb_map` without shipping
+ * `belayline_governed_namespaces`/`belayline_verb_map` without shipping
  * its own integration module. This closes that gap with the SAME posture as
  * {@see ElevationRules}:
  *
@@ -31,7 +31,7 @@ use Specflux\AgentSafety\Plugin\Approval\StateProbe;
  */
 final class StateProbes
 {
-    public const FILTER = 'agent_safety_state_probes';
+    public const FILTER = 'belayline_state_probes';
 
     /**
      * @param array<string, StateProbe> $moduleProbes Verb => probe, contributed by integration modules.
@@ -44,7 +44,7 @@ final class StateProbes
         }
 
         /** @var mixed $filtered */
-        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- self::FILTER is the literal, prefixed 'agent_safety_state_probes' constant; PHPCS can't resolve a class constant statically.
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- self::FILTER is the literal, prefixed 'belayline_state_probes' constant; PHPCS can't resolve a class constant statically.
         $filtered = apply_filters(self::FILTER, $moduleProbes);
         if (!is_array($filtered)) {
             return $moduleProbes;

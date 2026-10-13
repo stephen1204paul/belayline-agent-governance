@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Support\SiteBinding;
+use Belayline\Plugin\Support\SiteBinding;
 
 /**
  * Pure normalisation (AS-7 §3.4 item 2): scheme is ignored (http => https is

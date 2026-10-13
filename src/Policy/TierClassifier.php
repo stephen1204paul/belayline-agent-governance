@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Policy;
+namespace Belayline\Policy;
 
 /**
  * Resolves a verb (plus its call args) to a Tier, applying arg-aware
@@ -48,7 +48,7 @@ final class TierClassifier
             // demote an irreversible verb out of the approval gate entirely.
             // Enforcing it here rather than trusting each rule is what makes it
             // safe to accept rules from outside the bundled integration modules
-            // (`agent_safety_elevation_rules`): the seam can narrow, never widen.
+            // (`belayline_elevation_rules`): the seam can narrow, never widen.
             if ($elevated !== null && $elevated->value > $tier->value) {
                 $tier = $elevated;
             }

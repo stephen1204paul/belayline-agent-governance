@@ -2,7 +2,7 @@
 /**
  * `wp eval-file` provisioning script for the stage-3 Woo-native-MCP e2e.
  *
- * Run inside the wp-env cli container AFTER WooCommerce and Agent Safety are
+ * Run inside the wp-env cli container AFTER WooCommerce and Belayline are
  * both active. Idempotent: re-running it reuses the existing Shop Manager
  * user, mints a fresh API key each time (cheap, and avoids ever needing to
  * read back a secret WooCommerce never stores in plaintext), and re-seeds the
@@ -29,7 +29,7 @@ update_option('woocommerce_feature_mcp_integration_enabled', 'yes');
 
 // ---- 2. Shop Manager user (not an administrator: a pass here can't come --
 //         from admin capabilities — spec 3.2.5).
-$username = 'agsafe_shop_manager';
+$username = 'belayline_shop_manager';
 $user = get_user_by('login', $username);
 if (!$user) {
     $user_id = wp_insert_user([
@@ -57,7 +57,7 @@ $wpdb->insert(
     $wpdb->prefix . 'woocommerce_api_keys',
     [
         'user_id'         => $user_id,
-        'description'     => 'agsafe stage-3 e2e',
+        'description'     => 'belayline stage-3 e2e',
         'permissions'     => 'read_write',
         'consumer_key'    => wc_api_hash($consumer_key),
         'consumer_secret' => $consumer_secret,
@@ -68,22 +68,22 @@ $wpdb->insert(
 $key_id = (int) $wpdb->insert_id;
 
 // ---- 4. Bind wc:<key_id> to woo-default-agent, not the fallback pack -----
-$bindings = get_option('agsafe_pack_bindings', []);
+$bindings = get_option('belayline_pack_bindings', []);
 if (!is_array($bindings)) {
     $bindings = [];
 }
 $bindings['wc:' . $key_id] = 'woo-default-agent';
-update_option('agsafe_pack_bindings', $bindings, false);
+update_option('belayline_pack_bindings', $bindings, false);
 
 // ---- 5. Seed one product the smoke can list/delete -----------------------
-$product_id = (int) get_option('agsafe_smoke_woo_product_id', 0);
+$product_id = (int) get_option('belayline_smoke_woo_product_id', 0);
 if ($product_id <= 0 || get_post_status($product_id) === false) {
     $product = new WC_Product_Simple();
-    $product->set_name('AgSafe Stage 3 Widget');
+    $product->set_name('Belayline Stage 3 Widget');
     $product->set_regular_price('9.99');
     $product->set_status('publish');
     $product_id = $product->save();
-    update_option('agsafe_smoke_woo_product_id', $product_id, false);
+    update_option('belayline_smoke_woo_product_id', $product_id, false);
 }
 
 echo json_encode([

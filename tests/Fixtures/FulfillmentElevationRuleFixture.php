@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Tests\Fixtures;
+namespace Belayline\Tests\Fixtures;
 
-use Specflux\AgentSafety\Policy\ElevationRule;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Policy\ElevationRule;
+use Belayline\Policy\Tier;
 
 /**
- * Test-only mirror of the moved `Specflux\AgentSafety\Plugin\Integrations\Woo\OrderFulfillmentElevationRule`:
+ * Test-only mirror of the moved `Belayline\Plugin\Integrations\Woo\OrderFulfillmentElevationRule`:
  * an order status flip to a fulfillment state fires customer emails +
  * fulfillment, which is irreversible regardless of the verb's base tier.
  */

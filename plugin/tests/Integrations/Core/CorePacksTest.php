@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\Core;
+namespace Belayline\Plugin\Tests\Integrations\Core;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Integrations\Core\CorePacks;
-use Specflux\AgentSafety\Plugin\Integrations\Core\CoreVerbCatalog;
-use Specflux\AgentSafety\Plugin\Integrations\Woo\WooPacks;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Integrations\Core\CorePacks;
+use Belayline\Plugin\Integrations\Core\CoreVerbCatalog;
+use Belayline\Plugin\Integrations\Woo\WooPacks;
+use Belayline\Policy\Tier;
 
 /**
  * The core starter preset is POLICY shipped as code, pinned by the same

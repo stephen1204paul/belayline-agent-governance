@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Tests\Policy;
+namespace Belayline\Tests\Policy;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Policy\ElevationRule;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
-use Specflux\AgentSafety\Tests\Fixtures\BulkDeleteElevationRuleFixture;
-use Specflux\AgentSafety\Tests\Fixtures\FulfillmentElevationRuleFixture;
-use Specflux\AgentSafety\Tests\Fixtures\WooLikeVerbCatalog;
+use Belayline\Policy\ElevationRule;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
+use Belayline\Tests\Fixtures\BulkDeleteElevationRuleFixture;
+use Belayline\Tests\Fixtures\FulfillmentElevationRuleFixture;
+use Belayline\Tests\Fixtures\WooLikeVerbCatalog;
 
 final class TierClassifierTest extends TestCase
 {
@@ -85,7 +85,7 @@ final class TierClassifierTest extends TestCase
         // The ElevationRule contract has always said rules only elevate; this is
         // the enforcement. Without it one buggy or hostile rule could demote an
         // irreversible verb straight out of the approval gate — and the
-        // `agent_safety_elevation_rules` seam lets rules come from outside the
+        // `belayline_elevation_rules` seam lets rules come from outside the
         // bundled integration modules.
         $catalog = new VerbCatalog();
         $catalog->register(['demo/delete-everything' => Tier::Irreversible]);

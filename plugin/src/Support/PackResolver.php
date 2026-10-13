@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Packs\PackRegistry;
+use Belayline\Packs\Pack;
+use Belayline\Packs\PackRegistry;
 
 /**
  * Resolves the calling credential to a Capability Pack.
@@ -13,7 +13,7 @@ use Specflux\AgentSafety\Packs\PackRegistry;
  * The principal is whichever {@see RequestContext::currentTokens()} candidate
  * (application password, user, role, or an integration's own identity — e.g.
  * a WooCommerce API key) is bound first. Admin-configured bindings (the
- * `agsafe_pack_bindings` option, token id => pack name) map each credential to
+ * `belayline_pack_bindings` option, token id => pack name) map each credential to
  * a pack from the catalog; an unbound/unmatched request gets the safe default
  * ({@see PackRegistry::DEFAULT_PACK}). The same resolved pack is shared by the
  * gate and the audit hook within a request, so both see one consistent scope.
@@ -23,7 +23,7 @@ use Specflux\AgentSafety\Packs\PackRegistry;
  */
 final class PackResolver
 {
-    public const BINDINGS_OPTION = 'agsafe_pack_bindings';
+    public const BINDINGS_OPTION = 'belayline_pack_bindings';
 
     private ?PackRegistry $registry = null;
 
@@ -89,7 +89,7 @@ final class PackResolver
     /**
      * The registry over the built-in + integration-contributed catalog and the
      * persisted bindings. Exposed so the admin Packs UI can list the catalog
-     * and current bindings. Filterable via `agent_safety_pack_registry`
+     * and current bindings. Filterable via `belayline_pack_registry`
      * for bespoke catalogs/bindings.
      */
     public function registry(): PackRegistry
@@ -105,7 +105,7 @@ final class PackResolver
 
         /** @var PackRegistry $registry */
         $registry = function_exists('apply_filters')
-            ? apply_filters('agent_safety_pack_registry', $registry)
+            ? apply_filters('belayline_pack_registry', $registry)
             : $registry;
 
         return $this->registry = $registry;
@@ -121,7 +121,7 @@ final class PackResolver
      * Read + sanitise the bindings option to a clean array<string,string>
      * (subject token id => pack name). Anything malformed is dropped, never trusted.
      * Public because the admin page diffs a save against the STORED bindings —
-     * {@see registry()} may have been replaced by the `agent_safety_pack_registry`
+     * {@see registry()} may have been replaced by the `belayline_pack_registry`
      * filter, so its bindings are not necessarily what the option holds.
      *
      * @return array<string, string>

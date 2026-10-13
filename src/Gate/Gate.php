@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Gate;
+namespace Belayline\Gate;
 
-use Specflux\AgentSafety\Policy\TierClassifier;
+use Belayline\Policy\TierClassifier;
 
 /**
  * The decision core. Pure function of (verb, args, pack):

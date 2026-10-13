@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests;
+namespace Belayline\Plugin\Tests;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Audit\AuditDecision;
-use Specflux\AgentSafety\Plugin\Hooks\McpRequestAuditHandler;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Audit\AuditDecision;
+use Belayline\Plugin\Hooks\McpRequestAuditHandler;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
 
 /**
  * Exercises {@see McpRequestAuditHandler} against the six `mcp.request` tag
@@ -173,7 +173,7 @@ final class McpRequestAuditHandlerTest extends TestCase
     /**
      * §3.6.9 STAGE 10 DECISION, pinned: this handler classifies denials for
      * EVERY tool mcp-adapter routes, not only abilities
-     * {@see \Specflux\AgentSafety\Plugin\Hooks\AbilityPermissionGate::wrap()}
+     * {@see \Belayline\Plugin\Hooks\AbilityPermissionGate::wrap()}
      * wrapped (it only wraps governed namespaces). An ability named outside
      * any AS namespace -- so `wrap()` never touched it and no per-request AS
      * record could possibly exist for it -- still gets its permission denial

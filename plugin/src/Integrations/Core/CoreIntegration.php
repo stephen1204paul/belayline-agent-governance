@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\Core;
+namespace Belayline\Plugin\Integrations\Core;
 
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Policy\ElevationRule;
-use Specflux\AgentSafety\Policy\VerbCatalog;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
+use Belayline\Packs\Pack;
+use Belayline\Policy\ElevationRule;
+use Belayline\Policy\VerbCatalog;
+use Belayline\Plugin\Identity\IdentityChain;
 use wpdb;
 
 /**
  * The one place all WordPress-core coupling lives. Wired from the plugin
- * bootstrap UNCONDITIONALLY — unlike {@see \Specflux\AgentSafety\Plugin\Integrations\Woo\WooIntegration},
+ * bootstrap UNCONDITIONALLY — unlike {@see \Belayline\Plugin\Integrations\Woo\WooIntegration},
  * core is definitionally present on every site this plugin can run on.
  *
  * The module registers no identity provider of its own: identity for
@@ -35,7 +35,7 @@ final class CoreIntegration
     }
 
     /**
-     * @return array{elevationRules: list<ElevationRule>, packs: list<Pack>, governedNamespaces: list<string>, stateProbes: array<string, \Specflux\AgentSafety\Plugin\Approval\StateProbe>}
+     * @return array{elevationRules: list<ElevationRule>, packs: list<Pack>, governedNamespaces: list<string>, stateProbes: array<string, \Belayline\Plugin\Approval\StateProbe>}
      */
     public static function register(VerbCatalog $catalog, IdentityChain $identity, ?wpdb $db): array
     {

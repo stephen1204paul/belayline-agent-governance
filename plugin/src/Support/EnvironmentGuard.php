@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
-use Specflux\AgentSafety\Plugin\Approval\WpdbGrantStore;
-use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
+use Belayline\Plugin\Approval\WpdbGrantStore;
+use Belayline\Plugin\Audit\WpdbApprovalStore;
 
 /**
  * Site binding (AS-7, §3.4, §3.9): the normalised host+port+path an install's
@@ -34,7 +34,7 @@ use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
  */
 final class EnvironmentGuard
 {
-    public const OPTION = 'agsafe_site_binding';
+    public const OPTION = 'belayline_site_binding';
 
     /**
      * Held only while a void is actually running: `add_option()`'s
@@ -44,7 +44,7 @@ final class EnvironmentGuard
      * crashed request has gone stale. Deleted the moment the void
      * completes — see {@see ensureCurrent()} — and also by {@see rebind()}.
      */
-    public const LOCK_OPTION = 'agsafe_env_mismatch_lock';
+    public const LOCK_OPTION = 'belayline_env_mismatch_lock';
 
     /**
      * A lock older than this is assumed abandoned by a request that died
@@ -64,7 +64,7 @@ final class EnvironmentGuard
      * mismatched host must void again, since Relaxations may have been
      * granted in the meantime) and by {@see rebind()}.
      */
-    public const VOIDED_FOR_OPTION = 'agsafe_site_binding_voided_for';
+    public const VOIDED_FOR_OPTION = 'belayline_site_binding_voided_for';
 
     public function __construct(
         private readonly ShadowMode $shadow,
@@ -125,8 +125,8 @@ final class EnvironmentGuard
      * Otherwise {@see acquireLock()} decides whether THIS request runs the
      * void; on success it does, records completion, and releases the lock —
      * all three voids ({@see ShadowMode::voidAll()},
-     * {@see \Specflux\AgentSafety\Plugin\Approval\WpdbGrantStore::revokeAllActive()},
-     * {@see \Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore::voidUnclaimedApprovals()})
+     * {@see \Belayline\Plugin\Approval\WpdbGrantStore::revokeAllActive()},
+     * {@see \Belayline\Plugin\Audit\WpdbApprovalStore::voidUnclaimedApprovals()})
      * are idempotent, so re-running one that partially completed on a
      * crashed request is safe.
      */
@@ -231,8 +231,8 @@ final class EnvironmentGuard
 
         echo '<div class="notice notice-error"><p>'
             . esc_html__(
-                "SenroGate: this site's address changed since its shadow windows, grants and approved-but-unclaimed approvals were authorised. Those relaxations have been permanently voided. Rebind on the Agent Capability Packs page once this move is expected.",
-                'senrogate'
+                "Belayline Agent Governance: this site's address changed since its shadow windows, grants and approved-but-unclaimed approvals were authorised. Those relaxations have been permanently voided. Rebind on the Agent Capability Packs page once this move is expected.",
+                'belayline-agent-governance'
             )
             . '</p></div>';
     }

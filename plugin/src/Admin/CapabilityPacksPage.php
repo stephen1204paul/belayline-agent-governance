@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Admin;
+namespace Belayline\Plugin\Admin;
 
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Identity\IdentityProvider;
-use Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder;
-use Specflux\AgentSafety\Plugin\Support\EnvironmentGuard;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\PauseSwitch;
-use Specflux\AgentSafety\Plugin\Support\ShadowMode;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Identity\IdentityProvider;
+use Belayline\Plugin\Support\AdminChangeRecorder;
+use Belayline\Plugin\Support\EnvironmentGuard;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\PauseSwitch;
+use Belayline\Plugin\Support\ShadowMode;
 
 /**
  * Tools → "Agent Capability Packs": the human side of credential scoping,
@@ -22,7 +22,7 @@ use Specflux\AgentSafety\Plugin\Support\ShadowMode;
  * a role, or an integration's own credential — e.g. a WooCommerce API key) to
  * a pack from the catalog. One section per provider, using its {@see
  * IdentityProvider::label()} and {@see IdentityProvider::bindableTokens()}.
- * Bindings persist in the `agsafe_pack_bindings` option (token id => pack name)
+ * Bindings persist in the `belayline_pack_bindings` option (token id => pack name)
  * that {@see PackResolver} reads per request; an unbound token falls back to
  * the safe default pack.
  *
@@ -41,14 +41,14 @@ use Specflux\AgentSafety\Plugin\Support\ShadowMode;
  */
 final class CapabilityPacksPage
 {
-    private const SLUG = 'agent-safety-packs';
+    private const SLUG = 'belayline-packs';
     private const CAP = 'manage_options';
-    private const SAVE = 'agsafe_save_pack_bindings';
-    private const SHADOW = 'agsafe_save_shadow_packs';
-    private const PAUSE = 'agsafe_pause';
-    private const RESUME = 'agsafe_resume';
-    private const REBIND = 'agsafe_rebind_environment';
-    private const RENEW_SHADOW = 'agsafe_renew_shadow_pack';
+    private const SAVE = 'belayline_save_pack_bindings';
+    private const SHADOW = 'belayline_save_shadow_packs';
+    private const PAUSE = 'belayline_pause';
+    private const RESUME = 'belayline_resume';
+    private const REBIND = 'belayline_rebind_environment';
+    private const RENEW_SHADOW = 'belayline_renew_shadow_pack';
 
     /** Observation windows offered on the shadow form, in days; the last is the default. */
     private const SHADOW_DAYS = [1, 3, 7];
@@ -78,8 +78,8 @@ final class CapabilityPacksPage
     public function menu(): void
     {
         add_management_page(
-            __('Agent Capability Packs', 'senrogate'),
-            __('Agent Capability Packs', 'senrogate'),
+            __('Agent Capability Packs', 'belayline-agent-governance'),
+            __('Agent Capability Packs', 'belayline-agent-governance'),
             self::CAP,
             self::SLUG,
             [$this, 'render']
@@ -95,11 +95,11 @@ final class CapabilityPacksPage
         $registry = $this->packs->registry();
 
         echo '<div class="wrap">';
-        echo '<h1>' . esc_html__('Agent Capability Packs', 'senrogate') . '</h1>';
-        echo '<p>' . esc_html__('A pack is a credentialed, purpose-scoped view of the verb catalog. Enforced in the gate, not via WP roles. A pack that denies a tier class is injection-proof against that class by construction.', 'senrogate') . '</p>';
+        echo '<h1>' . esc_html__('Agent Capability Packs', 'belayline-agent-governance') . '</h1>';
+        echo '<p>' . esc_html__('A pack is a credentialed, purpose-scoped view of the verb catalog. Enforced in the gate, not via WP roles. A pack that denies a tier class is injection-proof against that class by construction.', 'belayline-agent-governance') . '</p>';
 
-        if (isset($_GET['agsafe_saved'])) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only flash.
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Capability pack bindings saved.', 'senrogate') . '</p></div>';
+        if (isset($_GET['belayline_saved'])) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only flash.
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Capability pack bindings saved.', 'belayline-agent-governance') . '</p></div>';
         }
 
         $this->renderEmergencyStop();
@@ -113,37 +113,37 @@ final class CapabilityPacksPage
     /**
      * The emergency stop, first on the page: one button that denies every
      * governed call while the audit trail keeps recording, and the way back.
-     * A pause the `agent_safety_paused` filter forces is shown but offers no
+     * A pause the `belayline_paused` filter forces is shown but offers no
      * Resume — nothing on this screen can lift it.
      */
     private function renderEmergencyStop(): void
     {
-        echo '<h2>' . esc_html__('Emergency stop', 'senrogate') . '</h2>';
+        echo '<h2>' . esc_html__('Emergency stop', 'belayline-agent-governance') . '</h2>';
 
         if (!$this->pause->isPaused()) {
-            echo '<p>' . esc_html__('Pausing denies every governed agent call, of every tier, until you resume. Nothing executes and no approval is claimed; each refusal is audited as site_paused, and a shadowed pack is paused like any other.', 'senrogate') . '</p>';
+            echo '<p>' . esc_html__('Pausing denies every governed agent call, of every tier, until you resume. Nothing executes and no approval is claimed; each refusal is audited as site_paused, and a shadowed pack is paused like any other.', 'belayline-agent-governance') . '</p>';
             echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
             echo '<input type="hidden" name="action" value="' . esc_attr(self::PAUSE) . '">';
             echo wp_nonce_field(self::PAUSE, '_wpnonce', true, false); // phpcs:ignore WordPress.Security.EscapeOutput -- core-built hidden fields.
-            echo '<p><label>' . esc_html__('Reason', 'senrogate') . ' <input type="text" name="reason" class="regular-text" required></label></p>';
-            echo '<p><button type="submit" class="button button-primary">' . esc_html__('Pause all agent actions', 'senrogate') . '</button></p>';
+            echo '<p><label>' . esc_html__('Reason', 'belayline-agent-governance') . ' <input type="text" name="reason" class="regular-text" required></label></p>';
+            echo '<p><button type="submit" class="button button-primary">' . esc_html__('Pause all agent actions', 'belayline-agent-governance') . '</button></p>';
             echo '</form>';
 
             return;
         }
 
         $state = $this->pause->state();
-        echo '<div class="notice notice-error inline"><p><strong>' . esc_html__('All agent actions are paused.', 'senrogate') . '</strong> ';
+        echo '<div class="notice notice-error inline"><p><strong>' . esc_html__('All agent actions are paused.', 'belayline-agent-governance') . '</strong> ';
         if ($state === null) {
             echo esc_html(sprintf(
                 /* translators: %s filter hook name */
-                __('Forced by the %s filter; it cannot be lifted from this screen.', 'senrogate'),
+                __('Forced by the %s filter; it cannot be lifted from this screen.', 'belayline-agent-governance'),
                 PauseSwitch::FILTER
             ));
         } else {
             echo esc_html(sprintf(
                 /* translators: 1: date and time (UTC), 2: user id, 3: reason */
-                __('Since %1$s by user #%2$s. Reason: %3$s', 'senrogate'),
+                __('Since %1$s by user #%2$s. Reason: %3$s', 'belayline-agent-governance'),
                 $state['since'] === null ? '?' : gmdate('Y-m-d H:i', $state['since']) . ' UTC',
                 $state['by'] === null ? '?' : (string) $state['by'],
                 $state['reason'] === '' ? '—' : $state['reason']
@@ -155,7 +155,7 @@ final class CapabilityPacksPage
             echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
             echo '<input type="hidden" name="action" value="' . esc_attr(self::RESUME) . '">';
             echo wp_nonce_field(self::RESUME, '_wpnonce', true, false); // phpcs:ignore WordPress.Security.EscapeOutput -- core-built hidden fields.
-            echo '<p><button type="submit" class="button button-primary">' . esc_html__('Resume agent actions', 'senrogate') . '</button></p>';
+            echo '<p><button type="submit" class="button button-primary">' . esc_html__('Resume agent actions', 'belayline-agent-governance') . '</button></p>';
             echo '</form>';
         }
     }
@@ -180,19 +180,19 @@ final class CapabilityPacksPage
 
         echo '<div class="notice notice-error inline"><p>' . esc_html__(
             "This site's address changed since its shadow windows, grants and approved-but-unclaimed approvals were authorised. Those relaxations have been permanently voided.",
-            'senrogate'
+            'belayline-agent-governance'
         ) . '</p></div>';
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
         echo '<input type="hidden" name="action" value="' . esc_attr(self::REBIND) . '">';
         echo wp_nonce_field(self::REBIND, '_wpnonce', true, false); // phpcs:ignore WordPress.Security.EscapeOutput -- core-built hidden fields.
-        echo '<p><button type="submit" class="button button-primary">' . esc_html__('Rebind to this address', 'senrogate') . '</button></p>';
+        echo '<p><button type="submit" class="button button-primary">' . esc_html__('Rebind to this address', 'belayline-agent-governance') . '</button></p>';
         echo '</form>';
     }
 
     public function rebindAction(): void
     {
         if (!current_user_can(self::CAP)) {
-            wp_die(esc_html__('Insufficient permissions.', 'senrogate'));
+            wp_die(esc_html__('Insufficient permissions.', 'belayline-agent-governance'));
         }
         check_admin_referer(self::REBIND);
 
@@ -206,7 +206,7 @@ final class CapabilityPacksPage
     public function renewShadowAction(): void
     {
         if (!current_user_can(self::CAP)) {
-            wp_die(esc_html__('Insufficient permissions.', 'senrogate'));
+            wp_die(esc_html__('Insufficient permissions.', 'belayline-agent-governance'));
         }
         check_admin_referer(self::RENEW_SHADOW);
 
@@ -217,7 +217,7 @@ final class CapabilityPacksPage
         $this->applyRenewShadow($pack);
 
         wp_safe_redirect(add_query_arg(
-            ['page' => self::SLUG, 'agsafe_saved' => '1'],
+            ['page' => self::SLUG, 'belayline_saved' => '1'],
             admin_url('tools.php')
         ));
         exit;
@@ -245,16 +245,16 @@ final class CapabilityPacksPage
         }
 
         echo '<div class="notice notice-error"><p><strong>'
-            . esc_html__('SenroGate: all agent actions are paused.', 'senrogate')
+            . esc_html__('Belayline Agent Governance: all agent actions are paused.', 'belayline-agent-governance')
             . '</strong> <a href="' . esc_url(admin_url('tools.php?page=' . self::SLUG)) . '">'
-            . esc_html__('Review or resume', 'senrogate')
+            . esc_html__('Review or resume', 'belayline-agent-governance')
             . '</a></p></div>';
     }
 
     public function pauseAction(): void
     {
         if (!current_user_can(self::CAP)) {
-            wp_die(esc_html__('Insufficient permissions.', 'senrogate'));
+            wp_die(esc_html__('Insufficient permissions.', 'belayline-agent-governance'));
         }
         check_admin_referer(self::PAUSE);
 
@@ -268,7 +268,7 @@ final class CapabilityPacksPage
     /**
      * The emergency-stop reason an admin typed: a slashed, unsanitised POST
      * value on the way in, a plain human-readable string on the way out
-     * (stored raw in the `agsafe_pause` option and shown escaped wherever
+     * (stored raw in the `belayline_pause` option and shown escaped wherever
      * it's displayed). A non-scalar value (an array from a malformed
      * request) has no meaningful text representation, so it becomes ''
      * rather than a cast artifact like "Array".
@@ -287,7 +287,7 @@ final class CapabilityPacksPage
     public function resumeAction(): void
     {
         if (!current_user_can(self::CAP)) {
-            wp_die(esc_html__('Insufficient permissions.', 'senrogate'));
+            wp_die(esc_html__('Insufficient permissions.', 'belayline-agent-governance'));
         }
         check_admin_referer(self::RESUME);
 
@@ -325,21 +325,21 @@ final class CapabilityPacksPage
         $effective = $this->shadow->expiries();
         $isProduction = $this->shadow->isProduction();
 
-        echo '<h2>' . esc_html__('Pack catalog', 'senrogate') . '</h2>';
+        echo '<h2>' . esc_html__('Pack catalog', 'belayline-agent-governance') . '</h2>';
         if ($isProduction) {
-            echo '<p><em>' . esc_html__('This site is production: shadow windows are capped at 24 hours, and enabling one requires typing the pack name to confirm.', 'senrogate') . '</em></p>';
+            echo '<p><em>' . esc_html__('This site is production: shadow windows are capped at 24 hours, and enabling one requires typing the pack name to confirm.', 'belayline-agent-governance') . '</em></p>';
         }
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
         echo '<input type="hidden" name="action" value="' . esc_attr(self::SHADOW) . '">';
         echo wp_nonce_field(self::SHADOW, '_wpnonce', true, false); // phpcs:ignore WordPress.Security.EscapeOutput -- core-built hidden fields.
         echo '<table class="widefat striped"><thead><tr>';
         $columns = [
-            __('Pack', 'senrogate'),
-            __('Allows', 'senrogate'),
-            __('Hard-denied (deny_class)', 'senrogate'),
-            __('Approval-gated', 'senrogate'),
-            __('PII', 'senrogate'),
-            __('Shadow (log only)', 'senrogate'),
+            __('Pack', 'belayline-agent-governance'),
+            __('Allows', 'belayline-agent-governance'),
+            __('Hard-denied (deny_class)', 'belayline-agent-governance'),
+            __('Approval-gated', 'belayline-agent-governance'),
+            __('PII', 'belayline-agent-governance'),
+            __('Shadow (log only)', 'belayline-agent-governance'),
         ];
         if ($isProduction) {
             $columns[] = '';
@@ -365,13 +365,13 @@ final class CapabilityPacksPage
                 '<td><label><input type="checkbox" name="shadow[]" value="%s"%s> %s</label>%s',
                 esc_attr($pack->name),
                 checked($expiresAt !== null, true, false),
-                esc_html__('audit only, enforce nothing', 'senrogate'),
+                esc_html__('audit only, enforce nothing', 'belayline-agent-governance'),
                 $this->expiryNote($expiresAt, $effective[$pack->name] ?? null), // phpcs:ignore WordPress.Security.EscapeOutput -- esc_html in helper.
             );
             if ($isProduction && $expiresAt === null) {
                 printf(
                     '<br><small>%s <input type="text" name="shadow_confirm[%s]" placeholder="%s"></small>',
-                    esc_html__('type the pack name to enable in production:', 'senrogate'),
+                    esc_html__('type the pack name to enable in production:', 'belayline-agent-governance'),
                     esc_attr($pack->name),
                     esc_attr($pack->name),
                 );
@@ -384,8 +384,8 @@ final class CapabilityPacksPage
         }
 
         echo '</tbody></table>';
-        echo '<p>' . esc_html__('A shadowed pack still audits every verdict (marked dry_run) but blocks nothing. Observation ends on its own when the chosen window lapses (7 days at most) and enforcement resumes; every toggle is written to the audit log. Pending approvals are not created for shadowed calls.', 'senrogate') . '</p>';
-        echo '<p><label>' . esc_html__('Shadow newly ticked packs for', 'senrogate') . ' <select name="shadow_days">';
+        echo '<p>' . esc_html__('A shadowed pack still audits every verdict (marked dry_run) but blocks nothing. Observation ends on its own when the chosen window lapses (7 days at most) and enforcement resumes; every toggle is written to the audit log. Pending approvals are not created for shadowed calls.', 'belayline-agent-governance') . '</p>';
+        echo '<p><label>' . esc_html__('Shadow newly ticked packs for', 'belayline-agent-governance') . ' <select name="shadow_days">';
         foreach (self::SHADOW_DAYS as $days) {
             printf(
                 '<option value="%d"%s>%s</option>',
@@ -393,20 +393,20 @@ final class CapabilityPacksPage
                 selected($days, self::defaultShadowDays(), false),
                 esc_html(sprintf(
                     /* translators: %d number of days */
-                    _n('%d day', '%d days', $days, 'senrogate'),
+                    _n('%d day', '%d days', $days, 'belayline-agent-governance'),
                     $days
                 )),
             );
         }
         echo '</select></label></p>';
-        echo '<p><button type="submit" class="button">' . esc_html__('Save shadow mode', 'senrogate') . '</button></p>';
+        echo '<p><button type="submit" class="button">' . esc_html__('Save shadow mode', 'belayline-agent-governance') . '</button></p>';
         echo '</form>';
     }
 
     public function saveShadow(): void
     {
         if (!current_user_can(self::CAP)) {
-            wp_die(esc_html__('Insufficient permissions.', 'senrogate'));
+            wp_die(esc_html__('Insufficient permissions.', 'belayline-agent-governance'));
         }
         check_admin_referer(self::SHADOW);
 
@@ -423,7 +423,7 @@ final class CapabilityPacksPage
         $this->applyShadow($posted, $days, $confirmations);
 
         wp_safe_redirect(add_query_arg(
-            ['page' => self::SLUG, 'agsafe_saved' => '1'],
+            ['page' => self::SLUG, 'belayline_saved' => '1'],
             admin_url('tools.php')
         ));
         exit;
@@ -498,13 +498,13 @@ final class CapabilityPacksPage
         if ($stored !== null) {
             $note = sprintf(
                 /* translators: %s expiry date and time (UTC) */
-                __('expires %s', 'senrogate'),
+                __('expires %s', 'belayline-agent-governance'),
                 gmdate('Y-m-d H:i', $stored) . ' UTC'
             );
         } elseif ($effective !== null) {
             $note = sprintf(
                 /* translators: 1: filter hook name, 2: expiry date and time (UTC) */
-                __('shadowed by the %1$s filter until %2$s', 'senrogate'),
+                __('shadowed by the %1$s filter until %2$s', 'belayline-agent-governance'),
                 ShadowMode::FILTER,
                 gmdate('Y-m-d H:i', $effective) . ' UTC'
             );
@@ -522,7 +522,7 @@ final class CapabilityPacksPage
         $out .= '<input type="hidden" name="action" value="' . esc_attr(self::RENEW_SHADOW) . '">';
         $out .= '<input type="hidden" name="pack" value="' . esc_attr($pack) . '">';
         $out .= wp_nonce_field(self::RENEW_SHADOW, '_wpnonce', true, false);
-        $out .= '<button type="submit" class="button button-small">' . esc_html__('Renew for 24h', 'senrogate') . '</button>';
+        $out .= '<button type="submit" class="button button-small">' . esc_html__('Renew for 24h', 'belayline-agent-governance') . '</button>';
         $out .= '</form>';
 
         return $out;
@@ -538,8 +538,8 @@ final class CapabilityPacksPage
      */
     private function renderBindings(array $names, string $default, array $bindings): void
     {
-        echo '<h2 style="margin-top:2em;">' . esc_html__('Credential bindings', 'senrogate') . '</h2>';
-        echo '<p>' . esc_html__('Bind a credential or role to a pack. Unbound tokens use the default pack.', 'senrogate') . '</p>';
+        echo '<h2 style="margin-top:2em;">' . esc_html__('Credential bindings', 'belayline-agent-governance') . '</h2>';
+        echo '<p>' . esc_html__('Bind a credential or role to a pack. Unbound tokens use the default pack.', 'belayline-agent-governance') . '</p>';
 
         $providers = array_values(array_filter(
             $this->identity->providers(),
@@ -547,7 +547,7 @@ final class CapabilityPacksPage
         ));
 
         if ($providers === []) {
-            echo '<p><em>' . esc_html__('No bindable credentials or roles were found yet. Bindings will appear here once an identity provider (a user, a role, or an active integration) has something to bind.', 'senrogate') . '</em></p>';
+            echo '<p><em>' . esc_html__('No bindable credentials or roles were found yet. Bindings will appear here once an identity provider (a user, a role, or an active integration) has something to bind.', 'belayline-agent-governance') . '</em></p>';
 
             return;
         }
@@ -560,7 +560,7 @@ final class CapabilityPacksPage
             $this->renderProviderSection($provider, $names, $default, $bindings);
         }
 
-        echo '<p><button type="submit" class="button button-primary">' . esc_html__('Save bindings', 'senrogate') . '</button></p>';
+        echo '<p><button type="submit" class="button button-primary">' . esc_html__('Save bindings', 'belayline-agent-governance') . '</button></p>';
         echo '</form>';
     }
 
@@ -574,7 +574,7 @@ final class CapabilityPacksPage
 
         echo '<h3>' . esc_html($provider->label()) . '</h3>';
         echo '<table class="widefat striped"><thead><tr>';
-        foreach ([__('Token', 'senrogate'), __('Description', 'senrogate'), __('Pack', 'senrogate')] as $col) {
+        foreach ([__('Token', 'belayline-agent-governance'), __('Description', 'belayline-agent-governance'), __('Pack', 'belayline-agent-governance')] as $col) {
             echo '<th>' . esc_html($col) . '</th>';
         }
         echo '</tr></thead><tbody>';
@@ -597,7 +597,7 @@ final class CapabilityPacksPage
     private function packSelect(string $subject, array $names, string $default, string $current): string
     {
         $out = '<select name="bindings[' . esc_attr($subject) . ']">';
-        $out .= '<option value="">' . esc_html(sprintf(/* translators: %s default pack name */ __('(default — %s)', 'senrogate'), $default)) . '</option>';
+        $out .= '<option value="">' . esc_html(sprintf(/* translators: %s default pack name */ __('(default — %s)', 'belayline-agent-governance'), $default)) . '</option>';
         foreach ($names as $name) {
             $out .= '<option value="' . esc_attr($name) . '"' . selected($current, $name, false) . '>' . esc_html($name) . '</option>';
         }
@@ -609,7 +609,7 @@ final class CapabilityPacksPage
     public function save(): void
     {
         if (!current_user_can(self::CAP)) {
-            wp_die(esc_html__('Insufficient permissions.', 'senrogate'));
+            wp_die(esc_html__('Insufficient permissions.', 'belayline-agent-governance'));
         }
         check_admin_referer(self::SAVE);
 
@@ -619,7 +619,7 @@ final class CapabilityPacksPage
         $this->applyBindings($posted);
 
         wp_safe_redirect(add_query_arg(
-            ['page' => self::SLUG, 'agsafe_saved' => '1'],
+            ['page' => self::SLUG, 'belayline_saved' => '1'],
             admin_url('tools.php')
         ));
         exit;

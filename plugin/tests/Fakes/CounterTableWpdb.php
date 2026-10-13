@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 /**
- * A wpdb stand-in that behaves like the `agsafe_counters` table for the three
- * statements {@see \Specflux\AgentSafety\Plugin\Support\AtomicCounterStore}
+ * A wpdb stand-in that behaves like the `belayline_counters` table for the three
+ * statements {@see \Belayline\Plugin\Support\AtomicCounterStore}
  * issues, instead of the base stub's canned returns (tests/stubs/wpdb.php).
  *
  * Each statement is matched against its WHOLE expected shape, so a change to

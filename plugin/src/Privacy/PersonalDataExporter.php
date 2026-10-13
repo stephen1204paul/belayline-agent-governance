@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Privacy;
+namespace Belayline\Plugin\Privacy;
 
 use WP_User;
 
@@ -48,7 +48,7 @@ final class PersonalDataExporter
     /**
      * One export group per audit row: the fields useful to the requester,
      * decoded straight from `record_json` (the same source {@see
-     * \Specflux\AgentSafety\Plugin\Admin\AuditLogPage} reads for its table).
+     * \Belayline\Plugin\Admin\AuditLogPage} reads for its table).
      *
      * @param array<string, mixed> $row
      * @return array{group_id: string, group_label: string, item_id: string, data: list<array{name: string, value: string}>}
@@ -59,17 +59,17 @@ final class PersonalDataExporter
         $record = is_array($decoded) ? $decoded : [];
 
         return [
-            'group_id' => 'agent-safety-audit-log',
-            'group_label' => __('SenroGate Audit Log', 'senrogate'),
-            'item_id' => 'agent-safety-audit-log-' . (string) ($row['id'] ?? ''),
+            'group_id' => 'belayline-audit-log',
+            'group_label' => __('Belayline Agent Governance Audit Log', 'belayline-agent-governance'),
+            'item_id' => 'belayline-audit-log-' . (string) ($row['id'] ?? ''),
             'data' => [
-                ['name' => __('Time', 'senrogate'), 'value' => (string) ($record['ts'] ?? '')],
-                ['name' => __('Ability', 'senrogate'), 'value' => (string) ($record['ability'] ?? '')],
-                ['name' => __('Tier', 'senrogate'), 'value' => isset($record['tier']) ? (string) $record['tier'] : ''],
-                ['name' => __('Decision', 'senrogate'), 'value' => (string) ($record['decision'] ?? '')],
-                ['name' => __('Reason', 'senrogate'), 'value' => (string) ($record['reason'] ?? '')],
-                ['name' => __('IP Address', 'senrogate'), 'value' => (string) ($record['ip'] ?? '')],
-                ['name' => __('Recorded Input', 'senrogate'), 'value' => (string) wp_json_encode($record['input'] ?? [])],
+                ['name' => __('Time', 'belayline-agent-governance'), 'value' => (string) ($record['ts'] ?? '')],
+                ['name' => __('Ability', 'belayline-agent-governance'), 'value' => (string) ($record['ability'] ?? '')],
+                ['name' => __('Tier', 'belayline-agent-governance'), 'value' => isset($record['tier']) ? (string) $record['tier'] : ''],
+                ['name' => __('Decision', 'belayline-agent-governance'), 'value' => (string) ($record['decision'] ?? '')],
+                ['name' => __('Reason', 'belayline-agent-governance'), 'value' => (string) ($record['reason'] ?? '')],
+                ['name' => __('IP Address', 'belayline-agent-governance'), 'value' => (string) ($record['ip'] ?? '')],
+                ['name' => __('Recorded Input', 'belayline-agent-governance'), 'value' => (string) wp_json_encode($record['input'] ?? [])],
             ],
         ];
     }

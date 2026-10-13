@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
 /**
- * Multisite refusal (S2). Agent Safety does not support WordPress multisite:
+ * Multisite refusal (S2). Belayline does not support WordPress multisite:
  * a network install spreads the identity/gate/audit wiring and the approvals
  * schema across sites in ways this plugin has never been designed or tested
  * for, so it refuses outright rather than risk a half-governed network.
- * Mirrors SenroFlux's own `MultisiteGuard` for consistency between the two
+ * Mirrors Site Agent's own `MultisiteGuard` for consistency between the two
  * plugins.
  */
 final class MultisiteGuard
@@ -23,7 +23,7 @@ final class MultisiteGuard
     /** The one sentence shown to the person who tried. */
     public static function message(): string
     {
-        return __('SenroGate does not support WordPress multisite. It was not activated.', 'senrogate');
+        return __('Belayline Agent Governance does not support WordPress multisite. It was not activated.', 'belayline-agent-governance');
     }
 
     /**
@@ -42,7 +42,7 @@ final class MultisiteGuard
 
         wp_die(
             esc_html(self::message()),
-            esc_html__('Plugin activation refused', 'senrogate'),
+            esc_html__('Plugin activation refused', 'belayline-agent-governance'),
             ['back_link' => true]
         );
     }
@@ -71,7 +71,7 @@ final class MultisiteGuard
 
         printf(
             '<div class="notice notice-error"><p>%s</p></div>',
-            esc_html__('SenroGate is inactive: WordPress multisite is not supported. Deactivate it on this network.', 'senrogate')
+            esc_html__('Belayline Agent Governance is inactive: WordPress multisite is not supported. Deactivate it on this network.', 'belayline-agent-governance')
         );
     }
 }

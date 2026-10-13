@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Fakes;
+namespace Belayline\Plugin\Tests\Fakes;
 
-use Specflux\AgentSafety\Approval\Grant;
-use Specflux\AgentSafety\Approval\GrantStatus;
-use Specflux\AgentSafety\Approval\GrantStore;
+use Belayline\Approval\Grant;
+use Belayline\Approval\GrantStatus;
+use Belayline\Approval\GrantStore;
 
 /**
  * Hand-rolled in-memory {@see GrantStore} (house style: no mocking framework).
  *
  * It delegates the MATCHING RULE to the real {@see Grant::canReserve()} rather
  * than reimplementing it, so a test driving this fake exercises the same
- * fail-closed logic {@see \Specflux\AgentSafety\Plugin\Approval\WpdbGrantStore}
+ * fail-closed logic {@see \Belayline\Plugin\Approval\WpdbGrantStore}
  * consults. What it does NOT model is atomicity — that guarantee lives in the
  * wpdb store's conditional UPDATE and is asserted on the SQL there.
  */

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
-use Specflux\AgentSafety\Approval\Grant;
-use Specflux\AgentSafety\Audit\AuditDecision;
-use Specflux\AgentSafety\Audit\AuditRecord;
-use Specflux\AgentSafety\Audit\AuditSink;
+use Belayline\Approval\Grant;
+use Belayline\Audit\AuditDecision;
+use Belayline\Audit\AuditRecord;
+use Belayline\Audit\AuditSink;
 
 /**
  * Audit emission for the pre-approval grant lifecycle (AS-12).
@@ -98,7 +98,7 @@ final class GrantRecorder
 
     /**
      * A request for a grant was turned away past the feature switch, with the
-     * refusal reason ({@see \Specflux\AgentSafety\Plugin\Api\Grants::REFUSED_NO_GRANTOR}
+     * refusal reason ({@see \Belayline\Plugin\Api\Grants::REFUSED_NO_GRANTOR}
      * and siblings). The would-be grantor rides in `input`, not the `approval`
      * slot: that slot names an authorisation that exists, and none does here.
      */

@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\Core;
+namespace Belayline\Plugin\Tests\Integrations\Core;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Gate\Gate;
-use Specflux\AgentSafety\Gate\GateContext;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
-use Specflux\AgentSafety\Plugin\Integrations\Core\CoreVerbCatalog;
+use Belayline\Gate\Gate;
+use Belayline\Gate\GateContext;
+use Belayline\Packs\Pack;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
+use Belayline\Plugin\Integrations\Core\CoreVerbCatalog;
 
 /**
  * Pins the tier assignments AND the fail-closed shape of the map: tests

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\Woo;
+namespace Belayline\Plugin\Tests\Integrations\Woo;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Integrations\Woo\WcApiKeyIdentity;
+use Belayline\Plugin\Integrations\Woo\WcApiKeyIdentity;
 use wpdb;
 
 final class WcApiKeyIdentityTest extends TestCase

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Verdict;
+namespace Belayline\Plugin\Verdict;
 
 /**
  * What {@see VerdictPipeline}'s probe step found for one call: no probe is
@@ -26,7 +26,7 @@ final class ProbeOutcome
         return new self(false, 'none', null);
     }
 
-    /** $probeArgs is the canonical-JSON encoding of the probe's {@see \Specflux\AgentSafety\Plugin\Approval\StateProbe::targetArgs()}. */
+    /** $probeArgs is the canonical-JSON encoding of the probe's {@see \Belayline\Plugin\Approval\StateProbe::targetArgs()}. */
     public static function ok(string $fingerprint, string $probeArgs): self
     {
         return new self(false, 'probe', $fingerprint, $probeArgs);

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\Woo;
+namespace Belayline\Plugin\Integrations\Woo;
 
-use Specflux\AgentSafety\Plugin\Identity\IdentityProvider;
+use Belayline\Plugin\Identity\IdentityProvider;
 use wpdb;
 
 /**
@@ -88,6 +88,6 @@ final class WcApiKeyIdentity implements IdentityProvider
 
     public function label(): string
     {
-        return __('WooCommerce REST API keys — create one under WooCommerce → Settings → Advanced → REST API.', 'senrogate');
+        return __('WooCommerce REST API keys — create one under WooCommerce → Settings → Advanced → REST API.', 'belayline-agent-governance');
     }
 }

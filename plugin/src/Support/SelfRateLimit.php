@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
 /**
- * AS-8 (§3.5 item 6): `agent-safety/check-approval`'s OWN fixed rate limit —
+ * AS-8 (§3.5 item 6): `belayline/check-approval`'s OWN fixed rate limit —
  * 10 calls/minute per principal, through the existing {@see RateCounter}
  * under a reserved key that no Pack owns, independent of the caller's Pack
  * (whose own `calls_per_minute`/`calls_per_hour` caps, enforced by
  * {@see RateLimitGate}, never apply to this verb — see
- * {@see \Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline::judgeCheckApproval()}).
+ * {@see \Belayline\Plugin\Verdict\VerdictPipeline::judgeCheckApproval()}).
  *
  * Lives in this namespace (not Integrations\Self) so its retry-after
  * calculation shares {@see RateCounter}'s bare `time()` call and the same
@@ -19,7 +19,7 @@ namespace Specflux\AgentSafety\Plugin\Support;
 final class SelfRateLimit
 {
     /** Reserved {@see RateCounter} bucket name: no Pack is ever named this. */
-    private const KEY = 'agent-safety-self';
+    private const KEY = 'belayline-self';
 
     private const PER_MINUTE = 10;
 

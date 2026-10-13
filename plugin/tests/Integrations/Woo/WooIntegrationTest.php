@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\Woo;
+namespace Belayline\Plugin\Tests\Integrations\Woo;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Integrations\Woo\BulkProductDeleteElevationRule;
-use Specflux\AgentSafety\Plugin\Integrations\Woo\CustomerNoteElevationRule;
-use Specflux\AgentSafety\Plugin\Integrations\Woo\ForceDeleteElevationRule;
-use Specflux\AgentSafety\Plugin\Integrations\Woo\OrderFulfillmentElevationRule;
-use Specflux\AgentSafety\Plugin\Integrations\Woo\ProductPriceOrPublishElevationRule;
-use Specflux\AgentSafety\Plugin\Integrations\Woo\WooIntegration;
+use Belayline\Policy\Tier;
+use Belayline\Policy\VerbCatalog;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Integrations\Woo\BulkProductDeleteElevationRule;
+use Belayline\Plugin\Integrations\Woo\CustomerNoteElevationRule;
+use Belayline\Plugin\Integrations\Woo\ForceDeleteElevationRule;
+use Belayline\Plugin\Integrations\Woo\OrderFulfillmentElevationRule;
+use Belayline\Plugin\Integrations\Woo\ProductPriceOrPublishElevationRule;
+use Belayline\Plugin\Integrations\Woo\WooIntegration;
 
 /**
  * Exercises {@see WooIntegration::available()} behind a `class_exists('WooCommerce')`

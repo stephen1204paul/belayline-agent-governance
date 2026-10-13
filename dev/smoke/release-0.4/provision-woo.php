@@ -2,7 +2,7 @@
 /**
  * `wp eval-file` provisioning script for the release-0.4 e2e proof harness.
  *
- * Run inside the wp-env cli container AFTER WooCommerce and Agent Safety are
+ * Run inside the wp-env cli container AFTER WooCommerce and Belayline are
  * both active. Idempotent for the user/key/pack-binding/app-password pieces
  * (safe to re-run); ALWAYS mints a brand new product each call, because P2's
  * seed and P3/P4/P5's scenarios each need their own product so they don't
@@ -15,12 +15,12 @@
  * PHP, not a one-liner.
  *
  * Env in:
- *   AGSAFE_PRODUCT_NAME       optional; else a timestamp-based unique name.
- *   AGSAFE_MINT_APP_PASSWORD  '1' to always mint a fresh admin application
+ *   BELAYLINE_PRODUCT_NAME       optional; else a timestamp-based unique name.
+ *   BELAYLINE_MINT_APP_PASSWORD  '1' to always mint a fresh admin application
  *                             password this call (default: only mint once,
  *                             tracked by the smoke_release04_app_password_uuid
  *                             option).
- *   AGSAFE_APP_PASSWORD_PACK  pack name to bind app:<uuid> to (default
+ *   BELAYLINE_APP_PASSWORD_PACK  pack name to bind app:<uuid> to (default
  *                             'woo-default-agent').
  *
  * Prints ONE line of JSON to stdout; nothing else in this file may echo.
@@ -38,7 +38,7 @@ update_option('woocommerce_feature_mcp_integration_enabled', 'yes');
 
 // ---- 2. Shop Manager user (not an administrator: a pass here can't come --
 //         from admin capabilities).
-$username = 'agsafe_shop_manager';
+$username = 'belayline_shop_manager';
 $user = get_user_by('login', $username);
 if (!$user) {
     $user_id = wp_insert_user([
@@ -65,7 +65,7 @@ $wpdb->insert(
     $wpdb->prefix . 'woocommerce_api_keys',
     [
         'user_id'         => $user_id,
-        'description'     => 'agsafe release-0.4 e2e',
+        'description'     => 'belayline release-0.4 e2e',
         'permissions'     => 'read_write',
         'consumer_key'    => wc_api_hash($consumer_key),
         'consumer_secret' => $consumer_secret,
@@ -76,17 +76,17 @@ $wpdb->insert(
 $key_id = (int) $wpdb->insert_id;
 
 // ---- 4. Bind wc:<key_id> to woo-default-agent, not the fallback pack -----
-$bindings = get_option('agsafe_pack_bindings', []);
+$bindings = get_option('belayline_pack_bindings', []);
 if (!is_array($bindings)) {
     $bindings = [];
 }
 $bindings['wc:' . $key_id] = 'woo-default-agent';
-update_option('agsafe_pack_bindings', $bindings, false);
+update_option('belayline_pack_bindings', $bindings, false);
 
 // ---- 5. Always seed a NEW product: callers need a fresh one per scenario -
-$product_name = getenv('AGSAFE_PRODUCT_NAME');
+$product_name = getenv('BELAYLINE_PRODUCT_NAME');
 if (!is_string($product_name) || $product_name === '') {
-    $product_name = 'AgSafe Release Widget ' . time() . '-' . wp_rand(1000, 9999);
+    $product_name = 'Belayline Release Widget ' . time() . '-' . wp_rand(1000, 9999);
 }
 $product = new WC_Product_Simple();
 $product->set_name($product_name);
@@ -103,7 +103,7 @@ if (!$admin) {
 $admin_user_id = $admin->ID;
 
 $marker_option = 'smoke_release04_app_password_uuid';
-$mint_fresh    = getenv('AGSAFE_MINT_APP_PASSWORD') === '1';
+$mint_fresh    = getenv('BELAYLINE_MINT_APP_PASSWORD') === '1';
 $existing_uuid = get_option($marker_option, '');
 
 $app_password_uuid   = is_string($existing_uuid) ? $existing_uuid : '';
@@ -117,7 +117,7 @@ if ($mint_fresh || $app_password_uuid === '') {
 
     $created = WP_Application_Passwords::create_new_application_password(
         $admin_user_id,
-        ['name' => 'agsafe-release-e2e-' . time() . '-' . wp_rand(1000, 9999)]
+        ['name' => 'belayline-release-e2e-' . time() . '-' . wp_rand(1000, 9999)]
     );
     if (is_wp_error($created)) {
         fwrite(STDERR, 'Could not create application password: ' . $created->get_error_message() . "\n");
@@ -130,17 +130,17 @@ if ($mint_fresh || $app_password_uuid === '') {
 }
 
 // ---- 7. Bind app:<uuid> to the requested pack (default woo-default-agent) -
-$app_pack = getenv('AGSAFE_APP_PASSWORD_PACK');
+$app_pack = getenv('BELAYLINE_APP_PASSWORD_PACK');
 if (!is_string($app_pack) || $app_pack === '') {
     $app_pack = 'woo-default-agent';
 }
 if ($app_password_uuid !== '') {
-    $bindings = get_option('agsafe_pack_bindings', []);
+    $bindings = get_option('belayline_pack_bindings', []);
     if (!is_array($bindings)) {
         $bindings = [];
     }
     $bindings['app:' . $app_password_uuid] = $app_pack;
-    update_option('agsafe_pack_bindings', $bindings, false);
+    update_option('belayline_pack_bindings', $bindings, false);
 }
 
 echo json_encode([

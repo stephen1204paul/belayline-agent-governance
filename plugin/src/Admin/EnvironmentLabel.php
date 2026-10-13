@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Admin;
+namespace Belayline\Plugin\Admin;
 
-use Specflux\AgentSafety\Plugin\Support\ShadowMode;
+use Belayline\Plugin\Support\ShadowMode;
 
 /**
  * AS-7 §3.4 item 12: "the environment type is shown on the AS admin screens" —
@@ -19,11 +19,11 @@ final class EnvironmentLabel
     /** Echoes the "Environment" heading and "Environment type: ..." paragraph. */
     public static function render(ShadowMode $shadow): void
     {
-        echo '<h2>' . esc_html__('Environment', 'senrogate') . '</h2>';
+        echo '<h2>' . esc_html__('Environment', 'belayline-agent-governance') . '</h2>';
         echo '<p>' . esc_html(sprintf(
             /* translators: %s the WordPress environment type (production, staging, ...) */
-            __('Environment type: %s', 'senrogate'),
-            $shadow->isProduction() ? __('production', 'senrogate') : __('non-production', 'senrogate')
+            __('Environment type: %s', 'belayline-agent-governance'),
+            $shadow->isProduction() ? __('production', 'belayline-agent-governance') : __('non-production', 'belayline-agent-governance')
         )) . '</p>';
     }
 }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Approval;
+namespace Belayline\Plugin\Approval;
 
 /**
  * A host-side probe of one governed object's mutable state, used to detect

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Approval\StateProbe;
-use Specflux\AgentSafety\Plugin\Support\StateProbes;
+use Belayline\Plugin\Approval\StateProbe;
+use Belayline\Plugin\Support\StateProbes;
 
 /**
- * The `agent_safety_state_probes` seam (AS-6): mirrors
- * {@see \Specflux\AgentSafety\Plugin\Tests\Support\ElevationRulesTest} exactly
+ * The `belayline_state_probes` seam (AS-6): mirrors
+ * {@see \Belayline\Plugin\Tests\Support\ElevationRulesTest} exactly
  * — a site may add a probe for a verb no module already declared one for, but
  * can never override or remove a module's own.
  */

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Tests\Packs;
+namespace Belayline\Tests\Packs;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Packs\LimitPolicy;
+use Belayline\Packs\LimitPolicy;
 
 final class LimitPolicyTest extends TestCase
 {

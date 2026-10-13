@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
 /**
  * The site-wide emergency stop. While paused, every governed call of every
@@ -11,9 +11,9 @@ namespace Specflux\AgentSafety\Plugin\Support;
  * plugin, which removes the gate and the log with it, or rebinding
  * credentials one at a time.
  *
- * Two inputs, both administrator- or host-controlled: the `agsafe_paused`
+ * Two inputs, both administrator- or host-controlled: the `belayline_paused`
  * option (absent or false when not paused; when paused, who, when and why)
- * and the `agent_safety_paused` filter. The filter can only FORCE a pause —
+ * and the `belayline_paused` filter. The filter can only FORCE a pause —
  * honoured on a literal `true`, nothing else — and can never clear a stored
  * one, so a host can add a stop of its own but not lift the operator's. A
  * stored value that is any non-empty array pauses, however malformed: a
@@ -21,16 +21,16 @@ namespace Specflux\AgentSafety\Plugin\Support;
  *
  * Pause is absolute. Shadow mode, which lets a shadowed pack's would-be
  * denial proceed as a dry run, does not apply to it
- * ({@see \Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline}).
+ * ({@see \Belayline\Plugin\Verdict\VerdictPipeline}).
  *
  * Calls bare time() so the test clock in tests/stubs/wpas-clock.php applies
  * (see {@see RateCounter} for why the unqualified call is deliberate).
  */
 final class PauseSwitch
 {
-    public const OPTION = 'agsafe_paused';
+    public const OPTION = 'belayline_paused';
 
-    public const FILTER = 'agent_safety_paused';
+    public const FILTER = 'belayline_paused';
 
     /** The deny reason every governed call carries while the site is paused. */
     public const REASON = 'site_paused';
@@ -41,7 +41,7 @@ final class PauseSwitch
 
     public function isPaused(): bool
     {
-        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- self::FILTER is the literal, prefixed 'agent_safety_paused' constant; PHPCS can't resolve a class constant statically.
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- self::FILTER is the literal, prefixed 'belayline_paused' constant; PHPCS can't resolve a class constant statically.
         return $this->state() !== null || apply_filters(self::FILTER, false) === true;
     }
 
