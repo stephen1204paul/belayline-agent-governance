@@ -1,0 +1,83 @@
+name: Deploy to WordPress.org
+
+# Ships the zip attached to a published GitHub release, byte for byte, to the
+# plugin's WordPress.org SVN repo (trunk + tags/<version>). Nothing is rebuilt:
+# the zip release.yml built and gated is the one that goes out. Manual only,
+# because publishing a GitHub release must not publish to WordPress.org too.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to deploy (e.g. v0.4.5)'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-wporg
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to WordPress.org SVN
+    runs-on: ubuntu-latest
+    steps:
+      # WordPress.org matches the SVN tag against readme.txt's Stable tag, which
+      # carries no leading "v".
+      - name: Resolve tag and version
+        id: resolve
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag must look like v1.2.3, got '$TAG'."
+            exit 1
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      # release.yml attaches the zip only (no .sha256), so there is no checksum to verify.
+      - name: Download the release zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+          VERSION: ${{ steps.resolve.outputs.version }}
+        working-directory: ${{ runner.temp }}
+        run: |
+          if [ "$(gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" != "false" ]; then
+            echo "::error::Release $TAG is missing or still a draft. Publish it on GitHub first."
+            exit 1
+          fi
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p "belayline-agent-governance-${VERSION}.zip"
+          unzip -q "belayline-agent-governance-${VERSION}.zip" -d wporg-build
+
+      - name: Assert the zip's versions match the tag
+        env:
+          VERSION: ${{ steps.resolve.outputs.version }}
+        working-directory: ${{ runner.temp }}/wporg-build/belayline-agent-governance
+        run: |
+          HEADER=$(awk '/^[[:space:]]*\*[[:space:]]*Version:/ {print $NF; exit}' belayline-agent-governance.php)
+          STABLE=$(awk -F': *' 'tolower($1) == "stable tag" {print $2; exit}' readme.txt | tr -d '\r ')
+          echo "tag=$VERSION header=$HEADER stable=$STABLE"
+          if [ "$HEADER" != "$VERSION" ] || [ "$STABLE" != "$VERSION" ]; then
+            echo "::error::Plugin header ($HEADER) and readme Stable tag ($STABLE) must both equal $VERSION."
+            exit 1
+          fi
+
+      # The action runs from the workspace; the checkout gives it .wordpress-org
+      # (directory banners and icons) once that folder exists.
+      - name: Checkout the tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.resolve.outputs.tag }}
+
+      - name: WordPress Plugin Deploy
+        uses: 10up/action-wordpress-plugin-deploy@stable
+        env:
+          SVN_USERNAME: ${{ secrets.WPORG_SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.WPORG_SVN_PASSWORD }}
+          SLUG: belayline-agent-governance
+          VERSION: ${{ steps.resolve.outputs.version }}
+          BUILD_DIR: ${{ runner.temp }}/wporg-build/belayline-agent-governance
