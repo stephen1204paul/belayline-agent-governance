@@ -249,11 +249,11 @@ part of the hash chain.
 
 == Upgrade Notice ==
 
-= 0.4.5 =
-Renamed to Belayline Agent Governance, with a new slug, text domain and `belayline_` prefix for hooks, options and tables. Deactivate and delete the old plugin folder, then install this one.
-
 = 0.5.0 =
 Adds change history and undo, ability review for other plugins' abilities, an IP allowlist, and FluentCart and SureCart modules. Adds a change-history table; back up your database first.
+
+= 0.4.5 =
+Renamed to Belayline Agent Governance, with a new slug, text domain and `belayline_` prefix for hooks, options and tables. Deactivate and delete the old plugin folder, then install this one.
 
 = 0.4.4 =
 Security fix: WooCommerce order statuses written with the wc- prefix now get the same approval tier as unprefixed ones. Update right away.
@@ -273,9 +273,6 @@ your database before upgrading. There is no downgrade path back to a pre-0.4.0 b
 runs.
 
 == Changelog ==
-
-= 0.4.5 =
-* Renamed to Belayline Agent Governance: new slug and text domain `belayline-agent-governance`, and a `belayline_` prefix for hooks, options and tables.
 
 = 0.5.0 =
 * Change history: every governed write records the fields it changed, before and after, linked
@@ -300,6 +297,9 @@ runs.
   audit log, not only calls through mcp-adapter's default server.
 * Public PHP API for change history and undo (`belayline()->changes()`), and for ability
   review status, so other plugins can show an agent's changes.
+
+= 0.4.5 =
+* Renamed to Belayline Agent Governance: new slug and text domain `belayline-agent-governance`, and a `belayline_` prefix for hooks, options and tables.
 
 = 0.4.4 =
 * Security: order status values with WooCommerce's wc- prefix now get the same approval tier as
