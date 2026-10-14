@@ -1,0 +1,121 @@
+name: Beta
+
+# Rolling beta: every push to the `beta` branch re-runs the PHP gate, builds
+# the zip with bin/build-zip.sh (the same single allowlisted build
+# release.yml runs), and replaces the assets on one GitHub prerelease tagged
+# `beta-build` (not `beta`, so the tag never shadows the branch). A cron job
+# on the beta server polls the .sha256 and fetches the zip.
+# Not a release: release.yml stays tag-triggered, and the tag-vs-header
+# version check is skipped here (there is no tag to match).
+#
+# Deliberately left out of the gate, to keep the beta loop fast: Plugin Check
+# and the wp-env e2e suite. They still run in ci.yml / release.yml for main
+# and for real tags.
+#
+# Asset names are a contract with the server script — do not rename them:
+#   belayline-agent-governance-beta.zip, belayline-agent-governance-beta.zip.sha256, beta-info.json
+
+on:
+  push:
+    branches: [beta]
+  workflow_dispatch:
+
+# Queue, don't cancel: a run cancelled mid-upload would leave a new zip
+# next to the old checksum.
+concurrency:
+  group: beta-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  SLUG: belayline-agent-governance
+
+jobs:
+  # Same job as ci.yml's `check`: core + plugin installs, then `composer
+  # check` (PHPCS, PHPStan, core suite, plugin suite).
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 8.1 is the plugin's floor (Requires PHP); 8.5 is the newest stable.
+        php: ['8.1', '8.5']
+    name: PHP ${{ matrix.php }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: Install core dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Install plugin dependencies
+        run: composer install --prefer-dist --no-progress --working-dir=plugin
+
+      - name: Lint, static analysis, and test suites
+        run: composer check
+
+  publish:
+    needs: check
+    runs-on: ubuntu-latest
+    name: Build and publish the beta zip
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same PHP as release.yml's build job; bin/build-zip.sh needs php and
+      # composer (zip/unzip are preinstalled on the runner).
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer
+
+      - name: Build the zip (bin/build-zip.sh, the single allowlisted build)
+        run: bin/build-zip.sh
+
+      # The build names the zip after the header version; the server wants a
+      # fixed name. Contents are untouched — the top-level folder inside the
+      # zip stays belayline-agent-governance/. The checksum is computed from
+      # inside the output dir so the file lists the bare name, as sha256sum
+      # prints.
+      - name: Rename to the fixed beta names and write checksum + info
+        run: |
+          VERSION=$(awk '/^[[:space:]]*\*[[:space:]]*Version:/ {print $NF; exit}' "plugin/${SLUG}.php")
+          [ -n "$VERSION" ] || { echo "::error::could not read Version from plugin header"; exit 1; }
+          [ -f "${SLUG}-${VERSION}.zip" ] || { echo "::error::build did not produce ${SLUG}-${VERSION}.zip"; exit 1; }
+          mkdir -p beta-out
+          mv "${SLUG}-${VERSION}.zip" "beta-out/${SLUG}-beta.zip"
+          (cd beta-out && sha256sum "${SLUG}-beta.zip" > "${SLUG}-beta.zip.sha256")
+          jq -n --arg commit "$GITHUB_SHA" --arg version "$VERSION" \
+            --arg built_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{commit: $commit, version: $version, built_at: $built_at}' > beta-out/beta-info.json
+          cat beta-out/beta-info.json beta-out/"${SLUG}-beta.zip.sha256"
+
+      - name: Create the rolling prerelease if missing, keep it a prerelease
+        run: |
+          if gh release view beta-build >/dev/null 2>&1; then
+            # Move the tag to this commit so the release page matches the
+            # assets, and undo any manual promotion to draft/latest.
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/beta-build" \
+              -f sha="$GITHUB_SHA" -F force=true >/dev/null
+            gh release edit beta-build --prerelease --draft=false --latest=false
+          else
+            gh release create beta-build --prerelease --latest=false \
+              --title "Beta (rolling)" \
+              --notes "Rolling build of the \`beta\` branch, replaced on every push. For the beta server only — not for production." \
+              --target "$GITHUB_SHA"
+          fi
+
+      # Zip first, checksum last: the server polls the .sha256 and then
+      # fetches the zip, so it never sees a new checksum before its zip.
+      - name: Upload assets (zip, then checksum, then info)
+        run: |
+          gh release upload beta-build "beta-out/${SLUG}-beta.zip" --clobber
+          gh release upload beta-build "beta-out/${SLUG}-beta.zip.sha256" --clobber
+          gh release upload beta-build beta-out/beta-info.json --clobber
