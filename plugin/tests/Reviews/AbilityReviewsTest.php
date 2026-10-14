@@ -305,7 +305,7 @@ final class AbilityReviewsTest extends TestCase
         }
     }
 
-    public function testStatusContractIsCallableTheWayTheSite AgentProbeCallsIt(): void
+    public function testStatusContractIsCallableTheWayTheSiteAgentProbeCallsIt(): void
     {
         $this->review(['acme/list' => 'read', 'acme/nuke' => 'blocked']);
         [$reviews] = $this->boot(['acme/list' => self::ability(), 'acme/nuke' => self::ability()]);
