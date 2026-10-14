@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\SureCart;
+namespace Belayline\Plugin\Integrations\SureCart;
 
 use RuntimeException;
 

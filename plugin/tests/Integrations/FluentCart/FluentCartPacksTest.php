@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\FluentCart;
+namespace Belayline\Plugin\Tests\Integrations\FluentCart;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Integrations\FluentCart\FluentCartPacks;
-use Specflux\AgentSafety\Plugin\Integrations\FluentCart\FluentCartVerbCatalog;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Integrations\FluentCart\FluentCartPacks;
+use Belayline\Plugin\Integrations\FluentCart\FluentCartVerbCatalog;
+use Belayline\Policy\Tier;
 
 final class FluentCartPacksTest extends TestCase
 {

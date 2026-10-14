@@ -1,6 +1,6 @@
 {
-    "name": "specflux/agent-safety-core",
-    "description": "Server-side governance core for AI-agent tool calls: verb-tier classification, capability packs, gate decisions, and compliance-grade audit. Framework-agnostic; consumed by the agent-safety plugin. WooCommerce is supported as a capability pack, not a hard dependency.",
+    "name": "stephen1204paul/belayline-core",
+    "description": "Server-side governance core for AI-agent tool calls: verb-tier classification, capability packs, gate decisions, and compliance-grade audit. Framework-agnostic; consumed by the Belayline Agent Governance plugin. WooCommerce is supported as a capability pack, not a hard dependency.",
     "type": "library",
     "license": "GPL-2.0-or-later",
     "require": {
@@ -14,12 +14,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Specflux\\AgentSafety\\": "src/"
+            "Belayline\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Specflux\\AgentSafety\\Tests\\": "tests/"
+            "Belayline\\Tests\\": "tests/"
         }
     },
     "scripts": {

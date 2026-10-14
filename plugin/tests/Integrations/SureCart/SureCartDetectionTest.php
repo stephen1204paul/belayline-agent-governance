@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\SureCart;
+namespace Belayline\Plugin\Tests\Integrations\SureCart;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Integrations\SureCart\SureCartIntegration;
+use Belayline\Plugin\Integrations\SureCart\SureCartIntegration;
 
 /**
  * Class stubs cannot be undefined, so the absent case runs first (and in

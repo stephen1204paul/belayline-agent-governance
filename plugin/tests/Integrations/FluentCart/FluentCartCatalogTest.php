@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\FluentCart;
+namespace Belayline\Plugin\Tests\Integrations\FluentCart;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Integrations\FluentCart\FluentCartIntegration;
-use Specflux\AgentSafety\Plugin\Integrations\FluentCart\FluentCartVerbCatalog;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Plugin\Integrations\FluentCart\FluentCartIntegration;
+use Belayline\Plugin\Integrations\FluentCart\FluentCartVerbCatalog;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 
 /**
  * The fixture (tests/Fixtures/fluentcart-1.7.0-abilities.json) lists every

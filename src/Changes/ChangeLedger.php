@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Changes;
+namespace Belayline\Changes;
 
 /** Persistence port for recorded changes (the host supplies the storage). */
 interface ChangeLedger

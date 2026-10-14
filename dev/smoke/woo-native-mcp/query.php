@@ -1,6 +1,6 @@
 <?php
 /**
- * `wp eval-file` helper for run.js: runs the SQL in the AGSAFE_SQL env var
+ * `wp eval-file` helper for run.js: runs the SQL in the BELAYLINE_SQL env var
  * and prints the result rows as JSON.
  *
  * Deliberately NOT `wp db query`: WP-CLI's db query decides whether a query
@@ -15,9 +15,9 @@
 defined('ABSPATH') || exit;
 
 global $wpdb;
-$sql = getenv('AGSAFE_SQL');
+$sql = getenv('BELAYLINE_SQL');
 if (!is_string($sql) || $sql === '') {
-    fwrite(STDERR, "AGSAFE_SQL env var is empty.\n");
+    fwrite(STDERR, "BELAYLINE_SQL env var is empty.\n");
     exit(1);
 }
 

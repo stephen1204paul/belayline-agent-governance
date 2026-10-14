@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Changes;
+namespace Belayline\Changes;
 
 /**
  * The drift check: an undo applies only while the object's current state

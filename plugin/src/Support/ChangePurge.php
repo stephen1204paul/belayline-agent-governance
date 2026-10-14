@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
-use Specflux\AgentSafety\Plugin\Changes\WpdbChangeStore;
+use Belayline\Plugin\Changes\WpdbChangeStore;
 
 /**
  * Daily retention purge of the change history table. Snapshot bodies can
@@ -19,10 +19,10 @@ use Specflux\AgentSafety\Plugin\Changes\WpdbChangeStore;
  */
 final class ChangePurge
 {
-    public const HOOK = 'agsafe_purge_changes';
+    public const HOOK = 'belayline_purge_changes';
 
     /** Days of change history kept. Not autoloaded; absent means {@see DEFAULT_DAYS}. */
-    public const RETENTION_OPTION = 'agsafe_changes_retention_days';
+    public const RETENTION_OPTION = 'belayline_changes_retention_days';
 
     public const DEFAULT_DAYS = 30;
 

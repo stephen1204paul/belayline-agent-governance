@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Changes;
+namespace Belayline\Changes;
 
 /**
  * Restores recorded changes of one or more object types, writing through the

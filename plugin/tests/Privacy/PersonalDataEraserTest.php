@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Privacy;
+namespace Belayline\Plugin\Tests\Privacy;
 
 use InMemoryAuditRowsWpdb;
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Audit\AuditReader;
-use Specflux\AgentSafety\Plugin\Privacy\PersonalDataEraser;
-use Specflux\AgentSafety\Plugin\Privacy\PrivacyAuditReader;
-use Specflux\AgentSafety\Plugin\Privacy\PrivacyChangeReader;
+use Belayline\Plugin\Audit\AuditReader;
+use Belayline\Plugin\Privacy\PersonalDataEraser;
+use Belayline\Plugin\Privacy\PrivacyAuditReader;
+use Belayline\Plugin\Privacy\PrivacyChangeReader;
 
 /**
  * §3.6 item 2 / §4 row 9: the eraser must never touch the append-only audit

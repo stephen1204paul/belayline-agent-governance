@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\SureCart;
+namespace Belayline\Plugin\Tests\Integrations\SureCart;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Integrations\SureCart\SureCartIntegration;
-use Specflux\AgentSafety\Plugin\Integrations\SureCart\SureCartVerbCatalog;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Plugin\Integrations\SureCart\SureCartIntegration;
+use Belayline\Plugin\Integrations\SureCart\SureCartVerbCatalog;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 
 final class SureCartCatalogTest extends TestCase
 {
@@ -128,12 +128,12 @@ final class SureCartCatalogTest extends TestCase
     {
         $GLOBALS['wpas_test_filters'] = [];
         SureCartIntegration::register(new VerbCatalog());
-        add_filter('agent_safety_grant_eligible', static fn () => true, 20, 3);
+        add_filter('belayline_grant_eligible', static fn () => true, 20, 3);
 
-        $this->assertFalse(apply_filters('agent_safety_grant_eligible', false, null, 'surecart/delete-coupon', []));
-        $this->assertFalse(apply_filters('agent_safety_grant_eligible', false, null, 'surecart/create-refund', []));
+        $this->assertFalse(apply_filters('belayline_grant_eligible', false, null, 'surecart/delete-coupon', []));
+        $this->assertFalse(apply_filters('belayline_grant_eligible', false, null, 'surecart/create-refund', []));
         // A grantable Tier 2 verb is left to the other callbacks.
-        $this->assertTrue(apply_filters('agent_safety_grant_eligible', false, null, 'surecart/create-invoice', []));
+        $this->assertTrue(apply_filters('belayline_grant_eligible', false, null, 'surecart/create-invoice', []));
         $GLOBALS['wpas_test_filters'] = [];
     }
 

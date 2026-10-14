@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\Woo\Changes;
+namespace Belayline\Plugin\Integrations\Woo\Changes;
 
 /**
  * Late-bound access to WooCommerce's CRUD classes and functions. WooCommerce

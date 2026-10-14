@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Changes;
+namespace Belayline\Changes;
 
 /**
  * The capture window around one governed call: pure state, no WordPress.

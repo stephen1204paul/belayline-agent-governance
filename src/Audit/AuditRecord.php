@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Audit;
+namespace Belayline\Audit;
 
 /**
  * One immutable audit event in the PCI-Req-10 shape.
@@ -107,7 +107,7 @@ final class AuditRecord
      * @param array<string, mixed>                     $input
      * @param list<string>                             $externalEffects
      * @param ?string                                  $changesSha256    Hash of the change set recorded while the call
-     *                                                                   ran ({@see \Specflux\AgentSafety\Changes\ChangeSet}).
+     *                                                                   ran ({@see \Belayline\Changes\ChangeSet}).
      *                                                                   Null = no capture window ran; a hash of an empty
      *                                                                   set = a window ran and saw no changes.
      */

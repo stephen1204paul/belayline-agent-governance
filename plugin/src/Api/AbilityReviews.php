@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Api;
+namespace Belayline\Plugin\Api;
 
-use Specflux\AgentSafety\Plugin\Reviews\ReviewTier;
-use Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Plugin\Reviews\ReviewTier;
+use Belayline\Plugin\Support\AdminChangeRecorder;
+use Belayline\Policy\VerbCatalog;
 
 /**
  * Ability review (0.5): an administrator classifies a third-party ability
- * without code, and SenroGate governs it from then on.
+ * without code, and Belayline Agent Governance governs it from then on.
  *
- * Storage is the `agsafe_ability_reviews` option, ability id => {tier,
+ * Storage is the `belayline_ability_reviews` option, ability id => {tier,
  * schema (sha256 of the input schema at review time), reviewed_by,
  * reviewed_at}. Everything else is derived from it:
  *
@@ -24,7 +24,7 @@ use Specflux\AgentSafety\Policy\VerbCatalog;
  *     the live input schema still hashes to the stored one. A changed schema
  *     leaves the verb unmapped, so the call is refused `unknown_verb` until a
  *     human reviews it again;
- *   - {@see status()} is the public contract SenroFlux probes:
+ *   - {@see status()} is the public contract Site Agent probes:
  *     'reviewed' | 'unreviewed' | 'blocked'.
  *
  * What an ability says about itself never loosens anything here: the stored
@@ -32,7 +32,7 @@ use Specflux\AgentSafety\Policy\VerbCatalog;
  */
 final class AbilityReviews
 {
-    public const OPTION = 'agsafe_ability_reviews';
+    public const OPTION = 'belayline_ability_reviews';
 
     public const REVIEWED = 'reviewed';
     public const UNREVIEWED = 'unreviewed';
@@ -52,7 +52,7 @@ final class AbilityReviews
         add_filter('wp_register_ability_args', [$this, 'observe'], 5, 2);
         // Irreversible reviews are ungrantable whatever else a site's eligibility
         // filter says: PHP_INT_MAX makes this the last word, and it can only say no.
-        add_filter('agent_safety_grant_eligible', [$this, 'grantEligible'], PHP_INT_MAX, 3);
+        add_filter('belayline_grant_eligible', [$this, 'grantEligible'], PHP_INT_MAX, 3);
     }
 
     /**
@@ -197,7 +197,7 @@ final class AbilityReviews
     }
 
     /**
-     * `agent_safety_grant_eligible`: an Irreversible review is never eligible
+     * `belayline_grant_eligible`: an Irreversible review is never eligible
      * for a pre-approval grant. Passes every other verb's answer through.
      *
      * @param mixed $eligible

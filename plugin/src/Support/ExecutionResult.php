@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
 /**
  * Decides whether an executed ability's return value represents success or failure.

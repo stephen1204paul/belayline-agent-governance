@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Changes;
+namespace Belayline\Changes;
 
 /** What an undo did. `items` are in the order they were processed (reverse recording order). */
 final class UndoResult

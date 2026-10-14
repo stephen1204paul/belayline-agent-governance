@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Admin;
+namespace Belayline\Plugin\Tests\Admin;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Admin\CapabilityPacksPage;
-use Specflux\AgentSafety\Plugin\Admin\ReasonLabels;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder;
-use Specflux\AgentSafety\Plugin\Support\IpAllowlist;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\PauseSwitch;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Support\ShadowMode;
-use Specflux\AgentSafety\Plugin\Support\UninstallManifest;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Plugin\Admin\CapabilityPacksPage;
+use Belayline\Plugin\Admin\ReasonLabels;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Support\AdminChangeRecorder;
+use Belayline\Plugin\Support\IpAllowlist;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\PauseSwitch;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Support\ShadowMode;
+use Belayline\Plugin\Support\UninstallManifest;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
 
 /** The IP allowlist form on the Packs screen: validation on save, the lock-out warning, the audit row. */
 final class CapabilityPacksPageIpAllowlistTest extends TestCase

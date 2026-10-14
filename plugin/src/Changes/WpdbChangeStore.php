@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Changes;
+namespace Belayline\Plugin\Changes;
 
-use Specflux\AgentSafety\Changes\ChangeAction;
-use Specflux\AgentSafety\Changes\ChangeLedger;
-use Specflux\AgentSafety\Changes\ClosedWindow;
-use Specflux\AgentSafety\Changes\StoredChange;
-use Specflux\AgentSafety\Plugin\Support\Schema;
+use Belayline\Changes\ChangeAction;
+use Belayline\Changes\ChangeLedger;
+use Belayline\Changes\ClosedWindow;
+use Belayline\Changes\StoredChange;
+use Belayline\Plugin\Support\Schema;
 use wpdb;
 
 /**
- * Storage for the `agsafe_changes` table ({@see Schema::changesColumns()}).
+ * Storage for the `belayline_changes` table ({@see Schema::changesColumns()}).
  * Unlike the audit log this table is NOT append-only: it sits outside the hash
  * chain by design, so the retention purge and the privacy eraser can delete
  * rows from it.
@@ -30,7 +30,7 @@ final class WpdbChangeStore implements ChangeLedger
 
     /**
      * Persist every change of a closed window as one row each, `seq` being its
-     * 1-based position (the same position {@see \Specflux\AgentSafety\Changes\ChangeSet::hash()}
+     * 1-based position (the same position {@see \Belayline\Changes\ChangeSet::hash()}
      * commits to). A window with no changes writes nothing: "no changes
      * recorded" is zero rows for the event.
      *

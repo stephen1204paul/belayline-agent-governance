@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Support\ValueAccumulator;
+use Belayline\Plugin\Support\ValueAccumulator;
 
 /**
  * Exercises the fixed-window day-bucket storage itself, independent of the
- * cap arithmetic ({@see \Specflux\AgentSafety\Tests\Packs\ArgumentCapPolicyTest}
+ * cap arithmetic ({@see \Belayline\Tests\Packs\ArgumentCapPolicyTest}
  * covers that in core) -- the same division of labour {@see
- * \Specflux\AgentSafety\Plugin\Tests\Support\RateCounterTest} exercises for
+ * \Belayline\Plugin\Tests\Support\RateCounterTest} exercises for
  * RateCounter. Time is frozen/advanced via $GLOBALS['wpas_test_time'], which
  * ValueAccumulator's bare time() call resolves to in this test run (see
  * tests/stubs/wpas-clock.php).

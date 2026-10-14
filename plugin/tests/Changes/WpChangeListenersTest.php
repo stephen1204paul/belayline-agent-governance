@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Changes;
+namespace Belayline\Plugin\Tests\Changes;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Changes\CaptureWindow;
-use Specflux\AgentSafety\Changes\ClosedWindow;
-use Specflux\AgentSafety\Plugin\Changes\Adapters\OptionAdapter;
-use Specflux\AgentSafety\Plugin\Changes\Adapters\PostAdapter;
-use Specflux\AgentSafety\Plugin\Changes\Adapters\PostMetaAdapter;
-use Specflux\AgentSafety\Plugin\Changes\Adapters\TermAdapter;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\AdapterBundle;
+use Belayline\Changes\CaptureWindow;
+use Belayline\Changes\ClosedWindow;
+use Belayline\Plugin\Changes\Adapters\OptionAdapter;
+use Belayline\Plugin\Changes\Adapters\PostAdapter;
+use Belayline\Plugin\Changes\Adapters\PostMetaAdapter;
+use Belayline\Plugin\Changes\Adapters\TermAdapter;
+use Belayline\Plugin\Tests\Fakes\AdapterBundle;
 
 /** One test per listener, each driven the way WordPress would call it. */
 final class WpChangeListenersTest extends TestCase
@@ -185,7 +185,7 @@ final class WpChangeListenersTest extends TestCase
     {
         $this->listeners->onUpdateOption('blogname', 'Old', 'New');
         $this->listeners->onUpdateOption('_transient_foo', 'a', 'b');
-        $this->listeners->onUpdateOption('agsafe_pause', 'a', 'b');
+        $this->listeners->onUpdateOption('belayline_pause', 'a', 'b');
         $this->listeners->onUpdateOption('cron', 'a', 'b');
 
         $changes = $this->closed()->changes;

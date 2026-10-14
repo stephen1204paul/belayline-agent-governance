@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Fakes;
+namespace Belayline\Plugin\Tests\Fakes;
 
-use Specflux\AgentSafety\Changes\CaptureWindow;
-use Specflux\AgentSafety\Changes\Change;
-use Specflux\AgentSafety\Changes\ChangeAction;
-use Specflux\AgentSafety\Changes\ChangeCaptureAdapter;
-use Specflux\AgentSafety\Changes\ChangeRestoreAdapter;
-use Specflux\AgentSafety\Changes\StoredChange;
+use Belayline\Changes\CaptureWindow;
+use Belayline\Changes\Change;
+use Belayline\Changes\ChangeAction;
+use Belayline\Changes\ChangeCaptureAdapter;
+use Belayline\Changes\ChangeRestoreAdapter;
+use Belayline\Changes\StoredChange;
 
 /** A filter-registered adapter pair for a made-up `widget` object type. */
 final class WidgetAdapter implements ChangeCaptureAdapter, ChangeRestoreAdapter

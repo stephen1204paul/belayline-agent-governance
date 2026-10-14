@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\FluentCart;
+namespace Belayline\Plugin\Integrations\FluentCart;
 
 /**
  * `upsert-customer` identifies its target by `customer_id` or by `email`

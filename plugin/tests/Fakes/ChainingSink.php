@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Fakes;
+namespace Belayline\Plugin\Tests\Fakes;
 
-use Specflux\AgentSafety\Audit\AuditRecord;
-use Specflux\AgentSafety\Audit\AuditSink;
-use Specflux\AgentSafety\Audit\HashChain;
+use Belayline\Audit\AuditRecord;
+use Belayline\Audit\AuditSink;
+use Belayline\Audit\HashChain;
 
 /** An append-only sink that links records into a real {@see HashChain}. */
 final class ChainingSink implements AuditSink

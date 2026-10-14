@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 // phpcs:disable PSR1.Methods.CamelCapsMethodName.NotCamelCaps -- overrides wpdb's snake_case API
 
-namespace Specflux\AgentSafety\Plugin\Tests\Fakes;
+namespace Belayline\Plugin\Tests\Fakes;
 
-use Specflux\AgentSafety\Plugin\Integrations\FluentCart\FluentCartStore;
+use Belayline\Plugin\Integrations\FluentCart\FluentCartStore;
 use wpdb;
 
 /**

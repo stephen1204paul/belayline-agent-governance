@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Fakes;
+namespace Belayline\Plugin\Tests\Fakes;
 
-use Specflux\AgentSafety\Changes\ChangeAction;
-use Specflux\AgentSafety\Changes\ChangeLedger;
-use Specflux\AgentSafety\Changes\ClosedWindow;
-use Specflux\AgentSafety\Changes\StoredChange;
+use Belayline\Changes\ChangeAction;
+use Belayline\Changes\ChangeLedger;
+use Belayline\Changes\ClosedWindow;
+use Belayline\Changes\StoredChange;
 
-/** Hand-rolled ledger: stores exactly what {@see \Specflux\AgentSafety\Changes\Change::toRow()} hands the real table. */
+/** Hand-rolled ledger: stores exactly what {@see \Belayline\Changes\Change::toRow()} hands the real table. */
 final class InMemoryChangeLedger implements ChangeLedger
 {
     /** @var list<array<string, mixed>> */

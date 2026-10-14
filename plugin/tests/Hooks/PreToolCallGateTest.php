@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Hooks;
+namespace Belayline\Plugin\Tests\Hooks;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Approval\ApprovalBinding;
-use Specflux\AgentSafety\Gate\Gate;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Hooks\PreToolCallGate;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Integrations\Woo\VerbMapper;
-use Specflux\AgentSafety\Plugin\Support\DecisionRecorder;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeApprovalStore;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeIdentityProvider;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeMcpTool;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Approval\ApprovalBinding;
+use Belayline\Gate\Gate;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Hooks\PreToolCallGate;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Integrations\Woo\VerbMapper;
+use Belayline\Plugin\Support\DecisionRecorder;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\FakeApprovalStore;
+use Belayline\Plugin\Tests\Fakes\FakeIdentityProvider;
+use Belayline\Plugin\Tests\Fakes\FakeMcpTool;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Plugin\Verdict\VerdictPipeline;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 use WP_Error;
 
 /**
@@ -35,9 +35,9 @@ use WP_Error;
  * Every gating BEHAVIOUR the verdict comes from — rate caps, argument caps,
  * shadow mode, the approval flow, what a hint does to a decision — is proven
  * once, in both modes, in
- * {@see \Specflux\AgentSafety\Plugin\Tests\Verdict\VerdictPipelineTest}
+ * {@see \Belayline\Plugin\Tests\Verdict\VerdictPipelineTest}
  * (and hint PARSING in
- * {@see \Specflux\AgentSafety\Plugin\Tests\Verdict\HintsTest}). Re-asserting
+ * {@see \Belayline\Plugin\Tests\Verdict\HintsTest}). Re-asserting
  * it here would only re-prove the pipeline through a keyhole.
  *
  * "demo-write" (-> verb "demo/write") is a Tier 1 verb an
@@ -102,7 +102,7 @@ final class PreToolCallGateTest extends TestCase
         $result = $gate->handle(['id' => 1], 'demo-write');
 
         $this->assertInstanceOf(WP_Error::class, $result);
-        $this->assertSame('agent_safety_denied', $result->get_error_code());
+        $this->assertSame('belayline_denied', $result->get_error_code());
         $this->assertStringContainsString('not_in_pack', $result->get_error_message());
         $this->assertSame(403, $result->get_error_data()['status']);
     }
@@ -173,7 +173,7 @@ final class PreToolCallGateTest extends TestCase
         // blocked every allowed call made through it.
         $gate = $this->gateFor(['demo/write' => Tier::SideEffecting], new Pack(name: 'walled', allow: []));
 
-        $args = ['ability_name' => 'agent-safety/check-approval', 'parameters' => ['approval_id' => 'apr_x']];
+        $args = ['ability_name' => 'belayline/check-approval', 'parameters' => ['approval_id' => 'apr_x']];
 
         $this->assertSame($args, $gate->handle($args, 'mcp-adapter-execute-ability'));
     }

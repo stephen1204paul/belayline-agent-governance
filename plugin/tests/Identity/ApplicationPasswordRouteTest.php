@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Identity;
+namespace Belayline\Plugin\Tests\Identity;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Gate\Gate;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Hooks\AbilityPermissionGate;
-use Specflux\AgentSafety\Plugin\Identity\ApplicationPasswordIdentity;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Support\DecisionRecorder;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Gate\Gate;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Hooks\AbilityPermissionGate;
+use Belayline\Plugin\Identity\ApplicationPasswordIdentity;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Support\DecisionRecorder;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Verdict\VerdictPipeline;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 use WP_Error;
 
 /**
- * A connector such as SenroFlux's `/wp-json/senroflux/mcp` authenticates each
+ * A connector such as Site Agent's `/wp-json/senroflux/mcp` authenticates each
  * request with a WordPress application password. The gate wraps the ABILITY's
  * permission callback, so which REST route carried the request is irrelevant:
  * the pack follows the application-password UUID the request authenticated

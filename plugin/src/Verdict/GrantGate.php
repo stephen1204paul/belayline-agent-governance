@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Verdict;
+namespace Belayline\Plugin\Verdict;
 
-use Specflux\AgentSafety\Approval\ApprovalBinding;
-use Specflux\AgentSafety\Approval\GrantStore;
-use Specflux\AgentSafety\Plugin\Approval\ApprovalMinter;
-use Specflux\AgentSafety\Plugin\Support\DecisionRecorder;
-use Specflux\AgentSafety\Plugin\Support\GrantRecorder;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
+use Belayline\Approval\ApprovalBinding;
+use Belayline\Approval\GrantStore;
+use Belayline\Plugin\Approval\ApprovalMinter;
+use Belayline\Plugin\Support\DecisionRecorder;
+use Belayline\Plugin\Support\GrantRecorder;
+use Belayline\Plugin\Support\RequestContext;
 
 /**
  * The pre-approval path of the {@see VerdictPipeline} (AS-12), kept in its own
@@ -23,13 +23,13 @@ use Specflux\AgentSafety\Plugin\Support\RequestContext;
  *
  * FOUR independent things must all be true before a grant authorises anything:
  *
- *  1. `agent_safety_enable_grants` returns exactly `true`. The whole feature is
+ *  1. `belayline_enable_grants` returns exactly `true`. The whole feature is
  *     off by default; an unhooked site behaves as if AS-12 did not ship.
  *  2. There is an authenticated subject. An empty one never matches
- *     ({@see \Specflux\AgentSafety\Approval\Grant::canReserve()}).
+ *     ({@see \Belayline\Approval\Grant::canReserve()}).
  *  3. An active grant exists for (correlation, verb, subject) with count left
  *     and its TTL intact.
- *  4. `agent_safety_grant_eligible` returns exactly `true` — DEFAULT FALSE.
+ *  4. `belayline_grant_eligible` returns exactly `true` — DEFAULT FALSE.
  *
  * Point 4 is the one that makes object binding safe. A grant is per-verb, not
  * per-object, so the host — which knows which objects the human actually
@@ -63,7 +63,7 @@ final class GrantGate
      */
     public static function enabled(): bool
     {
-        return true === apply_filters('agent_safety_enable_grants', false);
+        return true === apply_filters('belayline_enable_grants', false);
     }
 
     /** Wired at all? A gate without a store or a minter can never authorise anything. */
@@ -115,7 +115,7 @@ final class GrantGate
             }
 
             /** @var mixed $eligible */
-            $eligible = apply_filters('agent_safety_grant_eligible', false, $grant, $verb, $args);
+            $eligible = apply_filters('belayline_grant_eligible', false, $grant, $verb, $args);
             if (true !== $eligible) {
                 return null;
             }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\FluentCart;
+namespace Belayline\Plugin\Integrations\FluentCart;
 
 /**
  * Order-targeting writes (`change-order-status`, `refund-order`; both take

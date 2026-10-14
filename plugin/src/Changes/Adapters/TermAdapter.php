@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Changes\Adapters;
+namespace Belayline\Plugin\Changes\Adapters;
 
-use Specflux\AgentSafety\Changes\CaptureWindow;
-use Specflux\AgentSafety\Changes\ChangeAction;
-use Specflux\AgentSafety\Changes\ChangeCaptureAdapter;
-use Specflux\AgentSafety\Changes\ChangeRestoreAdapter;
-use Specflux\AgentSafety\Changes\StoredChange;
+use Belayline\Changes\CaptureWindow;
+use Belayline\Changes\ChangeAction;
+use Belayline\Changes\ChangeCaptureAdapter;
+use Belayline\Changes\ChangeRestoreAdapter;
+use Belayline\Changes\StoredChange;
 
 /**
  * Terms: edit_terms / edited_terms, created_term. The subtype is the taxonomy.

@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Changes;
+namespace Belayline\Plugin\Changes;
 
-use Specflux\AgentSafety\Changes\ChangeCaptureAdapter;
-use Specflux\AgentSafety\Changes\ChangeRestoreAdapter;
-use Specflux\AgentSafety\Changes\ChangeSnapshotter;
-use Specflux\AgentSafety\Plugin\Changes\Adapters\OptionAdapter;
-use Specflux\AgentSafety\Plugin\Changes\Adapters\PostAdapter;
-use Specflux\AgentSafety\Plugin\Changes\Adapters\PostMetaAdapter;
-use Specflux\AgentSafety\Plugin\Changes\Adapters\TermAdapter;
+use Belayline\Changes\ChangeCaptureAdapter;
+use Belayline\Changes\ChangeRestoreAdapter;
+use Belayline\Changes\ChangeSnapshotter;
+use Belayline\Plugin\Changes\Adapters\OptionAdapter;
+use Belayline\Plugin\Changes\Adapters\PostAdapter;
+use Belayline\Plugin\Changes\Adapters\PostMetaAdapter;
+use Belayline\Plugin\Changes\Adapters\TermAdapter;
 
 /**
  * The adapter registry. The built-ins (post, post meta, term, option) are
- * passed through the `agent_safety_change_adapters` filter, where an
+ * passed through the `belayline_change_adapters` filter, where an
  * integration appends its own objects: any mix of {@see ChangeCaptureAdapter},
  * {@see ChangeSnapshotter} and {@see ChangeRestoreAdapter} (one class may
  * implement several). Anything else in the list is dropped.
@@ -28,7 +28,7 @@ use Specflux\AgentSafety\Plugin\Changes\Adapters\TermAdapter;
  */
 final class ChangeAdapters
 {
-    public const FILTER = 'agent_safety_change_adapters';
+    public const FILTER = 'belayline_change_adapters';
 
     /** @var list<object>|null */
     private ?array $resolved = null;
@@ -66,7 +66,7 @@ final class ChangeAdapters
     {
         if ($this->resolved === null) {
             $builtins = $this->builtins ?? [new PostAdapter(), new PostMetaAdapter(), new TermAdapter(), new OptionAdapter()];
-            $filtered = apply_filters('agent_safety_change_adapters', $builtins);
+            $filtered = apply_filters('belayline_change_adapters', $builtins);
             $this->resolved = [];
             foreach (is_array($filtered) ? $filtered : $builtins as $adapter) {
                 if (is_object($adapter) && ($adapter instanceof ChangeCaptureAdapter || $adapter instanceof ChangeSnapshotter || $adapter instanceof ChangeRestoreAdapter)) {

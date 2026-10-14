@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\FluentCart;
+namespace Belayline\Plugin\Integrations\FluentCart;
 
 /**
  * The write side of FluentCart restores. One seam so the restore adapter holds

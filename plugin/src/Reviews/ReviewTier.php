@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Reviews;
+namespace Belayline\Plugin\Reviews;
 
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Policy\Tier;
 
 /**
  * What an administrator can decide about a third-party ability on the
@@ -36,10 +36,10 @@ enum ReviewTier: string
     public function label(): string
     {
         return match ($this) {
-            self::Read => __('Read (Tier 0, allowed and audited)', 'senrogate'),
-            self::Write => __('Write, approval needed', 'senrogate'),
-            self::Irreversible => __('Irreversible (parks every time, no pre-approval)', 'senrogate'),
-            self::Blocked => __('Blocked', 'senrogate'),
+            self::Read => __('Read (Tier 0, allowed and audited)', 'belayline-agent-governance'),
+            self::Write => __('Write, approval needed', 'belayline-agent-governance'),
+            self::Irreversible => __('Irreversible (parks every time, no pre-approval)', 'belayline-agent-governance'),
+            self::Blocked => __('Blocked', 'belayline-agent-governance'),
         };
     }
 }

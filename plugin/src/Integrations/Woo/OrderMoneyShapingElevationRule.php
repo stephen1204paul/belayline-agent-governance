@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\Woo;
+namespace Belayline\Plugin\Integrations\Woo;
 
-use Specflux\AgentSafety\Policy\ElevationRule;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Policy\ElevationRule;
+use Belayline\Policy\Tier;
 
 /**
  * An order write that shapes the money (items, fees, shipping, coupons) or

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\FluentCart;
+namespace Belayline\Plugin\Tests\Integrations\FluentCart;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Integrations\FluentCart\FluentCartIntegration;
+use Belayline\Plugin\Integrations\FluentCart\FluentCartIntegration;
 
 final class FluentCartDetectionTest extends TestCase
 {

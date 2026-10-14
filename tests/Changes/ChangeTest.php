@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Tests\Changes;
+namespace Belayline\Tests\Changes;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Changes\Change;
-use Specflux\AgentSafety\Changes\ChangeAction;
+use Belayline\Changes\Change;
+use Belayline\Changes\ChangeAction;
 
 final class ChangeTest extends TestCase
 {

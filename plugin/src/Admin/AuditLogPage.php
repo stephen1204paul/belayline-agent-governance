@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Admin;
+namespace Belayline\Plugin\Admin;
 
-use Specflux\AgentSafety\Plugin\Audit\AuditReader;
-use Specflux\AgentSafety\Plugin\Support\ShadowMode;
+use Belayline\Plugin\Audit\AuditReader;
+use Belayline\Plugin\Support\ShadowMode;
 
 /**
  * Tools → "Agent Audit Log": a read-only wp-admin viewer for the append-only audit
@@ -14,10 +14,10 @@ use Specflux\AgentSafety\Plugin\Support\ShadowMode;
  */
 final class AuditLogPage
 {
-    private const SLUG = 'agent-safety-audit';
+    private const SLUG = 'belayline-audit';
     private const PER_PAGE = 100;
     private const CAP = 'manage_options';
-    private const EXPORT_ACTION = 'agsafe_export_audit';
+    private const EXPORT_ACTION = 'belayline_export_audit';
 
     public function __construct(
         private readonly AuditReader $reader,
@@ -34,8 +34,8 @@ final class AuditLogPage
     public function menu(): void
     {
         add_management_page(
-            __('Agent Audit Log', 'senrogate'),
-            __('Agent Audit Log', 'senrogate'),
+            __('Agent Audit Log', 'belayline-agent-governance'),
+            __('Agent Audit Log', 'belayline-agent-governance'),
             self::CAP,
             self::SLUG,
             [$this, 'render']
@@ -56,7 +56,7 @@ final class AuditLogPage
         $pages = (int) ceil($total / self::PER_PAGE);
 
         echo '<div class="wrap">';
-        echo '<h1>' . esc_html__('Agent Audit Log', 'senrogate') . '</h1>';
+        echo '<h1>' . esc_html__('Agent Audit Log', 'belayline-agent-governance') . '</h1>';
 
         EnvironmentLabel::render($this->shadow);
 
@@ -64,14 +64,14 @@ final class AuditLogPage
         if ($intact) {
             printf(
                 '<div class="notice notice-success inline"><p><strong>%s</strong> %s</p></div>',
-                esc_html__('Chain intact.', 'senrogate'),
-                esc_html(sprintf(/* translators: %d event count */ __('%d hash-chained events; no tampering detected.', 'senrogate'), $total))
+                esc_html__('Chain intact.', 'belayline-agent-governance'),
+                esc_html(sprintf(/* translators: %d event count */ __('%d hash-chained events; no tampering detected.', 'belayline-agent-governance'), $total))
             );
         } else {
             printf(
                 '<div class="notice notice-error inline"><p><strong>%s</strong> %s</p></div>',
-                esc_html__('TAMPER DETECTED.', 'senrogate'),
-                esc_html__('The audit chain failed verification — a record was altered or deleted.', 'senrogate')
+                esc_html__('TAMPER DETECTED.', 'belayline-agent-governance'),
+                esc_html__('The audit chain failed verification — a record was altered or deleted.', 'belayline-agent-governance')
             );
         }
 
@@ -79,7 +79,7 @@ final class AuditLogPage
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="margin:12px 0;">';
         echo '<input type="hidden" name="action" value="' . esc_attr(self::EXPORT_ACTION) . '">';
         wp_nonce_field(self::EXPORT_ACTION);
-        submit_button(__('Export CSV', 'senrogate'), 'secondary', 'submit', false);
+        submit_button(__('Export CSV', 'belayline-agent-governance'), 'secondary', 'submit', false);
         echo '</form>';
 
         // Table.
@@ -90,7 +90,7 @@ final class AuditLogPage
         echo '</tr></thead><tbody>';
 
         if (!$rows) {
-            echo '<tr><td colspan="11">' . esc_html__('No events yet.', 'senrogate') . '</td></tr>';
+            echo '<tr><td colspan="11">' . esc_html__('No events yet.', 'belayline-agent-governance') . '</td></tr>';
         }
 
         foreach ($rows as $r) {
@@ -133,7 +133,7 @@ final class AuditLogPage
     public function export(): void
     {
         if (!current_user_can(self::CAP)) {
-            wp_die(esc_html__('Insufficient permissions.', 'senrogate'));
+            wp_die(esc_html__('Insufficient permissions.', 'belayline-agent-governance'));
         }
         check_admin_referer(self::EXPORT_ACTION);
 
@@ -145,7 +145,7 @@ final class AuditLogPage
 
         $out = fopen('php://output', 'w'); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- streaming a CSV download to the response body, not touching the filesystem; WP_Filesystem has no notion of php://output.
         if ($out === false) {
-            wp_die(esc_html__('Unable to open output stream.', 'senrogate'));
+            wp_die(esc_html__('Unable to open output stream.', 'belayline-agent-governance'));
         }
         $cols = ['id', 'event_id', 'ts', 'correlation_id', 'pack', 'ability', 'tier', 'decision', 'result', 'wp_user', 'ip', 'record_json', 'prev_hash', 'entry_hash'];
         fputcsv($out, $cols);
@@ -160,17 +160,17 @@ final class AuditLogPage
     private static function columnHeaders(): array
     {
         return [
-            __('ID', 'senrogate'),
-            __('Time (UTC)', 'senrogate'),
-            __('Correlation', 'senrogate'),
-            __('Ability', 'senrogate'),
-            __('Tier', 'senrogate'),
-            __('Decision', 'senrogate'),
-            __('Reason', 'senrogate'),
-            __('Result', 'senrogate'),
-            __('Token', 'senrogate'),
-            __('IP', 'senrogate'),
-            __('Input', 'senrogate'),
+            __('ID', 'belayline-agent-governance'),
+            __('Time (UTC)', 'belayline-agent-governance'),
+            __('Correlation', 'belayline-agent-governance'),
+            __('Ability', 'belayline-agent-governance'),
+            __('Tier', 'belayline-agent-governance'),
+            __('Decision', 'belayline-agent-governance'),
+            __('Reason', 'belayline-agent-governance'),
+            __('Result', 'belayline-agent-governance'),
+            __('Token', 'belayline-agent-governance'),
+            __('IP', 'belayline-agent-governance'),
+            __('Input', 'belayline-agent-governance'),
         ];
     }
 

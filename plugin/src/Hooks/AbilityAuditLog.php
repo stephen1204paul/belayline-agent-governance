@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Hooks;
+namespace Belayline\Plugin\Hooks;
 
-use Specflux\AgentSafety\Audit\AuditRecord;
-use Specflux\AgentSafety\Audit\AuditSink;
-use Specflux\AgentSafety\Audit\Redactor;
-use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Plugin\Support\ExecutionResult;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
+use Belayline\Audit\AuditRecord;
+use Belayline\Audit\AuditSink;
+use Belayline\Audit\Redactor;
+use Belayline\Plugin\Changes\ChangeCapture;
+use Belayline\Policy\TierClassifier;
+use Belayline\Plugin\Support\ExecutionResult;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Verdict\VerdictPipeline;
 
 /**
  * Audits every ability that EXECUTES — both successes and failures,
@@ -96,7 +96,7 @@ final class AbilityAuditLog
     /**
      * @param list<string> $governedNamespaces Ability-id prefixes this hook audits
      *                                          (contributed by integrations + the
-     *                                          `agent_safety_governed_namespaces`
+     *                                          `belayline_governed_namespaces`
      *                                          filter). Empty => inert no-op.
      */
     public function __construct(
@@ -171,11 +171,11 @@ final class AbilityAuditLog
     /**
      * Is this ability name under one of the governed namespace prefixes?
      *
-     * AS-8 (§3.5 item 7): `agent-safety/check-approval` is excluded here by
-     * name, even though `agent-safety/` is a governed namespace — a
+     * AS-8 (§3.5 item 7): `belayline/check-approval` is excluded here by
+     * name, even though `belayline/` is a governed namespace — a
      * successful poll writes NO hash-chained execution record; the ability
      * audits ITS OWN `approval.probe` row on a mismatch or rate-limit hit
-     * ({@see \Specflux\AgentSafety\Plugin\Integrations\Self\CheckApprovalAbility}).
+     * ({@see \Belayline\Plugin\Integrations\Self\CheckApprovalAbility}).
      * Named and exact, like the Verdict pipeline's exemption — never the
      * whole namespace.
      */

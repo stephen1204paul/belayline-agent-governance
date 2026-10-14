@@ -2,28 +2,28 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\Woo;
+namespace Belayline\Plugin\Tests\Integrations\Woo;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Changes\ChangeAction;
-use Specflux\AgentSafety\Changes\StoredChange;
-use Specflux\AgentSafety\Changes\UndoItem;
-use Specflux\AgentSafety\Changes\UndoResult;
-use Specflux\AgentSafety\Changes\UndoScope;
-use Specflux\AgentSafety\Plugin\Changes\ChangeAdapters;
-use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
-use Specflux\AgentSafety\Plugin\Changes\UndoService;
-use Specflux\AgentSafety\Plugin\Integrations\Woo\Changes\WooCaptureAdapter;
-use Specflux\AgentSafety\Plugin\Integrations\Woo\Changes\WooChangeAdapters;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\ChainingSink;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryChangeLedger;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Packs\PackRegistry;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Changes\ChangeAction;
+use Belayline\Changes\StoredChange;
+use Belayline\Changes\UndoItem;
+use Belayline\Changes\UndoResult;
+use Belayline\Changes\UndoScope;
+use Belayline\Plugin\Changes\ChangeAdapters;
+use Belayline\Plugin\Changes\ChangeCapture;
+use Belayline\Plugin\Changes\UndoService;
+use Belayline\Plugin\Integrations\Woo\Changes\WooCaptureAdapter;
+use Belayline\Plugin\Integrations\Woo\Changes\WooChangeAdapters;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\ChainingSink;
+use Belayline\Plugin\Tests\Fakes\InMemoryChangeLedger;
+use Belayline\Packs\Pack;
+use Belayline\Packs\PackRegistry;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 
 /**
  * WooCommerce capture and restore through the real undo engine, against
@@ -74,7 +74,7 @@ final class WooChangesTest extends TestCase
         // test action shim ignores priorities and fires in registration order.
         add_filter(ChangeAdapters::FILTER, static fn (array $adapters): array => [...WooChangeAdapters::all(), ...$adapters]);
         // The default pack redacts PII (customer and tax rows would be recorded unrestorable): use full.
-        add_filter('agent_safety_pack_registry', static function (PackRegistry $registry): PackRegistry {
+        add_filter('belayline_pack_registry', static function (PackRegistry $registry): PackRegistry {
             $registry->register(new Pack(name: 'default-agent', allow: [], pii: 'full'));
 
             return $registry;
@@ -381,7 +381,7 @@ final class WooChangesTest extends TestCase
 
     public function testACustomerChangeUnderAPiiRedactingPackIsRecordedButNotRestorable(): void
     {
-        $GLOBALS['wpas_test_filters']['agent_safety_pack_registry'] = [];
+        $GLOBALS['wpas_test_filters']['belayline_pack_registry'] = [];
         self::seed('customer', 12, \WC_Customer::class, ['email' => 'a@example.test', 'first_name' => 'Ann']);
         $event = $this->call(static function (): void {
             $c = new \WC_Customer(12);

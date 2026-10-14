@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\FluentCart;
+namespace Belayline\Plugin\Integrations\FluentCart;
 
-use Specflux\AgentSafety\Policy\ElevationRule;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Policy\ElevationRule;
+use Belayline\Policy\Tier;
 
 /**
  * Coupon changes are effective at checkout immediately, so only work on a

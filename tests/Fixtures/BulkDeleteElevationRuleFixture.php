@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Tests\Fixtures;
+namespace Belayline\Tests\Fixtures;
 
-use Specflux\AgentSafety\Policy\ElevationRule;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Policy\ElevationRule;
+use Belayline\Policy\Tier;
 
 /**
- * Test-only mirror of the moved `Specflux\AgentSafety\Plugin\Integrations\Woo\BulkProductDeleteElevationRule`:
+ * Test-only mirror of the moved `Belayline\Plugin\Integrations\Woo\BulkProductDeleteElevationRule`:
  * a bulk delete elevates beyond single-item (single = recoverable from snapshot).
  */
 final class BulkDeleteElevationRuleFixture implements ElevationRule

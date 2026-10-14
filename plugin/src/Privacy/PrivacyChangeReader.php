@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Privacy;
+namespace Belayline\Plugin\Privacy;
 
-use Specflux\AgentSafety\Plugin\Support\Schema;
+use Belayline\Plugin\Support\Schema;
 use wpdb;
 
 /**

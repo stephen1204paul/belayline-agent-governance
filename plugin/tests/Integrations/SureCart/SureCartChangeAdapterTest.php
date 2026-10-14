@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\SureCart;
+namespace Belayline\Plugin\Tests\Integrations\SureCart;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use Specflux\AgentSafety\Changes\UndoItem;
-use Specflux\AgentSafety\Changes\UndoResult;
-use Specflux\AgentSafety\Changes\UndoScope;
-use Specflux\AgentSafety\Plugin\Changes\ChangeAdapters;
-use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
-use Specflux\AgentSafety\Plugin\Changes\UndoService;
-use Specflux\AgentSafety\Plugin\Integrations\SureCart\SureCartChangeAdapter;
-use Specflux\AgentSafety\Plugin\Integrations\SureCart\SureCartVerbCatalog;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\ChainingSink;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryChangeLedger;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Changes\UndoItem;
+use Belayline\Changes\UndoResult;
+use Belayline\Changes\UndoScope;
+use Belayline\Plugin\Changes\ChangeAdapters;
+use Belayline\Plugin\Changes\ChangeCapture;
+use Belayline\Plugin\Changes\UndoService;
+use Belayline\Plugin\Integrations\SureCart\SureCartChangeAdapter;
+use Belayline\Plugin\Integrations\SureCart\SureCartVerbCatalog;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\ChainingSink;
+use Belayline\Plugin\Tests\Fakes\InMemoryChangeLedger;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 
 /** Capture and restore of SureCart's remote objects, against an in-memory remote: no network. */
 final class SureCartChangeAdapterTest extends TestCase

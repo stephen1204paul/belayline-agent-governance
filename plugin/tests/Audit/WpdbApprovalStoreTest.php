@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Audit;
+namespace Belayline\Plugin\Tests\Audit;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
-use Specflux\AgentSafety\Plugin\Support\SummaryMarkup;
+use Belayline\Plugin\Audit\WpdbApprovalStore;
+use Belayline\Plugin\Support\SummaryMarkup;
 use wpdb;
 
 /**
@@ -81,7 +81,7 @@ final class WpdbApprovalStoreTest extends TestCase
 
         $fired = array_values(array_filter(
             $GLOBALS['wpas_test_actions'],
-            static fn (array $a): bool => $a[0] === 'agent_safety_approval_requested',
+            static fn (array $a): bool => $a[0] === 'belayline_approval_requested',
         ));
         $this->assertCount(1, $fired);
         $this->assertSame([$approvalId, 'woocommerce/orders-refund', 'summary text'], array_slice($fired[0], 1));
@@ -96,7 +96,7 @@ final class WpdbApprovalStoreTest extends TestCase
 
         $fired = array_values(array_filter(
             $GLOBALS['wpas_test_actions'],
-            static fn (array $a): bool => $a[0] === 'agent_safety_approval_requested',
+            static fn (array $a): bool => $a[0] === 'belayline_approval_requested',
         ));
         $this->assertSame([$approvalId, 'acme/do', 'acme/do'], array_slice($fired[0], 1));
     }
@@ -114,7 +114,7 @@ final class WpdbApprovalStoreTest extends TestCase
         $this->assertSame('apr_existing', $approvalId);
         $this->assertSame([], array_filter(
             $GLOBALS['wpas_test_actions'],
-            static fn (array $a): bool => $a[0] === 'agent_safety_approval_requested',
+            static fn (array $a): bool => $a[0] === 'belayline_approval_requested',
         ));
     }
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Verdict;
+namespace Belayline\Plugin\Verdict;
 
 /**
  * How the {@see VerdictPipeline} treats a human grant for the call it is judging.

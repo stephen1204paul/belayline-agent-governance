@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
 /**
  * Provenance tag for approval summaries (AS-11 hardening).
@@ -15,7 +15,7 @@ namespace Specflux\AgentSafety\Plugin\Support;
  *
  * So the two provenances must stay distinguishable AFTER the row round-trips
  * through the database, where the renderer no longer has the pre-filter value to
- * compare against. `wrap()` tags a summary that the `agent_safety_approval_summary`
+ * compare against. `wrap()` tags a summary that the `belayline_approval_summary`
  * filter ACTUALLY CHANGED — a deliberate site-integration enrichment — and only a
  * tagged summary is later rendered as markup. Everything else is escaped.
  *
@@ -31,14 +31,14 @@ final class SummaryMarkup
      * summary grammar. Changing it only affects rows written after the change:
      * older rows simply read back as plain text, which is the safe direction.
      */
-    private const TAG = "\x02agent-safety:html\x03";
+    private const TAG = "\x02belayline:html\x03";
 
     /**
      * Second sentinel: the summary was generated from the call's (redacted)
      * arguments. It is plain text, shown on the approval screen only; it is
      * kept out of notification channels, which stay identifiers-only.
      */
-    private const ARGS_TAG = "\x02agent-safety:args\x03";
+    private const ARGS_TAG = "\x02belayline:args\x03";
 
     /** Tag an argument-derived summary (text; never markup, never notified). */
     public static function wrapArgs(string $text): string
@@ -67,7 +67,7 @@ final class SummaryMarkup
     /**
      * The summary as authored, with the provenance tag removed. Callers that
      * emit into HTML must still escape (agent-authored) or sanitise
-     * (host-authored) the result — see {@see \Specflux\AgentSafety\Plugin\Admin\PendingActionsPage::summaryHtml()}.
+     * (host-authored) the result — see {@see \Belayline\Plugin\Admin\PendingActionsPage::summaryHtml()}.
      */
     public static function unwrap(string $stored): string
     {

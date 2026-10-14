@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Changes;
+namespace Belayline\Plugin\Tests\Changes;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use Specflux\AgentSafety\Changes\SnapshotRef;
-use Specflux\AgentSafety\Plugin\Changes\ChangeAdapters;
-use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeStoreSnapshotter;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryChangeLedger;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Changes\SnapshotRef;
+use Belayline\Plugin\Changes\ChangeAdapters;
+use Belayline\Plugin\Changes\ChangeCapture;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\FakeStoreSnapshotter;
+use Belayline\Plugin\Tests\Fakes\InMemoryChangeLedger;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 
 /** Args-based capture for platforms WordPress hooks cannot see. */
 final class SnapshotterTest extends TestCase
@@ -97,7 +97,7 @@ final class SnapshotterTest extends TestCase
         $rows = $this->runCall(['ids' => [1]], function (): void {
             $GLOBALS['store']['price:1'] = ['price' => '15'];
             foreach ($this->capture->adapters()->capture() as $adapter) {
-                if ($adapter instanceof \Specflux\AgentSafety\Plugin\Changes\Adapters\PostAdapter) {
+                if ($adapter instanceof \Belayline\Plugin\Changes\Adapters\PostAdapter) {
                     $adapter->onPostUpdated(7, (object) ['post_title' => 'B', 'post_type' => 'post', 'post_status' => 'publish'], (object) ['post_title' => 'A', 'post_type' => 'post', 'post_status' => 'publish']);
                 }
             }
@@ -115,7 +115,7 @@ final class SnapshotterTest extends TestCase
         $rows = $this->runCall(['ids' => []], function (): void {
             $GLOBALS['store']['post:7'] = ['post_title' => 'B'];
             foreach ($this->capture->adapters()->capture() as $adapter) {
-                if ($adapter instanceof \Specflux\AgentSafety\Plugin\Changes\Adapters\PostAdapter) {
+                if ($adapter instanceof \Belayline\Plugin\Changes\Adapters\PostAdapter) {
                     $adapter->onPostUpdated(7, (object) ['ID' => 7, 'post_title' => 'B', 'post_type' => 'post', 'post_status' => 'publish'], (object) ['ID' => 7, 'post_title' => 'A', 'post_type' => 'post', 'post_status' => 'publish']);
                 }
             }

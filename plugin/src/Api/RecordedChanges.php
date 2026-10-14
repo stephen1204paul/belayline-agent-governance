@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Api;
+namespace Belayline\Plugin\Api;
 
-use Specflux\AgentSafety\Changes\UndoScope;
+use Belayline\Changes\UndoScope;
 
 /**
  * The changes recorded for one audit event or one correlation id (run), in

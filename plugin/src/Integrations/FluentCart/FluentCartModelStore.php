@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\FluentCart;
+namespace Belayline\Plugin\Integrations\FluentCart;
 
 /**
  * Restores through FluentCart's own layer: the `Coupon` and `Customer` models

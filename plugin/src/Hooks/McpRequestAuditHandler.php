@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Hooks;
+namespace Belayline\Plugin\Hooks;
 
-use Specflux\AgentSafety\Audit\AuditDecision;
-use Specflux\AgentSafety\Audit\AuditRecord;
-use Specflux\AgentSafety\Audit\AuditSink;
-use Specflux\AgentSafety\Audit\Redactor;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
+use Belayline\Audit\AuditDecision;
+use Belayline\Audit\AuditRecord;
+use Belayline\Audit\AuditSink;
+use Belayline\Audit\Redactor;
+use Belayline\Policy\TierClassifier;
+use Belayline\Plugin\Changes\ChangeCapture;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
 use WP\MCP\Infrastructure\Observability\Contracts\McpObservabilityHandlerInterface;
 
 /**
@@ -157,7 +157,7 @@ final class McpRequestAuditHandler implements McpObservabilityHandlerInterface
      * Stashes ONLY when the calling server's public `observability_handler`
      * property is an instance of this class. This handler is installed solely
      * on the adapter's DEFAULT server (via `mcp_adapter_default_server_config`);
-     * a custom server (e.g. SenroFlux's) never calls {@see record_event()}, so
+     * a custom server (e.g. Site Agent's) never calls {@see record_event()}, so
      * a stash entry there would make {@see AbilityAuditLog::after()} skip its
      * row (the DOUBLE-LOGGING DEDUPE) with nothing to replace it — a missing
      * audit row. Rule: when unsure (server missing, not an object, no such

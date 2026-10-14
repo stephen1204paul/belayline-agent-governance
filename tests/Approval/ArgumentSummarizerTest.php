@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Tests\Approval;
+namespace Belayline\Tests\Approval;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Approval\ApprovalBinding;
-use Specflux\AgentSafety\Approval\ArgumentSummarizer;
+use Belayline\Approval\ApprovalBinding;
+use Belayline\Approval\ArgumentSummarizer;
 
 final class ArgumentSummarizerTest extends TestCase
 {

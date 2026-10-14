@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\Woo;
+namespace Belayline\Plugin\Integrations\Woo;
 
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Policy\ElevationRule;
-use Specflux\AgentSafety\Policy\VerbCatalog;
-use Specflux\AgentSafety\Plugin\Approval\StateProbe;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
+use Belayline\Packs\Pack;
+use Belayline\Policy\ElevationRule;
+use Belayline\Policy\VerbCatalog;
+use Belayline\Plugin\Approval\StateProbe;
+use Belayline\Plugin\Identity\IdentityChain;
 use wpdb;
 
 /**
@@ -21,8 +21,8 @@ use wpdb;
  * {@see register()} MUTATES the two registries that already exist and can
  * grow incrementally ({@see VerbCatalog::register()}, {@see IdentityChain::register()}).
  * Tier-elevation rules and capability packs are instead RETURNED, because
- * their consumers — {@see \Specflux\AgentSafety\Policy\TierClassifier} and
- * {@see \Specflux\AgentSafety\Plugin\Support\PackResolver} — take constructor-only
+ * their consumers — {@see \Belayline\Policy\TierClassifier} and
+ * {@see \Belayline\Plugin\Support\PackResolver} — take constructor-only
  * dependency injection and are built by bootstrap AFTER this call returns; there
  * is no pre-existing registry object of that shape to mutate yet.
  */

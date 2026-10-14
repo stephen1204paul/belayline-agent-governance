@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\FluentCart;
+namespace Belayline\Plugin\Tests\Integrations\FluentCart;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Integrations\FluentCart\FluentCartCouponStateProbe;
-use Specflux\AgentSafety\Plugin\Integrations\FluentCart\FluentCartCustomerStateProbe;
-use Specflux\AgentSafety\Plugin\Integrations\FluentCart\FluentCartIntegration;
-use Specflux\AgentSafety\Plugin\Integrations\FluentCart\FluentCartOrderStateProbe;
-use Specflux\AgentSafety\Plugin\Integrations\FluentCart\FluentCartSubscriptionStateProbe;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Plugin\Integrations\FluentCart\FluentCartCouponStateProbe;
+use Belayline\Plugin\Integrations\FluentCart\FluentCartCustomerStateProbe;
+use Belayline\Plugin\Integrations\FluentCart\FluentCartIntegration;
+use Belayline\Plugin\Integrations\FluentCart\FluentCartOrderStateProbe;
+use Belayline\Plugin\Integrations\FluentCart\FluentCartSubscriptionStateProbe;
+use Belayline\Policy\VerbCatalog;
 use wpdb;
 
 final class FluentCartProbesTest extends TestCase

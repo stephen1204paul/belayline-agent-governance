@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Fixtures;
+namespace Belayline\Plugin\Tests\Fixtures;
 
 /**
  * The frozen WP_Error contract a blocked call is reported with — the ONE shape
  * both gate seams emit (via Verdict::error()) and the shape consumers such as
- * SenroFlux parse. Framework-free on purpose: this file is loaded by path
+ * Site Agent parse. Framework-free on purpose: this file is loaded by path
  * from other repositories' test suites, so it must not depend on PHPUnit or on
- * any Agent Safety class (docs/adr/0001-single-verdict-pipeline.md).
+ * any Belayline class (docs/adr/0001-single-verdict-pipeline.md).
  *
  * Producer test: plugin/tests/Verdict/VerdictErrorContractTest.php.
- * Consumer test: senroflux/tests/Tools/AgentSafetyContractTest.php.
+ * Consumer test: the Site Agent contract test (tests/Tools).
  *
  * Changing anything here is a contract change: bump the plugin's minor
  * version and update every consumer in the same release.
  */
 final class VerdictErrorFixture
 {
-    public const DENY_CODE = 'agent_safety_denied';
+    public const DENY_CODE = 'belayline_denied';
     public const APPROVAL_CODE = 'approval_required';
 
     /**

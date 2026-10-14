@@ -2,34 +2,34 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Verdict;
+namespace Belayline\Plugin\Verdict;
 
-use Specflux\AgentSafety\Approval\ApprovalBinding;
-use Specflux\AgentSafety\Approval\ApprovalStore;
-use Specflux\AgentSafety\Gate\Decision;
-use Specflux\AgentSafety\Gate\Gate;
-use Specflux\AgentSafety\Gate\GateContext;
-use Specflux\AgentSafety\Gate\Outcome;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Approval\StateFingerprint;
-use Specflux\AgentSafety\Plugin\Approval\StateProbe;
-use Specflux\AgentSafety\Plugin\Support\ArgumentCapGate;
-use Specflux\AgentSafety\Plugin\Support\DecisionRecorder;
-use Specflux\AgentSafety\Plugin\Support\EnvironmentGuard;
-use Specflux\AgentSafety\Plugin\Support\IpAllowlist;
-use Specflux\AgentSafety\Plugin\Support\PauseSwitch;
-use Specflux\AgentSafety\Plugin\Support\RateLimitGate;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Support\ShadowMode;
-use Specflux\AgentSafety\Plugin\Support\Tripwires;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Approval\ApprovalBinding;
+use Belayline\Approval\ApprovalStore;
+use Belayline\Gate\Decision;
+use Belayline\Gate\Gate;
+use Belayline\Gate\GateContext;
+use Belayline\Gate\Outcome;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Approval\StateFingerprint;
+use Belayline\Plugin\Approval\StateProbe;
+use Belayline\Plugin\Support\ArgumentCapGate;
+use Belayline\Plugin\Support\DecisionRecorder;
+use Belayline\Plugin\Support\EnvironmentGuard;
+use Belayline\Plugin\Support\IpAllowlist;
+use Belayline\Plugin\Support\PauseSwitch;
+use Belayline\Plugin\Support\RateLimitGate;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Support\ShadowMode;
+use Belayline\Plugin\Support\Tripwires;
+use Belayline\Policy\Tier;
 
 /**
  * The ordered, fail-closed evaluation that turns one governed call into a
  * {@see Verdict}. Both gate seams — the Abilities API `permission_callback`
- * ({@see \Specflux\AgentSafety\Plugin\Hooks\AbilityPermissionGate}) and
+ * ({@see \Belayline\Plugin\Hooks\AbilityPermissionGate}) and
  * mcp-adapter's `mcp_adapter_pre_tool_call`
- * ({@see \Specflux\AgentSafety\Plugin\Hooks\PreToolCallGate}) — are adapters
+ * ({@see \Belayline\Plugin\Hooks\PreToolCallGate}) — are adapters
  * of this one module, differing only in {@see VerdictMode}, so the same call
  * can never be judged two different ways (docs/adr/0001-single-verdict-pipeline.md).
  *
@@ -73,13 +73,13 @@ final class VerdictPipeline
 {
     /**
      * AS-8 (§3.5 item 3): the one explicit, named exemption from the caller's
-     * Pack — this exact verb, never the whole `agent-safety/` namespace and
-     * never a glob. Every real Pack's allow list omits `agent-safety/*` and
+     * Pack — this exact verb, never the whole `belayline/` namespace and
+     * never a glob. Every real Pack's allow list omits `belayline/*` and
      * the fallback `default-agent` pack allows nothing, so without this
      * exemption no agent could ever poll its own approval. See
      * {@see judgeCheckApproval()}.
      */
-    public const CHECK_APPROVAL_VERB = 'agent-safety/check-approval';
+    public const CHECK_APPROVAL_VERB = 'belayline/check-approval';
 
     /** @var array<string, true> verb|args_hash already claimed in THIS request (re-entrancy guard). */
     private array $reentry = [];
@@ -204,7 +204,7 @@ final class VerdictPipeline
     }
 
     /**
-     * AS-8 (§3.5 item 3): `agent-safety/check-approval` always answers Allow
+     * AS-8 (§3.5 item 3): `belayline/check-approval` always answers Allow
      * at tier 0 — no Pack allow-list, denyClass wall, approval rule or Pack
      * rate/quota cap is even consulted, because {@see judge()} returns here
      * before any of that machinery runs. It also answers while the site is
@@ -214,7 +214,7 @@ final class VerdictPipeline
      * approval's fate, and retrying costs nothing. This is NOT exempt from
      * authentication, its own fixed rate limit, or the audit rules the
      * ability applies itself — none of those live in the pipeline; see
-     * {@see \Specflux\AgentSafety\Plugin\Integrations\Self\CheckApprovalAbility}.
+     * {@see \Belayline\Plugin\Integrations\Self\CheckApprovalAbility}.
      */
     private function judgeCheckApproval(Pack $pack): Verdict
     {

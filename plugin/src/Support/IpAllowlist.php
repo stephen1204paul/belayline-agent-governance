@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
-use Specflux\AgentSafety\Network\IpMatcher;
+use Belayline\Network\IpMatcher;
 
 /**
  * The optional IP allowlist for credentials an agent uses from outside the
@@ -13,9 +13,9 @@ use Specflux\AgentSafety\Network\IpMatcher;
  * tokens, so it is never IP-checked — the person is at their own browser, and
  * checking it would turn a mistyped list into an admin lock-out.
  *
- * Two administrator-set options, newline-separated: `agsafe_ip_allowlist`
+ * Two administrator-set options, newline-separated: `belayline_ip_allowlist`
  * (addresses and CIDR ranges; empty means every address is allowed) and
- * `agsafe_trusted_proxies` (same format). Only when REMOTE_ADDR is itself a
+ * `belayline_trusted_proxies` (same format). Only when REMOTE_ADDR is itself a
  * trusted proxy is X-Forwarded-For read, and then only up to its right-most
  * untrusted hop ({@see IpMatcher::clientIp()}); a site behind a CDN that
  * names no proxy would otherwise allowlist the CDN.
@@ -24,13 +24,13 @@ use Specflux\AgentSafety\Network\IpMatcher;
  * every line is malformed (a hand-edited option denies rather than opens),
  * and an address that cannot be determined is refused. A refusal is the deny
  * reason `ip_not_allowed`, decided in the verdict pipeline beside the pause
- * ({@see \Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline}).
+ * ({@see \Belayline\Plugin\Verdict\VerdictPipeline}).
  */
 final class IpAllowlist
 {
-    public const OPTION = 'agsafe_ip_allowlist';
+    public const OPTION = 'belayline_ip_allowlist';
 
-    public const PROXIES_OPTION = 'agsafe_trusted_proxies';
+    public const PROXIES_OPTION = 'belayline_trusted_proxies';
 
     /** The deny reason every refused call carries. */
     public const REASON = 'ip_not_allowed';

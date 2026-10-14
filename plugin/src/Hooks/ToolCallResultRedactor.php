@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Hooks;
+namespace Belayline\Plugin\Hooks;
 
-use Specflux\AgentSafety\Audit\Redactor;
-use Specflux\AgentSafety\Plugin\Integrations\Core\CoreVerbCatalog;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
+use Belayline\Audit\Redactor;
+use Belayline\Plugin\Integrations\Core\CoreVerbCatalog;
+use Belayline\Plugin\Support\PackResolver;
 
 /**
  * Read-path PII redaction (backlog #11) — closes the gap {@see Redactor}'s own
@@ -93,7 +93,7 @@ final class ToolCallResultRedactor
      * @param list<string> $governedNamespaces Ability-id prefixes this hook
      *                                          redacts for (contributed by
      *                                          integrations + the
-     *                                          `agent_safety_governed_namespaces`
+     *                                          `belayline_governed_namespaces`
      *                                          filter). Empty => inert no-op.
      */
     public function __construct(

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use Specflux\AgentSafety\Plugin\Support\CorrelationConflict;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
+use Belayline\Plugin\Support\CorrelationConflict;
+use Belayline\Plugin\Support\RequestContext;
 
 /**
  * The host-settable correlation scope (AS-12). With grants enabled the
@@ -31,18 +31,18 @@ final class RequestContextCorrelationTest extends TestCase
     public function testTheIdIsPinnedForTheDurationOfTheCallback(): void
     {
         $seen = RequestContext::withCorrelation(
-            'senroflux:run:42',
+            'example:run:42',
             static fn (): string => RequestContext::correlation()
         );
 
-        $this->assertSame('senroflux:run:42', $seen);
+        $this->assertSame('example:run:42', $seen);
     }
 
     public function testTheCallbackReturnValueIsPassedThrough(): void
     {
         $this->assertSame(
             ['ok' => true],
-            RequestContext::withCorrelation('senroflux:run:1', static fn (): array => ['ok' => true])
+            RequestContext::withCorrelation('example:run:1', static fn (): array => ['ok' => true])
         );
     }
 
@@ -59,7 +59,7 @@ final class RequestContextCorrelationTest extends TestCase
     {
         // Nothing memoized going in: nothing may be memoized coming out, or the
         // NEXT run in this process would inherit this run's scope.
-        RequestContext::withCorrelation('senroflux:run:1', static fn (): bool => true);
+        RequestContext::withCorrelation('example:run:1', static fn (): bool => true);
 
         $this->assertStringStartsWith('sess_', RequestContext::correlation());
     }
@@ -67,7 +67,7 @@ final class RequestContextCorrelationTest extends TestCase
     public function testThePriorIdIsRestoredEvenWhenTheCallbackThrows(): void
     {
         try {
-            RequestContext::withCorrelation('senroflux:run:1', static function (): void {
+            RequestContext::withCorrelation('example:run:1', static function (): void {
                 throw new RuntimeException('tick blew up');
             });
             $this->fail('The callback exception should propagate.');
@@ -83,29 +83,29 @@ final class RequestContextCorrelationTest extends TestCase
         // The property the whole scoped design exists for: PHPUnit, WP-CLI and
         // wp-cron all tick more than one run per PHP lifetime.
         $first = RequestContext::withCorrelation(
-            'senroflux:run:1',
+            'example:run:1',
             static fn (): string => RequestContext::correlation()
         );
         RequestContext::reset(); // the host clears between runs; see the next test for when it doesn't
         $second = RequestContext::withCorrelation(
-            'senroflux:run:2',
+            'example:run:2',
             static fn (): string => RequestContext::correlation()
         );
 
-        $this->assertSame('senroflux:run:1', $first);
-        $this->assertSame('senroflux:run:2', $second);
+        $this->assertSame('example:run:1', $first);
+        $this->assertSame('example:run:2', $second);
         $this->assertNotSame($first, $second);
     }
 
     public function testADifferentAlreadyMemoizedIdThrows(): void
     {
-        RequestContext::withCorrelation('senroflux:run:1', static fn (): bool => true);
+        RequestContext::withCorrelation('example:run:1', static fn (): bool => true);
         $leaked = RequestContext::correlation(); // an audit handler reads it: sess_… is now pinned
 
         $this->expectException(CorrelationConflict::class);
 
         try {
-            RequestContext::withCorrelation('senroflux:run:2', static fn (): bool => true);
+            RequestContext::withCorrelation('example:run:2', static fn (): bool => true);
         } finally {
             // …and the conflicting id never took effect.
             $this->assertSame($leaked, RequestContext::correlation());
@@ -115,14 +115,14 @@ final class RequestContextCorrelationTest extends TestCase
     public function testReenteringTheSameIdIsAllowed(): void
     {
         $nested = RequestContext::withCorrelation(
-            'senroflux:run:1',
+            'example:run:1',
             static fn (): string => RequestContext::withCorrelation(
-                'senroflux:run:1',
+                'example:run:1',
                 static fn (): string => RequestContext::correlation()
             )
         );
 
-        $this->assertSame('senroflux:run:1', $nested);
+        $this->assertSame('example:run:1', $nested);
     }
 
     public function testAnEmptyIdIsRefused(): void
@@ -138,7 +138,7 @@ final class RequestContextCorrelationTest extends TestCase
         RequestContext::correlation();
 
         try {
-            RequestContext::withCorrelation('senroflux:run:9', static function () use (&$ran): void {
+            RequestContext::withCorrelation('example:run:9', static function () use (&$ran): void {
                 $ran = true;
             });
         } catch (CorrelationConflict) {

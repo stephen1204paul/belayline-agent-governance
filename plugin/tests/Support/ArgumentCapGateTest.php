@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
 use CounterTableWpdb;
-use Specflux\AgentSafety\Packs\ArgumentCap;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Support\ArgumentCapGate;
-use Specflux\AgentSafety\Plugin\Support\ValueAccumulator;
+use Belayline\Packs\ArgumentCap;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Support\ArgumentCapGate;
+use Belayline\Plugin\Support\ValueAccumulator;
 
 /**
- * Glues {@see \Specflux\AgentSafety\Packs\ArgumentCapPolicy} (exhaustively
+ * Glues {@see \Belayline\Packs\ArgumentCapPolicy} (exhaustively
  * covered in core) to {@see ValueAccumulator} storage -- the argument-aware
  * sibling of {@see RateLimitGateTest}. Distinct simulated calls pass distinct
  * args on purpose except where a test is specifically about memoized

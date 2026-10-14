@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Network;
+namespace Belayline\Network;
 
 /**
  * Pure IPv4/IPv6 address and CIDR matching, plus the client-address rule for a

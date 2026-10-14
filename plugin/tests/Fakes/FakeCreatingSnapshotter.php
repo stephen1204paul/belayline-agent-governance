@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Fakes;
+namespace Belayline\Plugin\Tests\Fakes;
 
 use RuntimeException;
-use Specflux\AgentSafety\Changes\ResultAwareSnapshotter;
-use Specflux\AgentSafety\Changes\SnapshotRef;
+use Belayline\Changes\ResultAwareSnapshotter;
+use Belayline\Changes\SnapshotRef;
 
 /** Handles `shop/create-price`; the new id exists only in the call's result (`['id' => ...]`). */
 final class FakeCreatingSnapshotter implements ResultAwareSnapshotter

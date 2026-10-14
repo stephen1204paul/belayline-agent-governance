@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Tests\Packs;
+namespace Belayline\Tests\Packs;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Packs\ArgumentCap;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Packs\VerbGlob;
+use Belayline\Packs\ArgumentCap;
+use Belayline\Packs\Pack;
+use Belayline\Packs\VerbGlob;
 
 /**
  * The one glob dialect shared by {@see Pack::allows()} and
- * {@see \Specflux\AgentSafety\Packs\ArgumentCap::appliesTo()}. Pack's own
+ * {@see \Belayline\Packs\ArgumentCap::appliesTo()}. Pack's own
  * allow/deny arithmetic is exhaustively covered via {@see
- * \Specflux\AgentSafety\Tests\Packs\PackRegistryTest}; the cases here confirm
+ * \Belayline\Tests\Packs\PackRegistryTest}; the cases here confirm
  * allows() still delegates correctly now that it routes through this class,
  * plus the new Pack::hasArgumentCaps() accessor.
  */

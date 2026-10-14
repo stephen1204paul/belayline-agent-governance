@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\FluentCart;
+namespace Belayline\Plugin\Integrations\FluentCart;
 
-use Specflux\AgentSafety\Policy\ElevationRule;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Policy\ElevationRule;
+use Belayline\Policy\Tier;
 
 /**
  * FluentCart 1.7.0's `add-order-note` is staff-only and declares just

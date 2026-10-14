@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Changes;
+namespace Belayline\Plugin\Tests\Changes;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use Specflux\AgentSafety\Changes\SnapshotRef;
-use Specflux\AgentSafety\Plugin\Changes\ChangeAdapters;
-use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeCreatingSnapshotter;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryChangeLedger;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Changes\SnapshotRef;
+use Belayline\Plugin\Changes\ChangeAdapters;
+use Belayline\Plugin\Changes\ChangeCapture;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\FakeCreatingSnapshotter;
+use Belayline\Plugin\Tests\Fakes\InMemoryChangeLedger;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 
 /** Creates whose id exists only in the call's result. */
 final class ResultAwareSnapshotterTest extends TestCase
@@ -104,7 +104,7 @@ final class ResultAwareSnapshotterTest extends TestCase
     public function testAPlainSnapshotterIsUnaffected(): void
     {
         $GLOBALS['store']['price:1'] = ['price' => '10'];
-        $plain = new \Specflux\AgentSafety\Plugin\Tests\Fakes\FakeStoreSnapshotter();
+        $plain = new \Belayline\Plugin\Tests\Fakes\FakeStoreSnapshotter();
         $GLOBALS['wpas_test_filters'] = [];
         add_filter(ChangeAdapters::FILTER, static fn (array $a): array => [...$a, $plain]);
         $capture = new ChangeCapture(new TierClassifier($this->catalog()), new PackResolver(), $this->ledger);

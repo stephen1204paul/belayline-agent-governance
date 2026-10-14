@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\Woo\Changes;
+namespace Belayline\Plugin\Integrations\Woo\Changes;
 
-use Specflux\AgentSafety\Changes\Change;
-use Specflux\AgentSafety\Changes\ChangeAction;
-use Specflux\AgentSafety\Changes\ChangeRestoreAdapter;
-use Specflux\AgentSafety\Changes\StoredChange;
+use Belayline\Changes\Change;
+use Belayline\Changes\ChangeAction;
+use Belayline\Changes\ChangeRestoreAdapter;
+use Belayline\Changes\StoredChange;
 
 /**
  * Restores WooCommerce changes through WooCommerce's own CRUD objects

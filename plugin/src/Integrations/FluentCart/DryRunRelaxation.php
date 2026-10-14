@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\FluentCart;
+namespace Belayline\Plugin\Integrations\FluentCart;
 
 /**
  * Spec 3.2: "`dry_run: true` on any write: Tier 0 -- FluentCart's own WriteGuard

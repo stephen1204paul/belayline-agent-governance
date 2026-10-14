@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\SureCart;
+namespace Belayline\Plugin\Integrations\SureCart;
 
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Policy\Tier;
 
 /**
  * OUR tier assignments for the 54 abilities SureCart 4.9.3 registers under

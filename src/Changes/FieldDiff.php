@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Changes;
+namespace Belayline\Changes;
 
 /** The field-level before/after view of one recorded change, shared by the admin screen and the public API. */
 final class FieldDiff

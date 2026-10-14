@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Tests\Packs;
+namespace Belayline\Tests\Packs;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Packs\PackRegistry;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Packs\Pack;
+use Belayline\Packs\PackRegistry;
+use Belayline\Policy\Tier;
 
 final class PackRegistryTest extends TestCase
 {

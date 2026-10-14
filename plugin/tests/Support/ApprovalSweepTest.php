@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
-use Specflux\AgentSafety\Plugin\Support\ApprovalSweep;
+use Belayline\Plugin\Audit\WpdbApprovalStore;
+use Belayline\Plugin\Support\ApprovalSweep;
 use wpdb;
 
 final class ApprovalSweepTest extends TestCase

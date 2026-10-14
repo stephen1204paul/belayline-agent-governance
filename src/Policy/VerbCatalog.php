@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Policy;
+namespace Belayline\Policy;
 
 /**
  * The catalog of verb -> tier assignments. OUR tier assignment is

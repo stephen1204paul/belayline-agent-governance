@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Hooks;
+namespace Belayline\Plugin\Hooks;
 
-use Specflux\AgentSafety\Plugin\Integrations\Woo\VerbMapper;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Verdict\Hints;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictMode;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
+use Belayline\Plugin\Integrations\Woo\VerbMapper;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Verdict\Hints;
+use Belayline\Plugin\Verdict\VerdictMode;
+use Belayline\Plugin\Verdict\VerdictPipeline;
 use WP_Error;
 
 /**

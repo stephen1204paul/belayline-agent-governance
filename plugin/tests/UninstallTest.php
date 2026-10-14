@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests;
+namespace Belayline\Plugin\Tests;
 
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Support\ApprovalSweep;
-use Specflux\AgentSafety\Plugin\Support\PauseSwitch;
-use Specflux\AgentSafety\Plugin\Support\Schema;
-use Specflux\AgentSafety\Plugin\Support\UninstallManifest;
+use Belayline\Plugin\Support\ApprovalSweep;
+use Belayline\Plugin\Support\PauseSwitch;
+use Belayline\Plugin\Support\Schema;
+use Belayline\Plugin\Support\UninstallManifest;
 
 /**
  * §3.6 item 3: `plugin/uninstall.php` is standalone (no bootstrap
- * guaranteed) and gated on `AGSAFE_REMOVE_DATA === true` — both the constant
+ * guaranteed) and gated on `BELAYLINE_REMOVE_DATA === true` — both the constant
  * check and `WP_UNINSTALL_PLUGIN` are real PHP constants, so each scenario
  * below runs in its OWN process ({@see RunInSeparateProcess}); a constant
  * defined for one test would otherwise leak into every other test in this
@@ -25,8 +25,8 @@ final class UninstallTest extends TestCase
     #[RunInSeparateProcess]
     public function testOptedInUninstallDropsTablesDeletesEveryManifestOptionAndClearsCron(): void
     {
-        define('WP_UNINSTALL_PLUGIN', 'senrogate/senrogate.php');
-        define('AGSAFE_REMOVE_DATA', true);
+        define('WP_UNINSTALL_PLUGIN', 'belayline-agent-governance/belayline-agent-governance.php');
+        define('BELAYLINE_REMOVE_DATA', true);
 
         $GLOBALS['wpas_test_options'] = [
             Schema::VERSION_OPTION => '4',
@@ -83,8 +83,8 @@ final class UninstallTest extends TestCase
     #[RunInSeparateProcess]
     public function testUninstallIsANoOpWithoutTheOptInConstant(): void
     {
-        define('WP_UNINSTALL_PLUGIN', 'senrogate/senrogate.php');
-        // AGSAFE_REMOVE_DATA left undefined -- the default, "keep everything" behaviour.
+        define('WP_UNINSTALL_PLUGIN', 'belayline-agent-governance/belayline-agent-governance.php');
+        // BELAYLINE_REMOVE_DATA left undefined -- the default, "keep everything" behaviour.
 
         $GLOBALS['wpas_test_options'] = [Schema::VERSION_OPTION => '4'];
         $GLOBALS['wpas_test_cron'] = [ApprovalSweep::HOOK => 1_800_000_000];
@@ -101,8 +101,8 @@ final class UninstallTest extends TestCase
     #[RunInSeparateProcess]
     public function testUninstallIsANoOpWhenTheOptInConstantIsNotExactlyTrue(): void
     {
-        define('WP_UNINSTALL_PLUGIN', 'senrogate/senrogate.php');
-        define('AGSAFE_REMOVE_DATA', 1); // truthy, but not the required strict `true`
+        define('WP_UNINSTALL_PLUGIN', 'belayline-agent-governance/belayline-agent-governance.php');
+        define('BELAYLINE_REMOVE_DATA', 1); // truthy, but not the required strict `true`
 
         $GLOBALS['wpas_test_options'] = [Schema::VERSION_OPTION => '4'];
 

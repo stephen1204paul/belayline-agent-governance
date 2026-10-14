@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Api;
+namespace Belayline\Plugin\Api;
 
-use Specflux\AgentSafety\Plugin\Support\SummaryMarkup;
+use Belayline\Plugin\Support\SummaryMarkup;
 
 /**
  * A read-only view of one approval row, shaped for PROGRAMMATIC consumers
@@ -35,7 +35,7 @@ final class ApprovalSummary
     }
 
     /**
-     * Map one raw store row ({@see \Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore::get()})
+     * Map one raw store row ({@see \Belayline\Plugin\Audit\WpdbApprovalStore::get()})
      * into this DTO; unknown/absent columns degrade to empty strings rather
      * than fataling, so a schema drift shows up as an odd-looking summary
      * instead of a 500.

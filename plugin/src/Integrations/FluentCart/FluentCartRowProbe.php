@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\FluentCart;
+namespace Belayline\Plugin\Integrations\FluentCart;
 
-use Specflux\AgentSafety\Plugin\Approval\StateProbe;
+use Belayline\Plugin\Approval\StateProbe;
 use wpdb;
 
 /**

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Tests\Changes;
+namespace Belayline\Tests\Changes;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Changes\ChangeSnapshotter;
-use Specflux\AgentSafety\Changes\ResultAwareSnapshotter;
+use Belayline\Changes\ChangeSnapshotter;
+use Belayline\Changes\ResultAwareSnapshotter;
 
 final class ResultAwareSnapshotterTest extends TestCase
 {

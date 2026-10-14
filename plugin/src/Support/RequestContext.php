@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Identity\IdentityChain;
 
 /**
  * The host-derived, non-deterministic bits an audit record needs:
- * ids, timestamp, client IP, actor. Kept out of the pure core so {@see \Specflux\AgentSafety\Audit\AuditRecord}
+ * ids, timestamp, client IP, actor. Kept out of the pure core so {@see \Belayline\Audit\AuditRecord}
  * stays clock-/RNG-free and unit-testable.
  *
  * `correlation()` is memoized for the lifetime of the PHP request, so every event
@@ -45,7 +45,7 @@ final class RequestContext
 
     /**
      * Wire the principal resolver the bootstrap assembled alongside the
-     * identity chain — {@see \Specflux\AgentSafety\Plugin\Support\PackResolver::principal()}
+     * identity chain — {@see \Belayline\Plugin\Support\PackResolver::principal()}
      * in production, so the audit actor / rate-limit / approval subject
      * names the SAME credential whose binding decided the pack, not merely
      * the first token the identity chain happens to list. When no resolver
@@ -101,7 +101,7 @@ final class RequestContext
      *
      * SECURITY: with grants enabled the correlation id is half of a grant's match
      * key, so a host MUST derive it from server-side state it owns (a run row's
-     * id, e.g. "senroflux:run:42") and NEVER from agent-authored arguments or an
+     * id, e.g. "example:run:42") and NEVER from agent-authored arguments or an
      * HTTP request parameter. There is deliberately no read-time filter for it:
      * a globally hookable correlation id would make the grant key overridable
      * from outside the host.
@@ -160,7 +160,7 @@ final class RequestContext
      * AS-7 §3.4 item 11: every audit row's context carries the environment
      * type and whether a site-binding mismatch is currently in effect — folded
      * into `actor` (a nested key each row already carries) rather than a new
-     * top-level {@see \Specflux\AgentSafety\Audit\AuditRecord} field, so the
+     * top-level {@see \Belayline\Audit\AuditRecord} field, so the
      * hash-chained record shape itself never changes. Reads the SAME option
      * {@see EnvironmentGuard} owns, directly: a full EnvironmentGuard needs an
      * approval store and a grant store to do its job, neither of which this

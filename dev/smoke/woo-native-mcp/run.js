@@ -1,5 +1,5 @@
 /**
- * Stage 3 wp-env leg: Agent Safety governing WooCommerce 11.1's OWN native
+ * Stage 3 wp-env leg: Belayline governing WooCommerce 11.1's OWN native
  * MCP server (`/wp-json/woocommerce/mcp`, Woo's bundled mcp-adapter v0.3.0,
  * `mcp_integration` feature on). See spec §3.2 item 5 and README.md.
  *
@@ -8,13 +8,13 @@
  *   2. woocommerce/products-delete {id, force:true} -> isError, an approval
  *      message for the verb, and the product still exists afterwards; the
  *      approval_id itself is asserted as DB ground truth (a pending
- *      wp_agsafe_approvals row keyed to wc:<key_id>), not off the MCP
+ *      wp_belayline_approvals row keyed to wc:<key_id>), not off the MCP
  *      response — Woo's bundled mcp-adapter v0.3.0 drops WP_Error data on
  *      this transport (README's "Live findings", finding 2)
  *   3. the fixture's uncatalogued woocommerce/ ability -> unknown_verb
  *   Control: the audit rows for 1 and 2 name principal wc:<key_id> and pack
  *   woo-default-agent, not the fallback default-agent.
- *   Plus: debug.log has no PHP warning/notice from agent-safety.
+ *   Plus: debug.log has no PHP warning/notice from belayline.
  *
  * Run: node run.js   (after ./setup.sh has written state.json)
  */
@@ -55,7 +55,7 @@ function wp(cmd) {
 function dbRows(query) {
   const raw = execFileSync(
     'docker',
-    ['exec', '-e', `AGSAFE_SQL=${query}`, '--user', 'www-data', state.cliContainer, 'wp', 'eval-file', '/tmp/agsafe-query.php'],
+    ['exec', '-e', `BELAYLINE_SQL=${query}`, '--user', 'www-data', state.cliContainer, 'wp', 'eval-file', '/tmp/belayline-query.php'],
     { encoding: 'utf8' }
   );
   const line = raw.trim().split('\n').filter(Boolean).pop() || '[]';
@@ -71,7 +71,7 @@ function dbCount(query) {
  * TCP connection every call, no keep-alive reuse): observed empirically that
  * Node's undici fetch can lose a pooled keep-alive connection after
  * products-list's large response, surfacing as "other side closed" on the
- * NEXT request — not an Agent Safety behaviour, a client/local-Apache
+ * NEXT request — not an Belayline behaviour, a client/local-Apache
  * keep-alive quirk in this harness.
  */
 async function mcp(body, sessionId) {
@@ -111,12 +111,12 @@ function haystack(resp) {
   }
 
   const tablePrefix = wp('config get table_prefix').trim();
-  const auditTable = `${tablePrefix}agsafe_audit_log`;
+  const auditTable = `${tablePrefix}belayline_audit_log`;
 
   // ---------- MCP handshake ----------
   const init = await mcp({
     jsonrpc: '2.0', id: 1, method: 'initialize',
-    params: { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: { name: 'agsafe-woo-mcp-smoke', version: '0.1.0' } },
+    params: { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: { name: 'belayline-woo-mcp-smoke', version: '0.1.0' } },
   });
   check('MCP initialize accepted', init.status === 200 && init.json && !init.json.error, JSON.stringify(init.json || init.raw).slice(0, 300));
   const sessionId = init.headers['mcp-session-id'];
@@ -135,7 +135,7 @@ function haystack(resp) {
   const need = {
     productsList: toolFor('woocommerce/products-list'),
     productsDelete: toolFor('woocommerce/products-delete'),
-    uncatalogued: toolFor('woocommerce/agsafe-smoke-widget-list'),
+    uncatalogued: toolFor('woocommerce/belayline-smoke-widget-list'),
   };
   for (const [k, name] of Object.entries(need)) {
     check(`tools/list exposes ${name}`, toolNames.includes(name), toolNames.join(','));
@@ -150,7 +150,7 @@ function haystack(resp) {
   const listOk = listRes.json?.result && !listRes.json.result.isError;
   check('woocommerce-products-list executes without error', listOk, JSON.stringify(listRes.json || listRes.raw).slice(0, 400));
   const listText = resultText(listRes.json?.result);
-  check('products-list response mentions the seeded product', listText.includes('AgSafe Stage 3 Widget') || listText.includes(String(state.product_id)), listText.slice(0, 400));
+  check('products-list response mentions the seeded product', listText.includes('Belayline Stage 3 Widget') || listText.includes(String(state.product_id)), listText.slice(0, 400));
   const after1 = dbCount(`SELECT COUNT(*) FROM ${auditTable} WHERE ability='woocommerce/products-list' AND decision='allowed'`);
   check('audit row(s) allowed for woocommerce/products-list', after1 > before1, `before=${before1} after=${after1}`);
 
@@ -172,7 +172,7 @@ function haystack(resp) {
   // Verdict::error()'s tier-neutral English message but NOT its structured
   // WP_Error code/data (status/verb/tier/approval_id) — see README's
   // "Live findings" section (finding 2, a documented transport limitation,
-  // not an Agent Safety defect). On THIS transport we therefore assert only
+  // not an Belayline defect). On THIS transport we therefore assert only
   // what actually crosses it: isError, the approval message text, that the
   // product survives, and DB ground truth for the filed approval + audit row.
   check('products-delete{force} call is refused (isError)', delRes.json?.result?.isError === true, JSON.stringify(delRes.json || delRes.raw).slice(0, 500));
@@ -188,7 +188,7 @@ function haystack(resp) {
 
   const after2 = dbCount(`SELECT COUNT(*) FROM ${auditTable} WHERE ability='woocommerce/products-delete' AND decision='pending'`);
   check('audit row(s) pending for woocommerce/products-delete', after2 > before2, `before=${before2} after=${after2}`);
-  const pendingApproval = dbRows(`SELECT approval_id, key_id FROM ${tablePrefix}agsafe_approvals WHERE verb='woocommerce/products-delete' AND status='pending' ORDER BY id DESC LIMIT 1`)[0];
+  const pendingApproval = dbRows(`SELECT approval_id, key_id FROM ${tablePrefix}belayline_approvals WHERE verb='woocommerce/products-delete' AND status='pending' ORDER BY id DESC LIMIT 1`)[0];
   check('a pending Approval row was actually filed (DB ground truth)', !!pendingApproval, JSON.stringify(pendingApproval));
   check('the pending Approval row\'s key_id is wc:<key_id>', pendingApproval?.key_id === `wc:${state.key_id}`, JSON.stringify(pendingApproval));
 
@@ -202,27 +202,27 @@ function haystack(resp) {
   check('case 2 audit row reason is approval_required', (row2.record_json || '').includes('"reason":"approval_required"'), row2.record_json);
 
   // ---------- Case 3: uncatalogued woocommerce/ ability -> unknown_verb ----------
-  const before3 = dbCount(`SELECT COUNT(*) FROM ${auditTable} WHERE ability='woocommerce/agsafe-smoke-widget-list'`);
+  const before3 = dbCount(`SELECT COUNT(*) FROM ${auditTable} WHERE ability='woocommerce/belayline-smoke-widget-list'`);
   const uncatRes = await mcp({
     jsonrpc: '2.0', id: 5, method: 'tools/call',
     params: { name: need.uncatalogued, arguments: {} },
   }, sessionId);
   const uncatHay = haystack(uncatRes);
   check('uncatalogued ability refused (isError)', uncatRes.json?.result?.isError === true, uncatHay.slice(0, 500));
-  const after3 = dbCount(`SELECT COUNT(*) FROM ${auditTable} WHERE ability='woocommerce/agsafe-smoke-widget-list'`);
+  const after3 = dbCount(`SELECT COUNT(*) FROM ${auditTable} WHERE ability='woocommerce/belayline-smoke-widget-list'`);
   check('audit row written for the uncatalogued attempt', after3 > before3, `before=${before3} after=${after3}`);
-  const denyReason = dbCount(`SELECT COUNT(*) FROM ${auditTable} WHERE ability='woocommerce/agsafe-smoke-widget-list' AND decision='denied' AND record_json LIKE '%unknown_verb%'`);
+  const denyReason = dbCount(`SELECT COUNT(*) FROM ${auditTable} WHERE ability='woocommerce/belayline-smoke-widget-list' AND decision='denied' AND record_json LIKE '%unknown_verb%'`);
   check('denial reason recorded is unknown_verb', denyReason >= 1, `rows=${denyReason}`);
 
-  // ---------- debug.log: no PHP warning/notice from agent-safety ----------
+  // ---------- debug.log: no PHP warning/notice from belayline ----------
   let debugLog = '';
   try {
     debugLog = execSync(`${CLI} bash -lc "test -f wp-content/debug.log && cat wp-content/debug.log || true"`, { encoding: 'utf8' });
   } catch (e) {
     debugLog = String(e.stdout || '');
   }
-  const agsafeIssues = debugLog.split('\n').filter((l) => /PHP (Warning|Notice|Deprecated)/i.test(l) && /agent-safety|Specflux\\AgentSafety/i.test(l));
-  check('debug.log has no PHP warning/notice/deprecated from agent-safety', agsafeIssues.length === 0, agsafeIssues.slice(0, 5).join(' | '));
+  const belaylineIssues = debugLog.split('\n').filter((l) => /PHP (Warning|Notice|Deprecated)/i.test(l) && /belayline|Belayline\\/i.test(l));
+  check('debug.log has no PHP warning/notice/deprecated from belayline', belaylineIssues.length === 0, belaylineIssues.slice(0, 5).join(' | '));
 
   const failed = results.filter((r) => !r.pass);
   console.log(`\n=== ${results.length - failed.length}/${results.length} checks passed ===`);

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\FluentCart;
+namespace Belayline\Plugin\Integrations\FluentCart;
 
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Approval\StateProbe;
-use Specflux\AgentSafety\Policy\ElevationRule;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Approval\StateProbe;
+use Belayline\Policy\ElevationRule;
+use Belayline\Policy\VerbCatalog;
 use wpdb;
 
 /**
@@ -49,7 +49,7 @@ final class FluentCartIntegration
     }
 
     /**
-     * Filter callback for `agent_safety_grant_eligible` (GrantGate; default
+     * Filter callback for `belayline_grant_eligible` (GrantGate; default
      * false): forces ineligible for {@see UNGRANTABLE_VERBS} whatever any other
      * callback said, so each refund or cancel needs its own human approval.
      * Register at PHP_INT_MAX priority. It can only narrow.
@@ -98,7 +98,7 @@ final class FluentCartIntegration
             $snapshotter = new FluentCartSnapshotter($db);
             $restore = new FluentCartRestoreAdapter($snapshotter, new FluentCartModelStore());
             add_filter(
-                'agent_safety_change_adapters',
+                'belayline_change_adapters',
                 static fn ($adapters): array => [...(is_array($adapters) ? $adapters : []), $snapshotter, $restore],
             );
         }

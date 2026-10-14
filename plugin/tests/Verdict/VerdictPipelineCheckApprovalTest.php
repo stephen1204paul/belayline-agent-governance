@@ -2,38 +2,38 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Verdict;
+namespace Belayline\Plugin\Tests\Verdict;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Gate\Outcome;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder;
-use Specflux\AgentSafety\Plugin\Support\ApprovalNotifier;
-use Specflux\AgentSafety\Plugin\Support\ArgumentCapGate;
-use Specflux\AgentSafety\Plugin\Support\DecisionRecorder;
-use Specflux\AgentSafety\Plugin\Support\PauseSwitch;
-use Specflux\AgentSafety\Plugin\Support\RateLimitGate;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Support\ShadowMode;
-use Specflux\AgentSafety\Plugin\Support\Tripwires;
-use Specflux\AgentSafety\Plugin\Support\WindowCounter;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeIdentityProvider;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
-use Specflux\AgentSafety\Plugin\Verdict\Hints;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictMode;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Gate\Outcome;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Support\AdminChangeRecorder;
+use Belayline\Plugin\Support\ApprovalNotifier;
+use Belayline\Plugin\Support\ArgumentCapGate;
+use Belayline\Plugin\Support\DecisionRecorder;
+use Belayline\Plugin\Support\PauseSwitch;
+use Belayline\Plugin\Support\RateLimitGate;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Support\ShadowMode;
+use Belayline\Plugin\Support\Tripwires;
+use Belayline\Plugin\Support\WindowCounter;
+use Belayline\Plugin\Tests\Fakes\FakeIdentityProvider;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Plugin\Verdict\Hints;
+use Belayline\Plugin\Verdict\VerdictMode;
+use Belayline\Plugin\Verdict\VerdictPipeline;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 
 /**
- * AS-8 (§3.5 item 3): `agent-safety/check-approval`'s named, exact exemption
+ * AS-8 (§3.5 item 3): `belayline/check-approval`'s named, exact exemption
  * from the caller's Pack, proven at the {@see VerdictPipeline::judge()} level
  * — independent of any Pack's allow list, denyClass wall, approval rule, rate
  * cap, the site pause, or a tripwire lockout. The ability's OWN scoping, rate
  * limit and audit rules live one layer up
- * ({@see \Specflux\AgentSafety\Plugin\Integrations\Self\CheckApprovalAbility})
+ * ({@see \Belayline\Plugin\Integrations\Self\CheckApprovalAbility})
  * and are covered in CheckApprovalAbilityTest.
  */
 final class VerdictPipelineCheckApprovalTest extends TestCase
@@ -83,7 +83,7 @@ final class VerdictPipelineCheckApprovalTest extends TestCase
         $changes = new AdminChangeRecorder($this->sink);
 
         return new VerdictPipeline(
-            new \Specflux\AgentSafety\Gate\Gate(new TierClassifier($catalog)),
+            new \Belayline\Gate\Gate(new TierClassifier($catalog)),
             new DecisionRecorder($this->sink),
             null,
             new RateLimitGate(),
@@ -95,7 +95,7 @@ final class VerdictPipelineCheckApprovalTest extends TestCase
         );
     }
 
-    /** Every real Pack's allow list omits agent-safety/*; the default-agent shape allows nothing. */
+    /** Every real Pack's allow list omits belayline/*; the default-agent shape allows nothing. */
     private function fenceless(): Pack
     {
         return new Pack(
@@ -165,7 +165,7 @@ final class VerdictPipelineCheckApprovalTest extends TestCase
         $changes = new AdminChangeRecorder($this->sink);
 
         return new VerdictPipeline(
-            new \Specflux\AgentSafety\Gate\Gate(new TierClassifier($catalog)),
+            new \Belayline\Gate\Gate(new TierClassifier($catalog)),
             new DecisionRecorder($this->sink),
             null,
             new RateLimitGate(),
@@ -230,10 +230,10 @@ final class VerdictPipelineCheckApprovalTest extends TestCase
     public function testExemptionIsExactNotTheWholeNamespace(): void
     {
         // Namespace is governed, but only the ONE verb is exempt: any other
-        // agent-safety/* verb the catalog never mapped denies unknown_verb,
+        // belayline/* verb the catalog never mapped denies unknown_verb,
         // exactly like any other ungoverned write.
         $verdict = $this->pipeline()->judge(
-            'agent-safety/some-other-verb',
+            'belayline/some-other-verb',
             [],
             $this->fenceless(),
             Hints::none(),

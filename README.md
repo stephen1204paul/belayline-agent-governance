@@ -1,14 +1,14 @@
-# SenroGate
+# Belayline Agent Governance
 
 A governed safety and audit layer for AI-agent tool calls in WordPress - verb-tier gating, capability packs, human approval, and a hash-chained audit trail.
 
-[![CI](https://github.com/stephen1204paul/senrogate/actions/workflows/ci.yml/badge.svg)](https://github.com/stephen1204paul/senrogate/actions/workflows/ci.yml)
+[![CI](https://github.com/stephen1204paul/belayline-agent-governance/actions/workflows/ci.yml/badge.svg)](https://github.com/stephen1204paul/belayline-agent-governance/actions/workflows/ci.yml)
 
 ## Why
 
 AI agents are starting to call WordPress the same way plugins do - through the Abilities API, and through MCP servers built on [WordPress/mcp-adapter](https://github.com/WordPress/mcp-adapter). That's a new kind of caller: not a human clicking through wp-admin, and not a plugin whose code you audited once and trust to behave the same way every time. An agent decides *at runtime* which tool to call and with what arguments, and it can decide wrong - refund the wrong order, or delete a product it was only asked to edit - with no confirmation step and no record of why.
 
-Most integrations answer this by trusting the tool's own metadata (a `readOnlyHint` annotation, a "safe" label) or by trusting the credential (an application password can do whatever the underlying REST route allows). Neither is a policy. SenroGate sits between the agent and the site and makes that policy explicit: every governed tool call is classified, checked against a capability pack bound to the calling identity, and written to an audit log - before it runs.
+Most integrations answer this by trusting the tool's own metadata (a `readOnlyHint` annotation, a "safe" label) or by trusting the credential (an application password can do whatever the underlying REST route allows). Neither is a policy. Belayline Agent Governance sits between the agent and the site and makes that policy explicit: every governed tool call is classified, checked against a capability pack bound to the calling identity, and written to an audit log - before it runs.
 
 It ships WordPress-general. WooCommerce is the flagship integration, wired in only when WooCommerce is active, not a dependency.
 
@@ -55,13 +55,13 @@ Every governed call goes through the same pipeline, regardless of whether it arr
 
 **Shadow mode.** A pack can be switched to "log only" under **Tools → Agent Capability Packs**: every verdict is still evaluated and audited (marked `dry_run`), nothing is enforced, and no pending approvals are minted for calls that already ran. Observation is time-boxed - the toggle offers 1, 3 or 7 days and a pack is never shadowed for more than 7 days from one toggle; when the window lapses, enforcement resumes on its own and the hourly sweep records a `shadow.expired` event. Anything that would keep a pack shadowed without a valid expiry (a hand-edited option, a filter returning a bare list) is treated as not shadowed.
 
-**Hash-chained audit log.** Every gate decision and every executed action is appended to a tamper-evident, hash-chained log (`agsafe_` prefixed tables), viewable and CSV-exportable under **Tools → Agent Audit Log**. The chain is re-verified on load, so a modified or deleted row shows up the next time anyone opens the log. Configuration changes made in wp-admin are in the same chain: switching shadow mode on or off (`shadow.enabled` / `shadow.disabled`) and rebinding a credential to a different pack (`binding.changed`, with the old and new pack) each write a row naming the administrator who did it.
+**Hash-chained audit log.** Every gate decision and every executed action is appended to a tamper-evident, hash-chained log (`belayline_` prefixed tables), viewable and CSV-exportable under **Tools → Agent Audit Log**. The chain is re-verified on load, so a modified or deleted row shows up the next time anyone opens the log. Configuration changes made in wp-admin are in the same chain: switching shadow mode on or off (`shadow.enabled` / `shadow.disabled`) and rebinding a credential to a different pack (`binding.changed`, with the old and new pack) each write a row naming the administrator who did it.
 
 **Read-path PII redaction.** Packs that request it get known PII fields (email, phone, name, address, etc.) masked both in what's written to the audit log and in the data returned to the agent.
 
-**MCP observability.** Where a site runs an MCP server built on `mcp-adapter` (as WooCommerce's does), SenroGate registers as that adapter's observability handler (`McpRequestAuditHandler`) and audits denied and blocked tool calls at the MCP layer too - using the adapter's public API, with no changes to mcp-adapter itself.
+**MCP observability.** Where a site runs an MCP server built on `mcp-adapter` (as WooCommerce's does), Belayline Agent Governance registers as that adapter's observability handler (`McpRequestAuditHandler`) and audits denied and blocked tool calls at the MCP layer too - using the adapter's public API, with no changes to mcp-adapter itself.
 
-Governed namespaces are opt-in: on a bare site the plugin governs nothing - namespaces are contributed by integration modules (the WooCommerce one governs `woocommerce/*`) or by the `agent_safety_governed_namespaces` filter. Governing a namespace without also mapping its verbs to tiers gets every call in it denied as an unknown verb - that's the fail-closed default working as intended, not a bug.
+Governed namespaces are opt-in: on a bare site the plugin governs nothing - namespaces are contributed by integration modules (the WooCommerce one governs `woocommerce/*`) or by the `belayline_governed_namespaces` filter. Governing a namespace without also mapping its verbs to tiers gets every call in it denied as an unknown verb - that's the fail-closed default working as intended, not a bug.
 
 ## Installation
 
@@ -70,35 +70,35 @@ Requirements: WordPress 7.0+, PHP 8.1+.
 This is not yet packaged for the plugin directory. To run it from source:
 
 ```sh
-git clone https://github.com/stephen1204paul/senrogate.git
+git clone https://github.com/stephen1204paul/belayline-agent-governance.git
 cd agent-safety
 composer install
 cd plugin
 composer install
 ```
 
-Then symlink or copy `plugin/` into `wp-content/plugins/senrogate` and activate **SenroGate** from the Plugins screen. WooCommerce support activates automatically if WooCommerce is active; nothing else to configure for it to be safe-by-default.
+Then symlink or copy `plugin/` into `wp-content/plugins/belayline-agent-governance` and activate **Belayline Agent Governance** from the Plugins screen. WooCommerce support activates automatically if WooCommerce is active; nothing else to configure for it to be safe-by-default.
 
-Uninstalling leaves the audit log and approval tables in place by default - it's a compliance record, and silently dropping it on uninstall would defeat the point. To have uninstall remove them, define `AGSAFE_REMOVE_DATA` as `true` before deleting the plugin.
+Uninstalling leaves the audit log and approval tables in place by default - it's a compliance record, and silently dropping it on uninstall would defeat the point. To have uninstall remove them, define `BELAYLINE_REMOVE_DATA` as `true` before deleting the plugin.
 
 ## Configuration
 
-SenroGate is configured mostly through wp-admin (**Tools → Agent Capability Packs**, **Tools → Pending Agent Actions**, **Tools → Agent Audit Log**) plus a small set of filters for extending the policy programmatically:
+Belayline Agent Governance is configured mostly through wp-admin (**Tools → Agent Capability Packs**, **Tools → Pending Agent Actions**, **Tools → Agent Audit Log**) plus a small set of filters for extending the policy programmatically:
 
 | Filter | Purpose |
 | --- | --- |
-| `agent_safety_governed_namespaces` | Widen the set of ability namespaces the plugin governs beyond `core/*`, without writing a full integration module. |
-| `agent_safety_verb_map` | Map additional verbs to tiers (`Tier` instance or its backing int: `0` Reversible, `1` SideEffecting, `2` Irreversible). Required companion to the namespace filter above - an unmapped verb in a governed namespace is denied, not allowed. |
-| `agent_safety_pack_registry` | Replace or extend the `PackRegistry` (catalog + bindings) surfaced to the admin Packs UI, for bespoke pack catalogs. |
-| `agent_safety_map_verb` | Extend tool-name → verb mapping for extensions registering their own namespaced abilities (used internally by the WooCommerce integration for `woocommerce-{resource}-{action}` → `woocommerce/{resource}-{action}`). |
-| `agent_safety_elevation_rules` | Contribute argument-aware tier-elevation rules (`ElevationRule` instances), for a verb whose blast radius depends on its arguments - publish vs draft, bulk vs single. Companion to the two filters above. May only add rules, and a rule can only ever raise a tier, so this narrows and never widens. |
-| `agent_safety_approval_summary` | Rewrite the human-facing summary of a pending action before it is stored (receives the flat summary, the verb, the input). A rewritten summary is rendered on the review screen through `wp_kses` allowing only `<a href>`; the binding (verb + args hash + principal) is outside the filter's reach. |
-| `agent_safety_enable_grants` | **Default `false`.** Turn on pre-approval grants: a human authorises up to N future calls of one verb inside one scope, instead of clicking once per action. Nothing about grants happens while this is off. |
-| `agent_safety_grant_eligible` | **Default `false`.** Decide whether an active grant covers THESE call arguments (receives the `Grant`, the verb and the args). Grants are per-verb, so this is where a host that knows which objects the human accepted says yes. A missing hook means no grant applies - never that every grant applies to any object. |
-| `agent_safety_can_grant` | Decide whether a grantor may issue a pre-approval grant (receives the default - whether the grantor holds `manage_options` - then the grantor's user id, the verb, the count and the scope). Only a literal `true` issues; anything else refuses and writes a `grant.refused` audit event. A grant with no grantor is refused before this filter runs. |
-| `agent_safety_grant_max_count` | The most calls one grant may carry (default 50). A request above it is refused and audited as `count_above_max`, not clamped; a filtered value that is not a positive int falls back to the default. |
-| `agent_safety_grant_ttl` | Hard grant lifetime in seconds, applied when a grant is issued (default 24 hours, which is also the ceiling - a longer filtered value is clamped to 24 hours). |
-| `agent_safety_shadow_packs` | Adjust which packs are in shadow (log-only) mode. Receives and must return `pack name => unix expiry timestamp`; an entry counts only while its expiry is an int in the future and no more than 7 days ahead. A bare list of names, a non-int, a lapsed or far-future stamp all mean "not shadowed" - the filter can shorten or end an observation, never make one permanent. |
+| `belayline_governed_namespaces` | Widen the set of ability namespaces the plugin governs beyond `core/*`, without writing a full integration module. |
+| `belayline_verb_map` | Map additional verbs to tiers (`Tier` instance or its backing int: `0` Reversible, `1` SideEffecting, `2` Irreversible). Required companion to the namespace filter above - an unmapped verb in a governed namespace is denied, not allowed. |
+| `belayline_pack_registry` | Replace or extend the `PackRegistry` (catalog + bindings) surfaced to the admin Packs UI, for bespoke pack catalogs. |
+| `belayline_map_verb` | Extend tool-name → verb mapping for extensions registering their own namespaced abilities (used internally by the WooCommerce integration for `woocommerce-{resource}-{action}` → `woocommerce/{resource}-{action}`). |
+| `belayline_elevation_rules` | Contribute argument-aware tier-elevation rules (`ElevationRule` instances), for a verb whose blast radius depends on its arguments - publish vs draft, bulk vs single. Companion to the two filters above. May only add rules, and a rule can only ever raise a tier, so this narrows and never widens. |
+| `belayline_approval_summary` | Rewrite the human-facing summary of a pending action before it is stored (receives the flat summary, the verb, the input). A rewritten summary is rendered on the review screen through `wp_kses` allowing only `<a href>`; the binding (verb + args hash + principal) is outside the filter's reach. |
+| `belayline_enable_grants` | **Default `false`.** Turn on pre-approval grants: a human authorises up to N future calls of one verb inside one scope, instead of clicking once per action. Nothing about grants happens while this is off. |
+| `belayline_grant_eligible` | **Default `false`.** Decide whether an active grant covers THESE call arguments (receives the `Grant`, the verb and the args). Grants are per-verb, so this is where a host that knows which objects the human accepted says yes. A missing hook means no grant applies - never that every grant applies to any object. |
+| `belayline_can_grant` | Decide whether a grantor may issue a pre-approval grant (receives the default - whether the grantor holds `manage_options` - then the grantor's user id, the verb, the count and the scope). Only a literal `true` issues; anything else refuses and writes a `grant.refused` audit event. A grant with no grantor is refused before this filter runs. |
+| `belayline_grant_max_count` | The most calls one grant may carry (default 50). A request above it is refused and audited as `count_above_max`, not clamped; a filtered value that is not a positive int falls back to the default. |
+| `belayline_grant_ttl` | Hard grant lifetime in seconds, applied when a grant is issued (default 24 hours, which is also the ceiling - a longer filtered value is clamped to 24 hours). |
+| `belayline_shadow_packs` | Adjust which packs are in shadow (log-only) mode. Receives and must return `pack name => unix expiry timestamp`; an entry counts only while its expiry is an int in the future and no more than 7 days ahead. A bare list of names, a non-int, a lapsed or far-future stamp all mean "not shadowed" - the filter can shorten or end an observation, never make one permanent. |
 
 Identity bindings (which pack applies to which application password, user, role, or WooCommerce API key) are managed under **Tools → Agent Capability Packs**; there is no code-level API for bindings beyond that screen and the registry filter above. Every binding change and shadow-mode toggle made on that screen is written to the audit log.
 
@@ -128,7 +128,7 @@ The core library (root `src/`) makes zero WordPress function calls - it's tested
 ## Project layout
 
 ```
-src/                         specflux/agent-safety-core - framework-agnostic, PHP >=8.1, no WP calls
+src/                         stephen1204paul/belayline-core - framework-agnostic, PHP >=8.1, no WP calls
   Policy/                    Tier, VerbCatalog, TierClassifier, ElevationRule
   Gate/                      Gate, GateContext, Decision, Outcome
   Packs/                     Pack, PackRegistry, LimitPolicy, LimitCheck
@@ -136,8 +136,8 @@ src/                         specflux/agent-safety-core - framework-agnostic, PH
   Audit/                     AuditRecord, AuditDecision, AuditSink, HashChain, Redactor
 tests/                       PHPUnit tests for the core
 
-plugin/                      specflux/agent-safety - WordPress plugin host
-  senrogate.php         plugin bootstrap (main file)
+plugin/                      stephen1204paul/belayline-agent-governance - WordPress plugin host
+  belayline-agent-governance.php         plugin bootstrap (main file)
   src/
     Identity/                IdentityChain + providers (app password, user/role)
     Hooks/                   PreToolCallGate, AbilityPermissionGate, AbilityAuditLog,

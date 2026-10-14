@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Fakes;
+namespace Belayline\Plugin\Tests\Fakes;
 
 use RuntimeException;
-use Specflux\AgentSafety\Changes\ChangeSnapshotter;
-use Specflux\AgentSafety\Changes\SnapshotRef;
+use Belayline\Changes\ChangeSnapshotter;
+use Belayline\Changes\SnapshotRef;
 
 final class FakeStoreSnapshotter implements ChangeSnapshotter
 {

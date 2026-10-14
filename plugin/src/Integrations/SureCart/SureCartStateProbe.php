@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\SureCart;
+namespace Belayline\Plugin\Integrations\SureCart;
 
 use Closure;
-use Specflux\AgentSafety\Plugin\Approval\StateProbe;
+use Belayline\Plugin\Approval\StateProbe;
 use Throwable;
 
 /**

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\Core;
+namespace Belayline\Plugin\Tests\Integrations\Core;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Integrations\Core\CoreIntegration;
-use Specflux\AgentSafety\Plugin\Integrations\Core\CoreVerbCatalog;
+use Belayline\Policy\Tier;
+use Belayline\Policy\VerbCatalog;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Integrations\Core\CoreIntegration;
+use Belayline\Plugin\Integrations\Core\CoreVerbCatalog;
 
 /**
  * The Core module is wired unconditionally, so its contract is simpler than

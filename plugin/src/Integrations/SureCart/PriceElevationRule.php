@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\SureCart;
+namespace Belayline\Plugin\Integrations\SureCart;
 
-use Specflux\AgentSafety\Policy\ElevationRule;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Policy\ElevationRule;
+use Belayline\Policy\Tier;
 
 /**
  * update-price that sets an amount, or archives the price, goes live for

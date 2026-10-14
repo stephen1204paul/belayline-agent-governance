@@ -2,29 +2,29 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Changes;
+namespace Belayline\Plugin\Tests\Changes;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Audit\AuditRecord;
-use Specflux\AgentSafety\Audit\HashChain;
-use Specflux\AgentSafety\Changes\CaptureWindow;
-use Specflux\AgentSafety\Changes\Change;
-use Specflux\AgentSafety\Changes\ChangeAction;
-use Specflux\AgentSafety\Changes\StoredChange;
-use Specflux\AgentSafety\Changes\UndoItem;
-use Specflux\AgentSafety\Changes\UndoResult;
-use Specflux\AgentSafety\Changes\UndoScope;
-use Specflux\AgentSafety\Plugin\Changes\ChangeAdapters;
-use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
-use Specflux\AgentSafety\Plugin\Changes\UndoService;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\ChainingSink;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryChangeLedger;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\WidgetAdapter;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Audit\AuditRecord;
+use Belayline\Audit\HashChain;
+use Belayline\Changes\CaptureWindow;
+use Belayline\Changes\Change;
+use Belayline\Changes\ChangeAction;
+use Belayline\Changes\StoredChange;
+use Belayline\Changes\UndoItem;
+use Belayline\Changes\UndoResult;
+use Belayline\Changes\UndoScope;
+use Belayline\Plugin\Changes\ChangeAdapters;
+use Belayline\Plugin\Changes\ChangeCapture;
+use Belayline\Plugin\Changes\UndoService;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\ChainingSink;
+use Belayline\Plugin\Tests\Fakes\InMemoryChangeLedger;
+use Belayline\Plugin\Tests\Fakes\WidgetAdapter;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 
 /** The undo engine against the write shims in tests/bootstrap.php, which dispatch the hooks the adapters listen on. */
 final class UndoServiceTest extends TestCase

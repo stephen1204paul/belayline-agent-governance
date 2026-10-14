@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin;
+namespace Belayline\Plugin;
 
-use Specflux\AgentSafety\Plugin\Api\AbilityReviews;
-use Specflux\AgentSafety\Plugin\Api\Approvals;
-use Specflux\AgentSafety\Plugin\Api\Changes;
-use Specflux\AgentSafety\Plugin\Api\Grants;
-use Specflux\AgentSafety\Plugin\Support\PauseSwitch;
+use Belayline\Plugin\Api\AbilityReviews;
+use Belayline\Plugin\Api\Approvals;
+use Belayline\Plugin\Api\Changes;
+use Belayline\Plugin\Api\Grants;
+use Belayline\Plugin\Support\PauseSwitch;
 
 /**
  * The plugin's service locator, built ONCE by the bootstrap after every seam
  * is wired, and reached from anywhere (other plugins, wp-admin, site code)
- * through the global {@see agent_safety()} helper.
+ * through the global {@see belayline()} helper.
  *
  * Deliberately minimal: it exposes only the services with an external
  * contract. Internal collaborators (gate, classifier, recorder…) stay
@@ -42,7 +42,7 @@ final class Container
     /**
      * The container, or null before `plugins_loaded` (or when the core lib is
      * missing/broken and the bootstrap bailed early). Callers MUST null-check:
-     * null means "Agent Safety isn't wired yet", never "throw".
+     * null means "Belayline isn't wired yet", never "throw".
      */
     public static function instance(): ?self
     {
@@ -67,7 +67,7 @@ final class Container
      * ordinary per-action approvals rather than assuming grants exist.
      *
      * Note that a non-null service is NOT the same as the feature being on —
-     * `agent_safety_enable_grants` defaults to false, and {@see Grants::issue()}
+     * `belayline_enable_grants` defaults to false, and {@see Grants::issue()}
      * refuses while it is off. Check {@see Grants::enabled()} if you need to
      * tell a user why nothing was issued.
      */
@@ -94,8 +94,8 @@ final class Container
      * enforced inside the service (capability, no agent contexts, no force);
      * the nonce check belongs to the caller.
      *
-     *   agent_safety()?->changes()?->forCorrelation($id);
-     *   agent_safety()?->changes()?->undo($set->scope(), get_current_user_id());
+     *   belayline()?->changes()?->forCorrelation($id);
+     *   belayline()?->changes()?->undo($set->scope(), get_current_user_id());
      */
     public function changes(): ?Changes
     {
@@ -107,8 +107,8 @@ final class Container
      * ability. Never null, since it needs no database; feature-detect the
      * METHOD on older copies:
      *
-     *   function_exists('agent_safety') && method_exists(agent_safety(), 'abilityReviews')
-     *   agent_safety()->abilityReviews()->status('acme/export'); // 'reviewed' | 'unreviewed' | 'blocked'
+     *   function_exists('belayline') && method_exists(belayline(), 'abilityReviews')
+     *   belayline()->abilityReviews()->status('acme/export'); // 'reviewed' | 'unreviewed' | 'blocked'
      */
     public function abilityReviews(): AbilityReviews
     {

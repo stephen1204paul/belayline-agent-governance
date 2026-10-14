@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Tests\Changes;
+namespace Belayline\Tests\Changes;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Changes\CaptureWindow;
-use Specflux\AgentSafety\Changes\Change;
-use Specflux\AgentSafety\Changes\ChangeAction;
-use Specflux\AgentSafety\Changes\ChangeSet;
+use Belayline\Changes\CaptureWindow;
+use Belayline\Changes\Change;
+use Belayline\Changes\ChangeAction;
+use Belayline\Changes\ChangeSet;
 
 final class CaptureWindowTest extends TestCase
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Changes;
+namespace Belayline\Changes;
 
 /** What happened to the object. `Irreversible` is recorded for the history but can never be undone. */
 enum ChangeAction: string

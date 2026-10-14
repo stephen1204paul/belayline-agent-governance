@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Policy;
+namespace Belayline\Policy;
 
 /**
  * Blast-radius classification for an agent verb.

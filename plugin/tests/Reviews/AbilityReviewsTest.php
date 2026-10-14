@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Reviews;
+namespace Belayline\Plugin\Tests\Reviews;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Gate\Gate;
-use Specflux\AgentSafety\Plugin\Admin\AbilitiesPage;
-use Specflux\AgentSafety\Plugin\Api\AbilityReviews;
-use Specflux\AgentSafety\Plugin\Container;
-use Specflux\AgentSafety\Plugin\Hooks\AbilityPermissionGate;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Reviews\ReviewedAbilitiesPack;
-use Specflux\AgentSafety\Plugin\Support\DecisionRecorder;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeApprovalStore;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeIdentityProvider;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Gate\Gate;
+use Belayline\Plugin\Admin\AbilitiesPage;
+use Belayline\Plugin\Api\AbilityReviews;
+use Belayline\Plugin\Container;
+use Belayline\Plugin\Hooks\AbilityPermissionGate;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Reviews\ReviewedAbilitiesPack;
+use Belayline\Plugin\Support\DecisionRecorder;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\FakeApprovalStore;
+use Belayline\Plugin\Tests\Fakes\FakeIdentityProvider;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Plugin\Verdict\VerdictPipeline;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 use WP_Error;
 
 /**
@@ -68,7 +68,7 @@ final class AbilityReviewsTest extends TestCase
     private function boot(array $abilities): array
     {
         remove_all_filters('wp_register_ability_args');
-        remove_all_filters('agent_safety_grant_eligible');
+        remove_all_filters('belayline_grant_eligible');
         $catalog = new VerbCatalog();
         $reviews = new AbilityReviews($catalog);
         $reviews->register();
@@ -115,10 +115,10 @@ final class AbilityReviewsTest extends TestCase
         if (!$result instanceof WP_Error) {
             return 'allowed';
         }
-        // A deny carries its reason after the pack name: "Blocked by SenroGate (pack): reason".
+        // A deny carries its reason after the pack name: "Blocked by Belayline Agent Governance (pack): reason".
         $code = (string) $result->get_error_code();
 
-        return $code === 'agent_safety_denied' ? substr((string) strrchr($result->get_error_message(), ' '), 1) : $code;
+        return $code === 'belayline_denied' ? substr((string) strrchr($result->get_error_message(), ' '), 1) : $code;
     }
 
     public function testUnreviewedAbilityInAnUngovernedNamespaceIsUntouchedAndReportsUnreviewed(): void
@@ -137,7 +137,7 @@ final class AbilityReviewsTest extends TestCase
             ['name' => 'acme/wipe', 'label' => 'Wipe', 'description' => '', 'annotations' => [], 'schema' => self::SCHEMA],
         ];
         $reviews = new AbilityReviews();
-        $page = new AbilitiesPage($reviews, [], new \Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder(), static fn () => $abilities);
+        $page = new AbilitiesPage($reviews, [], new \Belayline\Plugin\Support\AdminChangeRecorder(), static fn () => $abilities);
 
         $this->assertSame('read', AbilitiesPage::suggestion(['readonly' => true])?->value);
         $this->assertNull(AbilitiesPage::suggestion(['readonly' => 'yes']));
@@ -215,10 +215,10 @@ final class AbilityReviewsTest extends TestCase
         $this->assertSame('approval_required', self::codeOf($cb['acme/purge']([])));
 
         // A site that turns grants on and says "everything is eligible" still cannot grant it.
-        add_filter('agent_safety_grant_eligible', static fn () => true, 10, 4);
-        $this->assertFalse(apply_filters('agent_safety_grant_eligible', false, null, 'acme/purge', []));
-        $this->assertFalse(apply_filters('agent_safety_grant_eligible', true, null, 'acme/purge', []));
-        $this->assertTrue(apply_filters('agent_safety_grant_eligible', false, null, 'acme/edit', []), 'other verbs keep the site\'s answer');
+        add_filter('belayline_grant_eligible', static fn () => true, 10, 4);
+        $this->assertFalse(apply_filters('belayline_grant_eligible', false, null, 'acme/purge', []));
+        $this->assertFalse(apply_filters('belayline_grant_eligible', true, null, 'acme/purge', []));
+        $this->assertTrue(apply_filters('belayline_grant_eligible', false, null, 'acme/edit', []), 'other verbs keep the site\'s answer');
     }
 
     public function testSchemaDriftReturnsToUnreviewedAndCallsAreRefused(): void
@@ -254,7 +254,7 @@ final class AbilityReviewsTest extends TestCase
     {
         $abilities = [['name' => 'acme/list', 'label' => '', 'description' => '', 'annotations' => [], 'schema' => self::SCHEMA]];
         $reviews = new AbilityReviews();
-        $page = new AbilitiesPage($reviews, [], new \Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder($this->sink), static fn () => $abilities);
+        $page = new AbilitiesPage($reviews, [], new \Belayline\Plugin\Support\AdminChangeRecorder($this->sink), static fn () => $abilities);
 
         $this->assertFalse($page->applyNamespace('acme/', ['acme/list' => 'read'], '', false, 7));
         $this->assertSame('unreviewed', $reviews->status('acme/list'));
@@ -277,7 +277,7 @@ final class AbilityReviewsTest extends TestCase
     {
         $abilities = [['name' => 'woocommerce/orders-get', 'label' => '', 'description' => '', 'annotations' => [], 'schema' => null]];
         $reviews = new AbilityReviews();
-        $page = new AbilitiesPage($reviews, ['woocommerce/'], new \Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder(), static fn () => $abilities);
+        $page = new AbilitiesPage($reviews, ['woocommerce/'], new \Belayline\Plugin\Support\AdminChangeRecorder(), static fn () => $abilities);
 
         $this->assertSame([], $page->reviewable());
         $this->assertTrue($page->applyNamespace('woocommerce/', [], 'read', true, 7));
@@ -286,7 +286,7 @@ final class AbilityReviewsTest extends TestCase
 
     public function testSaveRequiresCapabilityAndNonce(): void
     {
-        $page = new AbilitiesPage(new AbilityReviews(), [], new \Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder(), static fn () => []);
+        $page = new AbilitiesPage(new AbilityReviews(), [], new \Belayline\Plugin\Support\AdminChangeRecorder(), static fn () => []);
 
         $GLOBALS['wpas_test_user_caps'] = [];
         try {
@@ -305,15 +305,15 @@ final class AbilityReviewsTest extends TestCase
         }
     }
 
-    public function testStatusContractIsCallableTheWayTheSenroFluxProbeCallsIt(): void
+    public function testStatusContractIsCallableTheWayTheSite AgentProbeCallsIt(): void
     {
         $this->review(['acme/list' => 'read', 'acme/nuke' => 'blocked']);
         [$reviews] = $this->boot(['acme/list' => self::ability(), 'acme/nuke' => self::ability()]);
         Container::init(null, null, null, null, $reviews);
 
         // The probe: feature-detect, then ask. A missing method means "not exposed".
-        $this->assertTrue(function_exists('agent_safety') && method_exists(agent_safety(), 'abilityReviews'));
-        $service = agent_safety()->abilityReviews();
+        $this->assertTrue(function_exists('belayline') && method_exists(belayline(), 'abilityReviews'));
+        $service = belayline()->abilityReviews();
 
         $this->assertSame('reviewed', $service->status('acme/list'));
         $this->assertSame('blocked', $service->status('acme/nuke'));

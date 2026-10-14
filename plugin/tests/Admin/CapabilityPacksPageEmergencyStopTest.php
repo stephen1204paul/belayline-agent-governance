@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Admin;
+namespace Belayline\Plugin\Tests\Admin;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use Specflux\AgentSafety\Plugin\Admin\CapabilityPacksPage;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\PauseSwitch;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Support\ShadowMode;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Plugin\Admin\CapabilityPacksPage;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Support\AdminChangeRecorder;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\PauseSwitch;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Support\ShadowMode;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
 
 /**
  * The emergency stop on the Packs screen: pauseAction()/resumeAction() are
@@ -21,8 +21,8 @@ use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
  * exit, unreachable under the test shims), success is proven through
  * applyPause()/applyResume(), and the render side (renderEmergencyStop(),
  * pausedNotice()) is proven by output. What a pause does to a governed call
- * is proven in {@see \Specflux\AgentSafety\Plugin\Tests\Verdict\VerdictPipelineStopsTest};
- * the switch itself in {@see \Specflux\AgentSafety\Plugin\Tests\Support\PauseSwitchTest}.
+ * is proven in {@see \Belayline\Plugin\Tests\Verdict\VerdictPipelineStopsTest};
+ * the switch itself in {@see \Belayline\Plugin\Tests\Support\PauseSwitchTest}.
  */
 final class CapabilityPacksPageEmergencyStopTest extends TestCase
 {
@@ -245,7 +245,7 @@ final class CapabilityPacksPageEmergencyStopTest extends TestCase
         $this->page->pausedNotice();
         $out = (string) ob_get_clean();
 
-        $this->assertStringContainsString('SenroGate: all agent actions are paused.', $out);
+        $this->assertStringContainsString('Belayline Agent Governance: all agent actions are paused.', $out);
         $this->assertStringContainsString('Review or resume', $out);
     }
 
@@ -270,7 +270,7 @@ final class CapabilityPacksPageEmergencyStopTest extends TestCase
 
         $this->assertStringContainsString('All agent actions are paused.', $out);
         $this->assertStringContainsString('Since ' . gmdate('Y-m-d H:i', self::NOW) . ' UTC by user #7. Reason: runaway bot', $out);
-        $this->assertStringContainsString('value="agsafe_resume"', $out);
+        $this->assertStringContainsString('value="belayline_resume"', $out);
     }
 
     public function testRenderShowsTheBannerButNoResumeFormForAFilterForcedPause(): void
@@ -283,7 +283,7 @@ final class CapabilityPacksPageEmergencyStopTest extends TestCase
 
         $this->assertStringContainsString('All agent actions are paused.', $out);
         $this->assertStringContainsString('Forced by the ' . PauseSwitch::FILTER . ' filter', $out);
-        $this->assertStringNotContainsString('value="agsafe_resume"', $out);
+        $this->assertStringNotContainsString('value="belayline_resume"', $out);
         $this->assertStringNotContainsString('Resume agent actions', $out);
     }
 

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Privacy;
+namespace Belayline\Plugin\Privacy;
 
 use wpdb;
 
 /**
  * Read side of the audit log scoped to ONE WordPress user, for the
  * personal-data exporter and eraser (§3.6 item 2). Matches ONLY the `wp_user`
- * column {@see \Specflux\AgentSafety\Plugin\Audit\WpdbAuditSink} writes
+ * column {@see \Belayline\Plugin\Audit\WpdbAuditSink} writes
  * alongside `record_json` (mirroring the audit record's `actor.wp_user`) —
  * never `input` or any other field — so a tool argument that happens to
  * contain someone else's email can never leak their audit rows into an
@@ -23,7 +23,7 @@ final class PrivacyAuditReader
 
     public function table(): string
     {
-        return $this->db->prefix . 'agsafe_audit_log';
+        return $this->db->prefix . 'belayline_audit_log';
     }
 
     /** Total rows for this user, across every page. */

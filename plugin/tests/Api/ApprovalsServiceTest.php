@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Api;
+namespace Belayline\Plugin\Tests\Api;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Audit\AuditDecision;
-use Specflux\AgentSafety\Plugin\Api\Approvals;
-use Specflux\AgentSafety\Plugin\Api\ApprovalSummary;
-use Specflux\AgentSafety\Plugin\Approval\StateFingerprint;
-use Specflux\AgentSafety\Plugin\Approval\StateProbe;
-use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
-use Specflux\AgentSafety\Plugin\Container;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Audit\AuditDecision;
+use Belayline\Plugin\Api\Approvals;
+use Belayline\Plugin\Api\ApprovalSummary;
+use Belayline\Plugin\Approval\StateFingerprint;
+use Belayline\Plugin\Approval\StateProbe;
+use Belayline\Plugin\Audit\WpdbApprovalStore;
+use Belayline\Plugin\Container;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
 use wpdb;
 
 /**
@@ -158,13 +158,13 @@ final class ApprovalsServiceTest extends TestCase
      */
     public function testContainerExposesTheServiceThroughTheGlobalLocator(): void
     {
-        $this->assertTrue(function_exists('agent_safety'), 'the global locator must exist once api.php has loaded');
-        $this->assertNull(agent_safety(), 'before bootstrap init the container is null');
+        $this->assertTrue(function_exists('belayline'), 'the global locator must exist once api.php has loaded');
+        $this->assertNull(belayline(), 'before bootstrap init the container is null');
 
         $service = $this->service();
         Container::init($service);
 
-        $container = agent_safety();
+        $container = belayline();
         $this->assertNotNull($container);
         $this->assertSame($service, $container->approvals());
     }
@@ -174,14 +174,14 @@ final class ApprovalsServiceTest extends TestCase
         return new Approvals(new WpdbApprovalStore($this->db), $this->sink);
     }
 
-    /** @return list<mixed[]> args of every agent_safety_approval_resolved firing */
+    /** @return list<mixed[]> args of every belayline_approval_resolved firing */
     private function resolvedActions(): array
     {
         return array_map(
             static fn (array $a): array => array_slice($a, 1),
             array_values(array_filter(
                 $GLOBALS['wpas_test_actions'],
-                static fn (array $a): bool => $a[0] === 'agent_safety_approval_resolved',
+                static fn (array $a): bool => $a[0] === 'belayline_approval_resolved',
             )),
         );
     }
@@ -210,7 +210,7 @@ final class ApprovalsServiceTest extends TestCase
             'verb' => 'core/post-publish',
             'status' => 'approved',
             'summary' => 'core/post-publish { id=42 }',
-            'correlation_id' => 'senroflux:run:7',
+            'correlation_id' => 'example:run:7',
             'created_ts' => '2026-08-30 12:00:00',
             'grant_id' => 'gnt_9',
         ]);

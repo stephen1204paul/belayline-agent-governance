@@ -2,27 +2,27 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\FluentCart;
+namespace Belayline\Plugin\Tests\Integrations\FluentCart;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Changes\Change;
-use Specflux\AgentSafety\Changes\ChangeAction;
-use Specflux\AgentSafety\Changes\StoredChange;
-use Specflux\AgentSafety\Changes\UndoItem;
-use Specflux\AgentSafety\Changes\UndoResult;
-use Specflux\AgentSafety\Changes\UndoScope;
-use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
-use Specflux\AgentSafety\Plugin\Changes\UndoService;
-use Specflux\AgentSafety\Plugin\Integrations\FluentCart\FluentCartIntegration;
-use Specflux\AgentSafety\Plugin\Integrations\FluentCart\FluentCartRestoreAdapter;
-use Specflux\AgentSafety\Plugin\Integrations\FluentCart\FluentCartSnapshotter;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\ChainingSink;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeFluentCartDb;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryChangeLedger;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Changes\Change;
+use Belayline\Changes\ChangeAction;
+use Belayline\Changes\StoredChange;
+use Belayline\Changes\UndoItem;
+use Belayline\Changes\UndoResult;
+use Belayline\Changes\UndoScope;
+use Belayline\Plugin\Changes\ChangeCapture;
+use Belayline\Plugin\Changes\UndoService;
+use Belayline\Plugin\Integrations\FluentCart\FluentCartIntegration;
+use Belayline\Plugin\Integrations\FluentCart\FluentCartRestoreAdapter;
+use Belayline\Plugin\Integrations\FluentCart\FluentCartSnapshotter;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\ChainingSink;
+use Belayline\Plugin\Tests\Fakes\FakeFluentCartDb;
+use Belayline\Plugin\Tests\Fakes\InMemoryChangeLedger;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 
 /** Capture through the real window + snapshotter, restore through the real undo engine, over an in-memory fct_* store. */
 final class FluentCartChangesTest extends TestCase
@@ -53,8 +53,8 @@ final class FluentCartChangesTest extends TestCase
         // Same object the integration wired for the store, swapped for the in-memory one.
         $snap = new FluentCartSnapshotter($this->db);
         $GLOBALS['wpas_test_filters'] = [];
-        add_filter('agent_safety_change_adapters', fn (array $a): array => [...$a, $snap, new FluentCartRestoreAdapter($snap, $this->db)]);
-        $catalog->register(\Specflux\AgentSafety\Plugin\Integrations\FluentCart\FluentCartVerbCatalog::MAP);
+        add_filter('belayline_change_adapters', fn (array $a): array => [...$a, $snap, new FluentCartRestoreAdapter($snap, $this->db)]);
+        $catalog->register(\Belayline\Plugin\Integrations\FluentCart\FluentCartVerbCatalog::MAP);
 
         $this->ledger = new InMemoryChangeLedger();
         $this->capture = new ChangeCapture(new TierClassifier($catalog), new PackResolver(), $this->ledger);

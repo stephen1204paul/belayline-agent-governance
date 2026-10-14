@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\SureCart;
+namespace Belayline\Plugin\Integrations\SureCart;
 
-use Specflux\AgentSafety\Policy\ElevationRule;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Policy\ElevationRule;
+use Belayline\Policy\Tier;
 
 /**
  * A coupon discounting 50% or more, or a fixed amount above a threshold,
@@ -20,7 +20,7 @@ final class DiscountElevationRule implements ElevationRule
     /** Minor units (10000 = 100.00 in the coupon's currency). Filterable. */
     public const DEFAULT_AMOUNT_THRESHOLD = 10000;
 
-    public const AMOUNT_THRESHOLD_FILTER = 'agent_safety_surecart_discount_amount_threshold';
+    public const AMOUNT_THRESHOLD_FILTER = 'belayline_surecart_discount_amount_threshold';
 
     private const VERBS = ['surecart/create-coupon', 'surecart/update-coupon'];
 
@@ -45,7 +45,7 @@ final class DiscountElevationRule implements ElevationRule
     public static function amountThreshold(): int
     {
         $value = function_exists('apply_filters')
-            ? apply_filters('agent_safety_surecart_discount_amount_threshold', self::DEFAULT_AMOUNT_THRESHOLD)
+            ? apply_filters('belayline_surecart_discount_amount_threshold', self::DEFAULT_AMOUNT_THRESHOLD)
             : self::DEFAULT_AMOUNT_THRESHOLD;
 
         // A broken filter must not disable the rule: fall back to the default.

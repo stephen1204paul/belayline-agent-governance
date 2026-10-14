@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Privacy;
+namespace Belayline\Plugin\Tests\Privacy;
 
 use InMemoryAuditRowsWpdb;
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Audit\HashChain;
-use Specflux\AgentSafety\Plugin\Privacy\PersonalDataExporter;
-use Specflux\AgentSafety\Plugin\Privacy\PrivacyAuditReader;
-use Specflux\AgentSafety\Plugin\Privacy\PrivacyChangeReader;
+use Belayline\Audit\HashChain;
+use Belayline\Plugin\Privacy\PersonalDataExporter;
+use Belayline\Plugin\Privacy\PrivacyAuditReader;
+use Belayline\Plugin\Privacy\PrivacyChangeReader;
 
 /**
  * §3.6 item 2 / §4 row 9: the exporter must resolve the requested email to a
@@ -43,7 +43,7 @@ final class PersonalDataExporterTest extends TestCase
 
         $this->assertTrue($result['done']);
         $this->assertCount(1, $result['data']);
-        $this->assertSame('agent-safety-audit-log-1', $result['data'][0]['item_id']);
+        $this->assertSame('belayline-audit-log-1', $result['data'][0]['item_id']);
         $this->assertSame('core/read-post', $result['data'][0]['data'][1]['value']);
     }
 
@@ -76,12 +76,12 @@ final class PersonalDataExporterTest extends TestCase
         $page1 = $exporter->export('bob@example.com', 1);
         $this->assertFalse($page1['done']);
         $this->assertCount(200, $page1['data']);
-        $this->assertSame('agent-safety-audit-log-1', $page1['data'][0]['item_id']);
+        $this->assertSame('belayline-audit-log-1', $page1['data'][0]['item_id']);
 
         $page2 = $exporter->export('bob@example.com', 2);
         $this->assertTrue($page2['done']);
         $this->assertCount(5, $page2['data']);
-        $this->assertSame('agent-safety-audit-log-201', $page2['data'][0]['item_id']);
+        $this->assertSame('belayline-audit-log-201', $page2['data'][0]['item_id']);
     }
 
     public function testExportsTheUsersChangeRowsAsTheirOwnGroup(): void
@@ -100,8 +100,8 @@ final class PersonalDataExporterTest extends TestCase
         $result = (new PersonalDataExporter(new PrivacyAuditReader($db), new PrivacyChangeReader($db)))->export('alice@example.com');
 
         $this->assertCount(2, $result['data'], 'one audit group plus one change group, nothing of user 6');
-        $this->assertSame('agent-safety-changes', $result['data'][1]['group_id']);
-        $this->assertSame('agent-safety-changes-10', $result['data'][1]['item_id']);
+        $this->assertSame('belayline-changes', $result['data'][1]['group_id']);
+        $this->assertSame('belayline-changes-10', $result['data'][1]['item_id']);
     }
 
     /**

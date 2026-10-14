@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Tests\Network;
+namespace Belayline\Tests\Network;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Network\IpMatcher;
+use Belayline\Network\IpMatcher;
 
 final class IpMatcherTest extends TestCase
 {

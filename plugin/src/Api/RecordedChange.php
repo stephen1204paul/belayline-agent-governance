@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Api;
+namespace Belayline\Plugin\Api;
 
-use Specflux\AgentSafety\Changes\FieldDiff;
-use Specflux\AgentSafety\Changes\StoredChange;
+use Belayline\Changes\FieldDiff;
+use Belayline\Changes\StoredChange;
 
 /** Read-only view of one recorded change, as the public API hands it to consumers. */
 final class RecordedChange

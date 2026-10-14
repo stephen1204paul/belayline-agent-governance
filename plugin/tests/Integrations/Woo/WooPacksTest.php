@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\Woo;
+namespace Belayline\Plugin\Tests\Integrations\Woo;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Packs\ArgumentCap;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Integrations\Woo\WooPacks;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Packs\ArgumentCap;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Integrations\Woo\WooPacks;
+use Belayline\Policy\Tier;
 
 /**
  * The starter presets are POLICY shipped as code, so these tests pin the
@@ -107,7 +107,7 @@ final class WooPacksTest extends TestCase
     public function testFulfillmentBotStatusCapComparesNormalisedValues(): void
     {
         $caps = $this->pack('fulfillment-bot')->argumentCaps;
-        $policy = new \Specflux\AgentSafety\Packs\ArgumentCapPolicy();
+        $policy = new \Belayline\Packs\ArgumentCapPolicy();
         $verdict = static fn (string $status): bool => $policy->evaluate(
             $caps,
             'woocommerce/orders-update',

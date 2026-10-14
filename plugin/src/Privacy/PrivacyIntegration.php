@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Privacy;
+namespace Belayline\Plugin\Privacy;
 
 use wpdb;
 
@@ -26,8 +26,8 @@ final class PrivacyIntegration
         $eraser = new PersonalDataEraser($reader, $changes);
 
         add_filter('wp_privacy_personal_data_exporters', static function (array $exporters) use ($exporter): array {
-            $exporters['agent-safety-audit-log'] = [
-                'exporter_friendly_name' => __('SenroGate Audit Log', 'senrogate'),
+            $exporters['belayline-audit-log'] = [
+                'exporter_friendly_name' => __('Belayline Agent Governance Audit Log', 'belayline-agent-governance'),
                 'callback' => [$exporter, 'export'],
             ];
 
@@ -35,8 +35,8 @@ final class PrivacyIntegration
         });
 
         add_filter('wp_privacy_personal_data_erasers', static function (array $erasers) use ($eraser): array {
-            $erasers['agent-safety-audit-log'] = [
-                'eraser_friendly_name' => __('SenroGate Audit Log', 'senrogate'),
+            $erasers['belayline-audit-log'] = [
+                'eraser_friendly_name' => __('Belayline Agent Governance Audit Log', 'belayline-agent-governance'),
                 'callback' => [$eraser, 'erase'],
             ];
 

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Admin;
+namespace Belayline\Plugin\Admin;
 
-use Specflux\AgentSafety\Plugin\Api\AbilityReviews;
-use Specflux\AgentSafety\Plugin\Reviews\ReviewedAbilitiesPack;
-use Specflux\AgentSafety\Plugin\Reviews\ReviewTier;
-use Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder;
+use Belayline\Plugin\Api\AbilityReviews;
+use Belayline\Plugin\Reviews\ReviewedAbilitiesPack;
+use Belayline\Plugin\Reviews\ReviewTier;
+use Belayline\Plugin\Support\AdminChangeRecorder;
 
 /**
  * Tools, "Agent Abilities": review third-party abilities without code.
@@ -24,13 +24,13 @@ use Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder;
  * `unknown_verb`. The form says so and, for a namespace with no review yet,
  * refuses to save until the administrator ticks that they understand.
  *
- * Page slug `agent-safety-abilities`: SenroFlux's setup check links to it.
+ * Page slug `belayline-abilities`: Site Agent's setup check links to it.
  */
 final class AbilitiesPage
 {
-    public const SLUG = 'agent-safety-abilities';
+    public const SLUG = 'belayline-abilities';
     private const CAP = 'manage_options';
-    private const SAVE = 'agsafe_save_ability_reviews';
+    private const SAVE = 'belayline_save_ability_reviews';
 
     /** @var callable(): list<array{name: string, label: string, description: string, annotations: array<string, mixed>, schema: mixed}> */
     private $lister;
@@ -57,8 +57,8 @@ final class AbilitiesPage
     public function menu(): void
     {
         add_management_page(
-            __('Agent Abilities', 'senrogate'),
-            __('Agent Abilities', 'senrogate'),
+            __('Agent Abilities', 'belayline-agent-governance'),
+            __('Agent Abilities', 'belayline-agent-governance'),
             self::CAP,
             self::SLUG,
             [$this, 'render']
@@ -144,18 +144,18 @@ final class AbilitiesPage
         }
 
         echo '<div class="wrap">';
-        echo '<h1>' . esc_html__('Agent Abilities', 'senrogate') . '</h1>';
-        echo '<p>' . esc_html__('Abilities added by other plugins are not governed until you review them here. Each one gets a tier; a call is then judged like any other governed call. What an ability says about itself (its annotations) is a suggestion only: nothing applies until you save.', 'senrogate') . '</p>';
+        echo '<h1>' . esc_html__('Agent Abilities', 'belayline-agent-governance') . '</h1>';
+        echo '<p>' . esc_html__('Abilities added by other plugins are not governed until you review them here. Each one gets a tier; a call is then judged like any other governed call. What an ability says about itself (its annotations) is a suggestion only: nothing applies until you save.', 'belayline-agent-governance') . '</p>';
         echo '<p>' . esc_html(sprintf(
             /* translators: %s: pack name */
-            __('A reviewed ability is only callable by a credential bound to the "%s" pack (Tools, Agent Capability Packs), or to a pack that allows it.', 'senrogate'),
+            __('A reviewed ability is only callable by a credential bound to the "%s" pack (Tools, Agent Capability Packs), or to a pack that allows it.', 'belayline-agent-governance'),
             ReviewedAbilitiesPack::NAME
         )) . '</p>';
         $this->notices();
 
         $groups = $this->reviewable();
         if ($groups === []) {
-            echo '<p>' . esc_html__('No abilities to review. Abilities in namespaces SenroGate already governs are not listed.', 'senrogate') . '</p></div>';
+            echo '<p>' . esc_html__('No abilities to review. Abilities in namespaces Belayline Agent Governance already governs are not listed.', 'belayline-agent-governance') . '</p></div>';
 
             return;
         }
@@ -170,11 +170,11 @@ final class AbilitiesPage
     private function notices(): void
     {
         // phpcs:disable WordPress.Security.NonceVerification.Recommended -- read-only flash flags.
-        if (isset($_GET['agsafe_saved'])) {
-            echo '<div class="notice notice-success"><p>' . esc_html__('Review saved.', 'senrogate') . '</p></div>';
+        if (isset($_GET['belayline_saved'])) {
+            echo '<div class="notice notice-success"><p>' . esc_html__('Review saved.', 'belayline-agent-governance') . '</p></div>';
         }
-        if (isset($_GET['agsafe_confirm'])) {
-            echo '<div class="notice notice-error"><p>' . esc_html__('Nothing was saved. Tick the box to confirm that reviewing one ability governs its whole namespace.', 'senrogate') . '</p></div>';
+        if (isset($_GET['belayline_confirm'])) {
+            echo '<div class="notice notice-error"><p>' . esc_html__('Nothing was saved. Tick the box to confirm that reviewing one ability governs its whole namespace.', 'belayline-agent-governance') . '</p></div>';
         }
         // phpcs:enable WordPress.Security.NonceVerification.Recommended
     }
@@ -189,22 +189,22 @@ final class AbilitiesPage
 
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="card" style="max-width:none;margin-top:16px;">';
         echo '<h2 style="margin-top:0;"><code>' . esc_html($ns) . '</code> ';
-        echo $governed ? '<small>' . esc_html__('(governed)', 'senrogate') . '</small>' : '';
+        echo $governed ? '<small>' . esc_html__('(governed)', 'belayline-agent-governance') . '</small>' : '';
         echo '</h2>';
         echo '<input type="hidden" name="action" value="' . esc_attr(self::SAVE) . '" />';
         echo '<input type="hidden" name="namespace" value="' . esc_attr($ns) . '" />';
         wp_nonce_field(self::SAVE);
 
-        echo '<p><label>' . esc_html__('Set every ability in this namespace to:', 'senrogate') . ' ';
-        echo '<select name="bulk"><option value="">' . esc_html__('(keep the choices below)', 'senrogate') . '</option>';
+        echo '<p><label>' . esc_html__('Set every ability in this namespace to:', 'belayline-agent-governance') . ' ';
+        echo '<select name="bulk"><option value="">' . esc_html__('(keep the choices below)', 'belayline-agent-governance') . '</option>';
         foreach (ReviewTier::cases() as $case) {
             echo '<option value="' . esc_attr($case->value) . '">' . esc_html($case->label()) . '</option>';
         }
-        echo '<option value="' . esc_attr(self::CLEAR) . '">' . esc_html__('Not reviewed', 'senrogate') . '</option>';
+        echo '<option value="' . esc_attr(self::CLEAR) . '">' . esc_html__('Not reviewed', 'belayline-agent-governance') . '</option>';
         echo '</select></label></p>';
 
         echo '<table class="widefat striped"><thead><tr>';
-        foreach ([__('Ability', 'senrogate'), __('Description', 'senrogate'), __('Annotations', 'senrogate'), __('Review', 'senrogate')] as $h) {
+        foreach ([__('Ability', 'belayline-agent-governance'), __('Description', 'belayline-agent-governance'), __('Annotations', 'belayline-agent-governance'), __('Review', 'belayline-agent-governance')] as $h) {
             echo '<th>' . esc_html($h) . '</th>';
         }
         echo '</tr></thead><tbody>';
@@ -213,13 +213,13 @@ final class AbilitiesPage
         }
         echo '</tbody></table>';
 
-        echo '<p><strong>' . esc_html__('Warning:', 'senrogate') . '</strong> ';
-        echo esc_html__('Reviewing one ability governs the whole namespace. Every ability in it that you leave unreviewed will then be refused (unknown_verb) instead of running ungoverned.', 'senrogate') . '</p>';
+        echo '<p><strong>' . esc_html__('Warning:', 'belayline-agent-governance') . '</strong> ';
+        echo esc_html__('Reviewing one ability governs the whole namespace. Every ability in it that you leave unreviewed will then be refused (unknown_verb) instead of running ungoverned.', 'belayline-agent-governance') . '</p>';
         if (!$governed) {
             echo '<p><label><input type="checkbox" name="confirm" value="1" /> ';
-            echo esc_html__('I understand: this namespace becomes governed and its unreviewed abilities are refused.', 'senrogate') . '</label></p>';
+            echo esc_html__('I understand: this namespace becomes governed and its unreviewed abilities are refused.', 'belayline-agent-governance') . '</label></p>';
         }
-        submit_button(__('Save review', 'senrogate'), 'primary', 'submit', false);
+        submit_button(__('Save review', 'belayline-agent-governance'), 'primary', 'submit', false);
         echo '</form>';
     }
 
@@ -245,15 +245,15 @@ final class AbilitiesPage
         echo '<td>' . esc_html($notes === [] ? '-' : implode(', ', $notes)) . '</td>';
 
         echo '<td><select name="tier[' . esc_attr($ability['name']) . ']">';
-        echo '<option value="">' . esc_html__('Not reviewed', 'senrogate') . '</option>';
+        echo '<option value="">' . esc_html__('Not reviewed', 'belayline-agent-governance') . '</option>';
         foreach (ReviewTier::cases() as $case) {
             echo '<option value="' . esc_attr($case->value) . '"' . selected($selected === $case, true, false) . '>' . esc_html($case->label()) . '</option>';
         }
         echo '</select>';
         if ($drifted) {
-            echo '<br /><em>' . esc_html__('Its input schema changed since the last review. Calls are refused until you save again.', 'senrogate') . '</em>';
+            echo '<br /><em>' . esc_html__('Its input schema changed since the last review. Calls are refused until you save again.', 'belayline-agent-governance') . '</em>';
         } elseif ($entry === null && $selected !== null) {
-            echo '<br /><em>' . esc_html__('Suggested from its annotations, not applied yet.', 'senrogate') . '</em>';
+            echo '<br /><em>' . esc_html__('Suggested from its annotations, not applied yet.', 'belayline-agent-governance') . '</em>';
         }
         echo '</td></tr>';
     }
@@ -263,7 +263,7 @@ final class AbilitiesPage
     public function save(): void
     {
         if (!current_user_can(self::CAP)) {
-            wp_die(esc_html__('Insufficient permissions.', 'senrogate'));
+            wp_die(esc_html__('Insufficient permissions.', 'belayline-agent-governance'));
         }
         check_admin_referer(self::SAVE);
 
@@ -277,7 +277,7 @@ final class AbilitiesPage
         $saved = $this->applyNamespace((string) $ns, (array) $tiers, (string) $bulk, $confirmed, get_current_user_id());
 
         wp_safe_redirect(add_query_arg(
-            ['page' => self::SLUG, $saved ? 'agsafe_saved' : 'agsafe_confirm' => '1'],
+            ['page' => self::SLUG, $saved ? 'belayline_saved' : 'belayline_confirm' => '1'],
             admin_url('tools.php')
         ));
         exit;

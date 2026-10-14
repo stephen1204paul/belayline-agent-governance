@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# build-zip.sh — the single allowlisted build for the Agent Safety plugin.
+# build-zip.sh — the single allowlisted build for the Belayline plugin.
 #
 # Builds a WordPress-installable zip from plugin/ + the vendored core
 # library, using an explicit allowlist for what goes in, and an
@@ -22,7 +22,7 @@
 #                         suite right after a build should pass this flag.
 #
 # Env (test-only):
-#   AGSAFE_BUILD_TEST_INJECT=<relative/path/inside/senrogate>
+#   BELAYLINE_BUILD_TEST_INJECT=<relative/path/inside/belayline-agent-governance>
 #                         Injects an empty file at that path into the
 #                         staging dir *after* the allowlist copy and
 #                         *before* zipping, so the independent
@@ -46,7 +46,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PLUGIN_DIR="$REPO_ROOT/plugin"
 BUILD_DIR="$REPO_ROOT/build"
-STAGE_DIR="$BUILD_DIR/senrogate"
+STAGE_DIR="$BUILD_DIR/belayline-agent-governance"
 
 RESTORE_DEV_DEPS=0
 for arg in "$@"; do
@@ -75,22 +75,22 @@ command -v composer >/dev/null 2>&1 || fail "composer not found on PATH"
 command -v zip >/dev/null 2>&1 || fail "zip not found on PATH"
 command -v unzip >/dev/null 2>&1 || fail "unzip not found on PATH"
 
-[ -f "$PLUGIN_DIR/senrogate.php" ] || fail "plugin header not found at $PLUGIN_DIR/senrogate.php"
+[ -f "$PLUGIN_DIR/belayline-agent-governance.php" ] || fail "plugin header not found at $PLUGIN_DIR/belayline-agent-governance.php"
 
 # ---------------------------------------------------------------------------
 # 1. Version, from the plugin header (same field the release workflow
 #    already asserts the tag against).
 # ---------------------------------------------------------------------------
-VERSION=$(awk '/^[[:space:]]*\*[[:space:]]*Version:/ {print $NF; exit}' "$PLUGIN_DIR/senrogate.php")
+VERSION=$(awk '/^[[:space:]]*\*[[:space:]]*Version:/ {print $NF; exit}' "$PLUGIN_DIR/belayline-agent-governance.php")
 [ -n "$VERSION" ] || fail "could not read Version: from plugin header"
 log "plugin header Version: $VERSION"
 
-ZIP_PATH="$REPO_ROOT/senrogate-${VERSION}.zip"
+ZIP_PATH="$REPO_ROOT/belayline-agent-governance-${VERSION}.zip"
 
 # ---------------------------------------------------------------------------
 # 2. Runtime-only composer install in plugin/. Note: plugin/'s path repo
 #    COPIES (mirrors) the root core library into
-#    plugin/vendor/specflux/agent-safety-core/ rather than symlinking it —
+#    plugin/vendor/stephen1204paul/belayline-core/ rather than symlinking it —
 #    this leaves plugin/vendor in a --no-dev state (composer.lock updated
 #    too) until either --restore-dev-deps is passed or `composer install`
 #    is re-run manually in plugin/.
@@ -99,12 +99,12 @@ log "composer install --no-dev in plugin/"
 (cd "$PLUGIN_DIR" && composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction)
 # `install` leaves an existing mirror alone, so a local checkout could ship a
 # stale copy of the core. Re-mirror it from the root every time.
-(cd "$PLUGIN_DIR" && composer reinstall specflux/agent-safety-core --no-interaction)
+(cd "$PLUGIN_DIR" && composer reinstall stephen1204paul/belayline-core --no-interaction)
 
 # ---------------------------------------------------------------------------
 # 3. Stage the allowlist.
 # ---------------------------------------------------------------------------
-log "staging build/senrogate/"
+log "staging build/belayline-agent-governance/"
 rm -rf "$BUILD_DIR" "$ZIP_PATH"
 mkdir -p "$STAGE_DIR"
 
@@ -114,7 +114,7 @@ copy_required_file() {
 	cp "$PLUGIN_DIR/$rel" "$STAGE_DIR/$rel"
 }
 
-copy_required_file "senrogate.php"
+copy_required_file "belayline-agent-governance.php"
 copy_required_file "uninstall.php"
 copy_required_file "readme.txt"
 
@@ -125,8 +125,8 @@ copy_required_file "readme.txt"
 [ -f "$PLUGIN_DIR/composer.json" ] || fail "required plugin file missing: plugin/composer.json"
 php -r '
 	$json = json_decode(file_get_contents($argv[1]), true, 512, JSON_THROW_ON_ERROR);
-	$json["repositories"] = [["type" => "vcs", "url" => "https://github.com/stephen1204paul/senrogate"]];
-	$json["require"]["specflux/agent-safety-core"] = $argv[3];
+	$json["repositories"] = [["type" => "vcs", "url" => "https://github.com/stephen1204paul/belayline-agent-governance"]];
+	$json["require"]["stephen1204paul/belayline-core"] = $argv[3];
 	file_put_contents($argv[2], json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
 ' "$PLUGIN_DIR/composer.json" "$STAGE_DIR/composer.json" "$VERSION" || fail "could not write the shipped composer.json"
 
@@ -142,27 +142,27 @@ fi
 [ -d "$PLUGIN_DIR/vendor" ] || fail "plugin/vendor missing — composer install did not run"
 cp -R "$PLUGIN_DIR/vendor" "$STAGE_DIR/vendor"
 
-# Inside vendor/specflux/agent-safety-core/, the path-repo mirror pulls in
+# Inside vendor/stephen1204paul/belayline-core/, the path-repo mirror pulls in
 # the ENTIRE root repo checkout (tests/, docs/, .git/, CLAUDE.md, its own
 # nested plugin/ copy, dotfiles, ...) because composer's path repository
 # mirrors the whole directory. Prune it down to src/, composer.json and
 # LICENSE (if present) — nothing else from that package ships.
-CORE_VENDOR_DIR="$STAGE_DIR/vendor/specflux/agent-safety-core"
+CORE_VENDOR_DIR="$STAGE_DIR/vendor/stephen1204paul/belayline-core"
 if [ -d "$CORE_VENDOR_DIR" ]; then
 	KEEP_TMP="$BUILD_DIR/.core-keep"
 	rm -rf "$KEEP_TMP"
 	mkdir -p "$KEEP_TMP"
 
-	[ -d "$CORE_VENDOR_DIR/src" ] || fail "vendor/specflux/agent-safety-core/src missing after composer install"
+	[ -d "$CORE_VENDOR_DIR/src" ] || fail "vendor/stephen1204paul/belayline-core/src missing after composer install"
 	mv "$CORE_VENDOR_DIR/src" "$KEEP_TMP/src"
 
-	[ -f "$CORE_VENDOR_DIR/composer.json" ] || fail "vendor/specflux/agent-safety-core/composer.json missing after composer install"
+	[ -f "$CORE_VENDOR_DIR/composer.json" ] || fail "vendor/stephen1204paul/belayline-core/composer.json missing after composer install"
 	mv "$CORE_VENDOR_DIR/composer.json" "$KEEP_TMP/composer.json"
 
 	if [ -f "$CORE_VENDOR_DIR/LICENSE" ]; then
 		mv "$CORE_VENDOR_DIR/LICENSE" "$KEEP_TMP/LICENSE"
 	else
-		fail "vendor/specflux/agent-safety-core/LICENSE missing after composer install"
+		fail "vendor/stephen1204paul/belayline-core/LICENSE missing after composer install"
 	fi
 
 	rm -rf "$CORE_VENDOR_DIR"
@@ -170,27 +170,27 @@ if [ -d "$CORE_VENDOR_DIR" ]; then
 	mv "$KEEP_TMP"/* "$CORE_VENDOR_DIR/"
 	rm -rf "$KEEP_TMP"
 else
-	fail "vendor/specflux/agent-safety-core missing after composer install"
+	fail "vendor/stephen1204paul/belayline-core missing after composer install"
 fi
 
 # Test-only injection hook: prove the verifier is independent of the
 # copier above by planting a disallowed file straight into the staging
 # dir, after staging is otherwise complete.
-if [ -n "${AGSAFE_BUILD_TEST_INJECT:-}" ]; then
-	INJECT_PATH="$STAGE_DIR/${AGSAFE_BUILD_TEST_INJECT}"
+if [ -n "${BELAYLINE_BUILD_TEST_INJECT:-}" ]; then
+	INJECT_PATH="$STAGE_DIR/${BELAYLINE_BUILD_TEST_INJECT}"
 	mkdir -p "$(dirname "$INJECT_PATH")"
 	: >"$INJECT_PATH"
-	log "TEST INJECTION: planted $STAGE_DIR/${AGSAFE_BUILD_TEST_INJECT} for verification proof"
+	log "TEST INJECTION: planted $STAGE_DIR/${BELAYLINE_BUILD_TEST_INJECT} for verification proof"
 fi
 
 # Finder can drop .DS_Store files into the staging dir; they are never shipped.
 find "$STAGE_DIR" -name .DS_Store -type f -delete
 
 # ---------------------------------------------------------------------------
-# 4. Zip it, top-level folder senrogate/.
+# 4. Zip it, top-level folder belayline-agent-governance/.
 # ---------------------------------------------------------------------------
 log "zipping $ZIP_PATH"
-(cd "$BUILD_DIR" && zip -rq -X -D "$ZIP_PATH" senrogate)
+(cd "$BUILD_DIR" && zip -rq -X -D "$ZIP_PATH" belayline-agent-governance)
 
 # ---------------------------------------------------------------------------
 # 5. Independent verification: read the zip's own entry list back (not the
@@ -199,18 +199,18 @@ log "zipping $ZIP_PATH"
 # ---------------------------------------------------------------------------
 log "verifying zip entries against the allowlist"
 
-ALLOW_RE='^senrogate/$'
-ALLOW_RE="$ALLOW_RE|^senrogate/senrogate\.php$"
-ALLOW_RE="$ALLOW_RE|^senrogate/uninstall\.php$"
-ALLOW_RE="$ALLOW_RE|^senrogate/readme\.txt$"
-ALLOW_RE="$ALLOW_RE|^senrogate/composer\.json$"
-ALLOW_RE="$ALLOW_RE|^senrogate/src/([^./][^/]*/)*[^./][^/]*$"
-ALLOW_RE="$ALLOW_RE|^senrogate/assets/([^./][^/]*/)*[^./][^/]*$"
-ALLOW_RE="$ALLOW_RE|^senrogate/vendor/autoload\.php$"
-ALLOW_RE="$ALLOW_RE|^senrogate/vendor/composer/([^./][^/]*/)*[^./][^/]*$"
-ALLOW_RE="$ALLOW_RE|^senrogate/vendor/specflux/agent-safety-core/src/([^./][^/]*/)*[^./][^/]*$"
-ALLOW_RE="$ALLOW_RE|^senrogate/vendor/specflux/agent-safety-core/composer\.json$"
-ALLOW_RE="$ALLOW_RE|^senrogate/vendor/specflux/agent-safety-core/LICENSE$"
+ALLOW_RE='^belayline-agent-governance/$'
+ALLOW_RE="$ALLOW_RE|^belayline-agent-governance/belayline-agent-governance\.php$"
+ALLOW_RE="$ALLOW_RE|^belayline-agent-governance/uninstall\.php$"
+ALLOW_RE="$ALLOW_RE|^belayline-agent-governance/readme\.txt$"
+ALLOW_RE="$ALLOW_RE|^belayline-agent-governance/composer\.json$"
+ALLOW_RE="$ALLOW_RE|^belayline-agent-governance/src/([^./][^/]*/)*[^./][^/]*$"
+ALLOW_RE="$ALLOW_RE|^belayline-agent-governance/assets/([^./][^/]*/)*[^./][^/]*$"
+ALLOW_RE="$ALLOW_RE|^belayline-agent-governance/vendor/autoload\.php$"
+ALLOW_RE="$ALLOW_RE|^belayline-agent-governance/vendor/composer/([^./][^/]*/)*[^./][^/]*$"
+ALLOW_RE="$ALLOW_RE|^belayline-agent-governance/vendor/stephen1204paul/belayline-core/src/([^./][^/]*/)*[^./][^/]*$"
+ALLOW_RE="$ALLOW_RE|^belayline-agent-governance/vendor/stephen1204paul/belayline-core/composer\.json$"
+ALLOW_RE="$ALLOW_RE|^belayline-agent-governance/vendor/stephen1204paul/belayline-core/LICENSE$"
 # Note: the zip is built with `zip -D` (no directory entries), so the
 # patterns above only ever need to match file entries.
 

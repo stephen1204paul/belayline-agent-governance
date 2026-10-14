@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Approval\WpdbGrantStore;
-use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
-use Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder;
-use Specflux\AgentSafety\Plugin\Support\EnvironmentGuard;
-use Specflux\AgentSafety\Plugin\Support\ShadowMode;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Plugin\Approval\WpdbGrantStore;
+use Belayline\Plugin\Audit\WpdbApprovalStore;
+use Belayline\Plugin\Support\AdminChangeRecorder;
+use Belayline\Plugin\Support\EnvironmentGuard;
+use Belayline\Plugin\Support\ShadowMode;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
 use wpdb;
 
 /**
@@ -136,7 +136,7 @@ final class EnvironmentGuardTest extends TestCase
         $this->assertSame([], $GLOBALS['wpas_test_options'][ShadowMode::OPTION]);
 
         // Grants revoked: the UPDATE reached the grants table.
-        $grantQueries = array_filter($db->queries, static fn (string $q): bool => str_contains($q, 'agsafe_grants') && str_contains($q, "'revoked'"));
+        $grantQueries = array_filter($db->queries, static fn (string $q): bool => str_contains($q, 'belayline_grants') && str_contains($q, "'revoked'"));
         $this->assertNotEmpty($grantQueries);
 
         // Approvals voided: the UPDATE reached the approvals table with the
@@ -144,7 +144,7 @@ final class EnvironmentGuardTest extends TestCase
         // never touched by this WHERE clause.
         $approvalQueries = array_filter(
             $db->queries,
-            static fn (string $q): bool => str_contains($q, 'agsafe_approvals') && str_contains($q, "'void_environment'"),
+            static fn (string $q): bool => str_contains($q, 'belayline_approvals') && str_contains($q, "'void_environment'"),
         );
         $this->assertNotEmpty($approvalQueries);
         foreach ($approvalQueries as $q) {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Changes\Adapters;
+namespace Belayline\Plugin\Changes\Adapters;
 
 /** WordPress object to plain-array helpers shared by capture and restore, so both see the same shape. */
 final class WpObjects

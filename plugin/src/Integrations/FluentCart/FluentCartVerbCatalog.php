@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\FluentCart;
+namespace Belayline\Plugin\Integrations\FluentCart;
 
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Policy\Tier;
 
 /**
  * OUR tier assignments for every `fluent-cart/` ability FluentCart 1.7.0

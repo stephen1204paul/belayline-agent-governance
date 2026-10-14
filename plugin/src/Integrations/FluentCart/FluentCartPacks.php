@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\FluentCart;
+namespace Belayline\Plugin\Integrations\FluentCart;
 
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Packs\Pack;
+use Belayline\Policy\Tier;
 
 /**
- * FluentCart starter packs, registered like {@see \Specflux\AgentSafety\Plugin\Integrations\Woo\WooPacks}:
+ * FluentCart starter packs, registered like {@see \Belayline\Plugin\Integrations\Woo\WooPacks}:
  *   - fluentcart-default-agent     — every `fluent-cart/` verb, but each Tier-2
  *                                    verb (order status, refund, subscription
  *                                    cancel) waits for a human approval.

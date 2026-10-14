@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\Woo\Changes;
+namespace Belayline\Plugin\Integrations\Woo\Changes;
 
-use Specflux\AgentSafety\Changes\ChangeSnapshotter;
-use Specflux\AgentSafety\Changes\SnapshotRef;
+use Belayline\Changes\ChangeSnapshotter;
+use Belayline\Changes\SnapshotRef;
 
 /**
  * Tax rates are not WC_Data objects: WC_Tax writes the table directly and its
@@ -14,7 +14,7 @@ use Specflux\AgentSafety\Changes\SnapshotRef;
  * recorded. A rate created by the call has no id yet; the capture adapter sees
  * it on `woocommerce_tax_rate_added`. WooCommerce ships no tax ability today,
  * so the ids matched are the REST bridge's naming (`woocommerce/taxes-*`) and
- * SenroFlux's `senroflux/tax-rate-*`.
+ * Site Agent's `senroflux/tax-rate-*`.
  */
 final class WooTaxRateSnapshotter implements ChangeSnapshotter
 {

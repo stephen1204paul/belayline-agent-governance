@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
-use Specflux\AgentSafety\Approval\ApprovalBinding;
-use Specflux\AgentSafety\Approval\ArgumentSummarizer;
-use Specflux\AgentSafety\Approval\ApprovalStore;
-use Specflux\AgentSafety\Audit\AuditDecision;
-use Specflux\AgentSafety\Audit\AuditRecord;
-use Specflux\AgentSafety\Audit\AuditSink;
-use Specflux\AgentSafety\Audit\Redactor;
-use Specflux\AgentSafety\Gate\Decision;
-use Specflux\AgentSafety\Packs\Pack;
+use Belayline\Approval\ApprovalBinding;
+use Belayline\Approval\ArgumentSummarizer;
+use Belayline\Approval\ApprovalStore;
+use Belayline\Audit\AuditDecision;
+use Belayline\Audit\AuditRecord;
+use Belayline\Audit\AuditSink;
+use Belayline\Audit\Redactor;
+use Belayline\Gate\Decision;
+use Belayline\Packs\Pack;
 
 /**
  * Decision-side recording shared by BOTH gate seams — the live Abilities-API
- * permission_callback ({@see \Specflux\AgentSafety\Plugin\Hooks\AbilityPermissionGate})
+ * permission_callback ({@see \Belayline\Plugin\Hooks\AbilityPermissionGate})
  * and the forward-compat mcp_adapter_pre_tool_call seam
- * ({@see \Specflux\AgentSafety\Plugin\Hooks\PreToolCallGate}).
+ * ({@see \Belayline\Plugin\Hooks\PreToolCallGate}).
  *
  * Owning these here is what keeps the seams from DIVERGING: a denial or a pending
  * approval is audited and persisted identically no matter which seam intercepts a
@@ -58,7 +58,7 @@ final class DecisionRecorder
     /**
      * Emit a gate-decision audit record for a NON-executing verdict — a
      * denial or a pending approval. Allowed calls are audited at execution time by
-     * {@see \Specflux\AgentSafety\Plugin\Hooks\AbilityAuditLog}. No-op without a sink.
+     * {@see \Belayline\Plugin\Hooks\AbilityAuditLog}. No-op without a sink.
      * $shadow = true marks a shadow-mode verdict (observed, not enforced —
      * the call DID execute) via the record's dry_run field.
      *
@@ -109,9 +109,9 @@ final class DecisionRecorder
      *
      * AS-6: $fingerprint/$fingerprintKind carry the state-probe result (or its
      * absence) through to the store, which uses them for the pending-dedupe
-     * staleness check (see {@see \Specflux\AgentSafety\Approval\ApprovalStore::request()}).
+     * staleness check (see {@see \Belayline\Approval\ApprovalStore::request()}).
      * $probeArgs (security fix) is the canonical-JSON encoding of the probe's
-     * {@see \Specflux\AgentSafety\Plugin\Approval\StateProbe::targetArgs()},
+     * {@see \Belayline\Plugin\Approval\StateProbe::targetArgs()},
      * stored so the approve-time re-probe never has to parse the summary.
      *
      * @param array<string, mixed> $input
@@ -138,7 +138,7 @@ final class DecisionRecorder
     /**
      * AS-6: emit the `approval.stale` lifecycle event when a claim-time
      * re-probe found the target changed since the approval was requested
-     * ({@see \Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline::claim()}).
+     * ({@see \Belayline\Plugin\Verdict\VerdictPipeline::claim()}).
      * Records BOTH hashes so an auditor can see exactly what changed. Audited
      * as a dry run when the pack is shadowed (the call proceeds anyway; no
      * pending approval is filed for it — §3.3 item 11). No-op without a sink.
@@ -174,7 +174,7 @@ final class DecisionRecorder
      *
      * Extracted so every writer of an approval row goes through one path — the
      * pending request above AND the already-approved row a pre-approval grant
-     * mints ({@see \Specflux\AgentSafety\Plugin\Verdict\GrantGate}). "The filter
+     * mints ({@see \Belayline\Plugin\Verdict\GrantGate}). "The filter
      * fires for grant-minted rows too" is then true by construction rather than
      * by two call sites remembering to agree.
      *
@@ -182,7 +182,7 @@ final class DecisionRecorder
      */
     public function summaryFor(string $verb, array $input): string
     {
-        // AS-11: a host may enrich the human-facing summary (e.g. SenroFlux's
+        // AS-11: a host may enrich the human-facing summary (e.g. Site Agent's
         // rich publish rows). The filter may narrow or reword — it can never
         // touch the verb, the binding hash or the principal, so it can never
         // loosen what the approval binds to.
@@ -196,7 +196,7 @@ final class DecisionRecorder
         // values into its own markup therefore owns escaping them: it has
         // opted that row into markup rendering.
         $flat = $this->summarize($verb, $input);
-        $filtered = apply_filters('agent_safety_approval_summary', $flat, $verb, $input);
+        $filtered = apply_filters('belayline_approval_summary', $flat, $verb, $input);
 
         return is_string($filtered) && $filtered !== $flat
             ? SummaryMarkup::wrap($filtered)

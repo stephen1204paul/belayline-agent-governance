@@ -2,36 +2,36 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\Self;
+namespace Belayline\Plugin\Integrations\Self;
 
-use Specflux\AgentSafety\Audit\AuditSink;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
-use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
-use Specflux\AgentSafety\Plugin\Support\PauseSwitch;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
+use Belayline\Audit\AuditSink;
+use Belayline\Policy\Tier;
+use Belayline\Policy\VerbCatalog;
+use Belayline\Plugin\Audit\WpdbApprovalStore;
+use Belayline\Plugin\Support\PauseSwitch;
+use Belayline\Plugin\Verdict\VerdictPipeline;
 
 /**
  * AS-8 (§3.5): the plugin's OWN built-in integration — not a third-party
  * capability pack module like Core/Woo, but the same registration shape, so
  * the bootstrap can treat it uniformly. Registered UNCONDITIONALLY, like
- * {@see \Specflux\AgentSafety\Plugin\Integrations\Core\CoreIntegration}: the
- * `agent-safety/check-approval` ability exists on every site this plugin runs
+ * {@see \Belayline\Plugin\Integrations\Core\CoreIntegration}: the
+ * `belayline/check-approval` ability exists on every site this plugin runs
  * on, independent of WooCommerce.
  *
- * Contributes the `agent-safety/` namespace as governed (so the ability goes
+ * Contributes the `belayline/` namespace as governed (so the ability goes
  * through the ordinary permission-gate seam) and catalogues its one verb at a
  * FIXED tier 0 — fixed in the sense that nothing in this file makes the tier
  * unconditional; the actual "no pack can change it" guarantee is the named
  * exemption inside {@see VerdictPipeline::judge()}, not this catalog entry.
- * Any OTHER `agent-safety/*` verb is deliberately left unclassified, so it
+ * Any OTHER `belayline/*` verb is deliberately left unclassified, so it
  * denies `unknown_verb` like any ungoverned write — the exemption is this one
  * verb, never the namespace.
  */
 final class SelfIntegration
 {
     /** The ability category this module registers on `wp_abilities_api_categories_init`. */
-    public const CATEGORY = 'agent-safety';
+    public const CATEGORY = 'belayline';
 
     public static function available(): bool
     {
@@ -48,7 +48,7 @@ final class SelfIntegration
         return [
             'elevationRules' => [],
             'packs' => [],
-            'governedNamespaces' => ['agent-safety/'],
+            'governedNamespaces' => ['belayline/'],
             'stateProbes' => [],
         ];
     }
@@ -57,7 +57,7 @@ final class SelfIntegration
      * Wire the ability + its category onto the real Abilities API hooks
      * (§3.5 item 8: always registered while the plugin is active, no
      * disabling filter — unconditional `add_action`, exactly like
-     * {@see \Specflux\AgentSafety\Plugin\Hooks\AbilityAuditLog::register()}
+     * {@see \Belayline\Plugin\Hooks\AbilityAuditLog::register()}
      * being wired regardless of feature flags).
      */
     public static function registerAbility(?WpdbApprovalStore $approvals, ?AuditSink $sink, ?PauseSwitch $pause): void
@@ -66,17 +66,17 @@ final class SelfIntegration
 
         add_action('wp_abilities_api_categories_init', static function (): void {
             wp_register_ability_category(self::CATEGORY, [
-                'label' => __('SenroGate', 'senrogate'),
-                'description' => __('Abilities added by the SenroGate plugin.', 'senrogate'),
+                'label' => __('Belayline Agent Governance', 'belayline-agent-governance'),
+                'description' => __('Abilities added by the Belayline Agent Governance plugin.', 'belayline-agent-governance'),
             ]);
         });
 
         add_action('wp_abilities_api_init', static function () use ($ability): void {
             wp_register_ability(VerdictPipeline::CHECK_APPROVAL_VERB, [
-                'label' => __('Check Approval', 'senrogate'),
+                'label' => __('Check Approval', 'belayline-agent-governance'),
                 'description' => __(
                     'Check the status of an approval_required request by its approval_id. Returns the current status, what to do next, and (once resolved) whether a human or a standing grant resolved it.',
-                    'senrogate'
+                    'belayline-agent-governance'
                 ),
                 'category' => self::CATEGORY,
                 'permission_callback' => [$ability, 'permissionCallback'],
@@ -86,7 +86,7 @@ final class SelfIntegration
                     'properties' => [
                         'approval_id' => [
                             'type' => 'string',
-                            'description' => __('The approval_id from an earlier approval_required response.', 'senrogate'),
+                            'description' => __('The approval_id from an earlier approval_required response.', 'belayline-agent-governance'),
                         ],
                     ],
                     'required' => ['approval_id'],
@@ -97,7 +97,7 @@ final class SelfIntegration
                         'readonly' => true,
                         'instructions' => __(
                             'Poll no faster than every 30 seconds; back off to every 5 minutes; stop polling at pending_expires_at. Only status "approved" means retry the original call, with exactly the original arguments. Do not tell the user the action was approved before that.',
-                            'senrogate'
+                            'belayline-agent-governance'
                         ),
                     ],
                 ],

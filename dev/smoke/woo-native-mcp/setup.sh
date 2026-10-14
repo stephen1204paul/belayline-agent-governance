@@ -31,7 +31,7 @@ fi
 CLI=(docker exec "$CLI_NAME" wp)
 
 echo "== activating plugins =="
-"${CLI[@]}" plugin activate woocommerce senrogate
+"${CLI[@]}" plugin activate woocommerce belayline-agent-governance
 
 # wp-env's default permalink structure is plain (?p=123), under which WordPress
 # never registers the /wp-json/ pretty rewrite rules a REST/MCP route needs —
@@ -42,11 +42,11 @@ echo "== enabling pretty permalinks (required for /wp-json/ routes) =="
 "${CLI[@]}" rewrite flush --hard
 
 echo "== copying helper scripts into the cli container =="
-docker cp query.php "$CLI_NAME:/tmp/agsafe-query.php"
+docker cp query.php "$CLI_NAME:/tmp/belayline-query.php"
 
 echo "== provisioning (Shop Manager, bound REST key, product, feature flag) =="
-docker cp provision.php "$CLI_NAME:/tmp/agsafe-provision.php"
-PROVISION_JSON="$("${CLI[@]}" eval-file /tmp/agsafe-provision.php)"
+docker cp provision.php "$CLI_NAME:/tmp/belayline-provision.php"
+PROVISION_JSON="$("${CLI[@]}" eval-file /tmp/belayline-provision.php)"
 echo "$PROVISION_JSON"
 
 BASE_URL="http://localhost:8950"

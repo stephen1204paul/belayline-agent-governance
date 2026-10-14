@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Support\RateCounter;
+use Belayline\Plugin\Support\RateCounter;
 use CounterTableWpdb;
-use Specflux\AgentSafety\Plugin\Support\SelfRateLimit;
+use Belayline\Plugin\Support\SelfRateLimit;
 
 /** AS-8 (§3.5 item 6): the fixed 10/minute cap check-approval enforces on itself. */
 final class SelfRateLimitTest extends TestCase
@@ -64,7 +64,7 @@ final class SelfRateLimitTest extends TestCase
         $limit->admit('wc:key_7');
         $limit->admit('wc:key_7');
 
-        $this->assertSame(10, (new RateCounter())->countsFor('agent-safety-self', 'wc:key_7')['minute']);
+        $this->assertSame(10, (new RateCounter())->countsFor('belayline-self', 'wc:key_7')['minute']);
     }
 
     public function testARequestLandingBetweenReserveAndCheckCannotBothTakeTheLastSlot(): void

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Changes;
+namespace Belayline\Changes;
 
 /** What one undo covers: one change, one audit event, or one correlation id ("undo this run"). */
 final class UndoScope

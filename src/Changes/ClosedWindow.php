@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Changes;
+namespace Belayline\Changes;
 
 /** What a {@see CaptureWindow} hands back when its outermost call returns. */
 final class ClosedWindow

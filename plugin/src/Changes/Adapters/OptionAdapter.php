@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Changes\Adapters;
+namespace Belayline\Plugin\Changes\Adapters;
 
-use Specflux\AgentSafety\Changes\CaptureWindow;
-use Specflux\AgentSafety\Changes\ChangeAction;
-use Specflux\AgentSafety\Changes\ChangeCaptureAdapter;
-use Specflux\AgentSafety\Changes\ChangeRestoreAdapter;
-use Specflux\AgentSafety\Changes\StoredChange;
+use Belayline\Changes\CaptureWindow;
+use Belayline\Changes\ChangeAction;
+use Belayline\Changes\ChangeCaptureAdapter;
+use Belayline\Changes\ChangeRestoreAdapter;
+use Belayline\Changes\StoredChange;
 
 /** Options via the `update_option` action (old and new). The object id is the option name. */
 final class OptionAdapter implements ChangeCaptureAdapter, ChangeRestoreAdapter
@@ -18,9 +18,9 @@ final class OptionAdapter implements ChangeCaptureAdapter, ChangeRestoreAdapter
     /**
      * Options never captured: caches and cron, and this plugin's own state
      * (pause switch, shadow list, site binding, retention). An undo must never
-     * be able to restore a control SenroGate itself owns.
+     * be able to restore a control Belayline Agent Governance itself owns.
      */
-    private const IGNORED_PREFIXES = ['_transient', '_site_transient', 'agsafe_', 'agent_safety'];
+    private const IGNORED_PREFIXES = ['_transient', '_site_transient', 'belayline_', 'belayline'];
     private const IGNORED = ['cron', 'rewrite_rules', 'recently_activated'];
 
     public function objectTypes(): array

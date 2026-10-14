@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Changes\Adapters;
+namespace Belayline\Plugin\Changes\Adapters;
 
-use Specflux\AgentSafety\Changes\CaptureWindow;
-use Specflux\AgentSafety\Changes\Change;
-use Specflux\AgentSafety\Changes\ChangeAction;
+use Belayline\Changes\CaptureWindow;
+use Belayline\Changes\Change;
+use Belayline\Changes\ChangeAction;
 
 /**
  * Shared plumbing for the built-in hook adapters: a bound window, a

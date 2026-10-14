@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Tests\Changes;
+namespace Belayline\Tests\Changes;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Changes\CaptureWindow;
-use Specflux\AgentSafety\Changes\Change;
-use Specflux\AgentSafety\Changes\ChangeAction;
-use Specflux\AgentSafety\Changes\Drift;
-use Specflux\AgentSafety\Changes\StoredChange;
+use Belayline\Changes\CaptureWindow;
+use Belayline\Changes\Change;
+use Belayline\Changes\ChangeAction;
+use Belayline\Changes\Drift;
+use Belayline\Changes\StoredChange;
 
 final class DriftTest extends TestCase
 {

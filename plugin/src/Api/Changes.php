@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Api;
+namespace Belayline\Plugin\Api;
 
-use Specflux\AgentSafety\Changes\ChangeLedger;
-use Specflux\AgentSafety\Changes\StoredChange;
-use Specflux\AgentSafety\Changes\UndoItem;
-use Specflux\AgentSafety\Changes\UndoResult;
-use Specflux\AgentSafety\Changes\UndoScope;
-use Specflux\AgentSafety\Plugin\Changes\UndoService;
+use Belayline\Changes\ChangeLedger;
+use Belayline\Changes\StoredChange;
+use Belayline\Changes\UndoItem;
+use Belayline\Changes\UndoResult;
+use Belayline\Changes\UndoScope;
+use Belayline\Plugin\Changes\UndoService;
 
 /**
- * The change-history API (SPEC-SENROGATE-0.5 section 3.5), reached through
- * `agent_safety()->changes()`.
+ * The change-history API (the 0.5 spec section 3.5), reached through
+ * `belayline()->changes()`.
  *
  * Reading is the caller's to gate (the data can include customer fields):
  * check a capability before showing it. Undoing is enforced HERE, not by the
@@ -22,7 +22,7 @@ use Specflux\AgentSafety\Plugin\Changes\UndoService;
  * credential or inside a governed call. A nonce check is the caller's job (a
  * human click on its own screen); this API never accepts an agent as the actor.
  *
- *   $changes = agent_safety()?->changes();
+ *   $changes = belayline()?->changes();
  *   $run     = $changes?->forCorrelation($correlation_id);
  *   $preview = $changes?->preview($run->scope());
  *   $result  = $changes?->undo($run->scope(), get_current_user_id());

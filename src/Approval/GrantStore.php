@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Approval;
+namespace Belayline\Approval;
 
 /**
  * Persistence contract for pre-approval grants (AS-12). Same dependency

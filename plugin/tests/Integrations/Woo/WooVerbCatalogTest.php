@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\Woo;
+namespace Belayline\Plugin\Tests\Integrations\Woo;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
-use Specflux\AgentSafety\Plugin\Integrations\Woo\WooVerbCatalog;
+use Belayline\Policy\Tier;
+use Belayline\Policy\VerbCatalog;
+use Belayline\Plugin\Integrations\Woo\WooVerbCatalog;
 
 /**
  * Pins the 16 named abilities as the WHOLE catalogue: no forward-compat

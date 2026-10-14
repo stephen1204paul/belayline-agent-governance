@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Changes;
+namespace Belayline\Changes;
 
 /** One object a {@see ChangeSnapshotter} says a call will touch. */
 final class SnapshotRef

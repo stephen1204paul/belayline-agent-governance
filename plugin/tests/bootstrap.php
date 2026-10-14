@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHPUnit bootstrap for the plugin test suite. Run from woo-agent-safety/ via:
+ * PHPUnit bootstrap for the plugin test suite. Run from woo-belayline/ via:
  *   vendor/bin/phpunit -c plugin/phpunit.xml.dist
  *
  * The plugin has no WordPress (or mcp-adapter) install available in CI/local
@@ -22,12 +22,12 @@ if (!is_readable($wpasPluginAutoload)) {
 require_once $wpasPluginAutoload;
 
 // Real WordPress defines this before loading any plugin file; api.php (like
-// senrogate.php) exits immediately without it.
+// belayline-agent-governance.php) exits immediately without it.
 if (!defined('ABSPATH')) {
     define('ABSPATH', __DIR__ . '/');
 }
 
-// The global agent_safety() service locator — function_exists-guarded, and
+// The global belayline() service locator — function_exists-guarded, and
 // require-once idempotent with the real plugin main file's own load of it.
 require_once __DIR__ . '/../src/api.php';
 
@@ -405,7 +405,7 @@ if (!function_exists('wp_get_environment_type')) {
      *
      * Deliberately defaults to 'local', NOT the real WordPress default of
      * 'production' (AS-7 §3.4 item 8) — every pre-stage-7 shadow-mode test
-     * was written assuming the full 7-day {@see \Specflux\AgentSafety\Plugin\Support\ShadowMode::MAX_TTL}
+     * was written assuming the full 7-day {@see \Belayline\Plugin\Support\ShadowMode::MAX_TTL}
      * ceiling with no environment configured; defaulting this shim to
      * 'production' would silently reinterpret all of them under the new
      * 24-hour production ceiling. A test that wants the production heuristic

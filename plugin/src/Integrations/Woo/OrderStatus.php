@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\Woo;
+namespace Belayline\Plugin\Integrations\Woo;
 
 /**
  * Normalises an order status argument the way WooCommerce does before it

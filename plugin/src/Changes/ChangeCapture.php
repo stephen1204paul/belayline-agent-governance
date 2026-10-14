@@ -2,27 +2,27 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Changes;
+namespace Belayline\Plugin\Changes;
 
-use Specflux\AgentSafety\Changes\CaptureWindow;
-use Specflux\AgentSafety\Changes\Change;
-use Specflux\AgentSafety\Changes\ChangeAction;
-use Specflux\AgentSafety\Changes\ChangeLedger;
-use Specflux\AgentSafety\Changes\ChangeSnapshotter;
-use Specflux\AgentSafety\Changes\ClosedWindow;
-use Specflux\AgentSafety\Changes\ResultAwareSnapshotter;
-use Specflux\AgentSafety\Changes\SnapshotRef;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
-use Specflux\AgentSafety\Policy\TierClassifier;
+use Belayline\Changes\CaptureWindow;
+use Belayline\Changes\Change;
+use Belayline\Changes\ChangeAction;
+use Belayline\Changes\ChangeLedger;
+use Belayline\Changes\ChangeSnapshotter;
+use Belayline\Changes\ClosedWindow;
+use Belayline\Changes\ResultAwareSnapshotter;
+use Belayline\Changes\SnapshotRef;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Verdict\VerdictPipeline;
+use Belayline\Policy\TierClassifier;
 
 /**
  * Wraps a governed call's execution in a {@see CaptureWindow}: it opens for a
  * call at Tier >= 1, and closes when the call RETURNS, throws, or yields a
  * WP_Error. `wp_after_execute_ability` fires only on success, so closing is
  * done from a `finally` around the ability's own `execute_callback`
- * ({@see \Specflux\AgentSafety\Plugin\Hooks\AbilityPermissionGate::wrap()}) —
+ * ({@see \Belayline\Plugin\Hooks\AbilityPermissionGate::wrap()}) —
  * never from that hook — and a failing call can therefore never leak an open
  * window (and its listeners) into the rest of the request. A fatal skips
  * `finally`; {@see closeAll()} on shutdown covers that.

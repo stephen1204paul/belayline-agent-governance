@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Changes;
+namespace Belayline\Changes;
 
 /** A persisted change as the undo engine reads it back, bodies decoded. */
 final class StoredChange

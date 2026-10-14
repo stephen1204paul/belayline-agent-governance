@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\FluentCart;
+namespace Belayline\Plugin\Integrations\FluentCart;
 
-use Specflux\AgentSafety\Changes\ChangeSnapshotter;
-use Specflux\AgentSafety\Changes\SnapshotRef;
+use Belayline\Changes\ChangeSnapshotter;
+use Belayline\Changes\SnapshotRef;
 use wpdb;
 
 /**

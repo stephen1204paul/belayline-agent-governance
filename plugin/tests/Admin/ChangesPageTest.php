@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Admin;
+namespace Belayline\Plugin\Tests\Admin;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Changes\CaptureWindow;
-use Specflux\AgentSafety\Changes\Change;
-use Specflux\AgentSafety\Changes\ChangeAction;
-use Specflux\AgentSafety\Changes\UndoResult;
-use Specflux\AgentSafety\Plugin\Admin\ChangesPage;
-use Specflux\AgentSafety\Plugin\Audit\AuditReader;
-use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
-use Specflux\AgentSafety\Plugin\Changes\UndoService;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryChangeLedger;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Changes\CaptureWindow;
+use Belayline\Changes\Change;
+use Belayline\Changes\ChangeAction;
+use Belayline\Changes\UndoResult;
+use Belayline\Plugin\Admin\ChangesPage;
+use Belayline\Plugin\Audit\AuditReader;
+use Belayline\Plugin\Changes\ChangeCapture;
+use Belayline\Plugin\Changes\UndoService;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\InMemoryChangeLedger;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 use wpdb;
 
 final class ChangesPageTest extends TestCase

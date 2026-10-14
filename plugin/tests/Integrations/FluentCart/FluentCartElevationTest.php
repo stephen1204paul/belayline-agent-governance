@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\FluentCart;
+namespace Belayline\Plugin\Tests\Integrations\FluentCart;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Integrations\FluentCart\CouponActivationElevationRule;
-use Specflux\AgentSafety\Plugin\Integrations\FluentCart\DryRunRelaxation;
-use Specflux\AgentSafety\Plugin\Integrations\FluentCart\FluentCartIntegration;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Plugin\Integrations\FluentCart\CouponActivationElevationRule;
+use Belayline\Plugin\Integrations\FluentCart\DryRunRelaxation;
+use Belayline\Plugin\Integrations\FluentCart\FluentCartIntegration;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 use wpdb;
 
 final class FluentCartElevationTest extends TestCase

@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Approval;
+namespace Belayline\Plugin\Approval;
 
-use Specflux\AgentSafety\Approval\Grant;
-use Specflux\AgentSafety\Approval\GrantStatus;
-use Specflux\AgentSafety\Approval\GrantStore;
-use Specflux\AgentSafety\Plugin\Support\Schema;
+use Belayline\Approval\Grant;
+use Belayline\Approval\GrantStatus;
+use Belayline\Approval\GrantStore;
+use Belayline\Plugin\Support\Schema;
 use wpdb;
 
 /**
  * Pre-approval grant store backed by its own custom table (shape owned by
  * {@see Schema::grantsColumns()}). Implements the core {@see GrantStore} seam
- * plus the host-only counts the {@see \Specflux\AgentSafety\Plugin\Api\Grants}
+ * plus the host-only counts the {@see \Belayline\Plugin\Api\Grants}
  * service audits with.
  *
  * Deliberately NOT rows in the approvals table and NOT transients: a grant
@@ -28,10 +28,10 @@ use wpdb;
  *    the SQL guard is there for atomicity — two concurrent calls can decrement
  *    one grant at most once each, and can never take it below zero.
  *  - An empty or absent subject NEVER matches, mirroring
- *    {@see \Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore::reserve()}. That
+ *    {@see \Belayline\Plugin\Audit\WpdbApprovalStore::reserve()}. That
  *    check happens before any query is built.
  *  - The hard TTL is a wall independent of the count
- *    (filter `agent_safety_grant_ttl`, default and ceiling 24 h) and every
+ *    (filter `belayline_grant_ttl`, default and ceiling 24 h) and every
  *    comparison is in UTC (UTC_TIMESTAMP()), so no server-timezone drift can
  *    extend a grant.
  *  - {@see release()} can restore an `exhausted` grant to `active` but can never
@@ -41,7 +41,7 @@ final class WpdbGrantStore implements GrantStore
 {
     /**
      * Hard grant lifetime. After this a grant is dead however much count it has
-     * left. Filterable via `agent_safety_grant_ttl` (seconds), downward only: a
+     * left. Filterable via `belayline_grant_ttl` (seconds), downward only: a
      * filtered value above {@see self::TTL_MAX_SECONDS} is clamped to it, one
      * that is not a positive int is ignored, and the filter can only ever be
      * applied at ISSUE time, so shortening it later cannot retro-extend a grant
@@ -342,7 +342,7 @@ final class WpdbGrantStore implements GrantStore
         }
 
         /** @var mixed $filtered */
-        $filtered = apply_filters('agent_safety_grant_ttl', self::TTL_SECONDS);
+        $filtered = apply_filters('belayline_grant_ttl', self::TTL_SECONDS);
 
         return is_int($filtered) && $filtered > 0 ? min($filtered, self::TTL_MAX_SECONDS) : self::TTL_SECONDS;
     }

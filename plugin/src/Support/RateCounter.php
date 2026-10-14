@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
 /**
  * Fixed-window call counters backing a Pack's rate/quota caps (backlog #16;
@@ -26,7 +26,7 @@ namespace Specflux\AgentSafety\Plugin\Support;
  * Calls bare time() unqualified: PHP resolves an unqualified function call by
  * checking the CALLING code's own namespace first and only falls back to the
  * global one if nothing matches there. The test suite defines a
- * Specflux\AgentSafety\Plugin\Support\time() override (see
+ * Belayline\Plugin\Support\time() override (see
  * tests/stubs/wpas-clock.php) so tests can freeze/advance "now" via
  * $GLOBALS['wpas_test_time']; production code never loads that stub, so the
  * bare call here always falls through to the real global time().
@@ -35,7 +35,7 @@ final class RateCounter
 {
     // Namespaces this counter's rows in the shared counters table (the key is
     // per pack/identity/window, so no fixed list of full names exists).
-    public const PREFIX = 'agsafe_rl_';
+    public const PREFIX = 'belayline_rl_';
 
     private const MINUTE_WINDOW = 60;
     private const HOUR_WINDOW = 3600;

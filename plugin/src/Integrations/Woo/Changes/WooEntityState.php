@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\Woo\Changes;
+namespace Belayline\Plugin\Integrations\Woo\Changes;
 
 /**
  * The plain-array shape of a WooCommerce object, shared by capture and

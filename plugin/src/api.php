@@ -1,22 +1,22 @@
 <?php
 
 /**
- * Global service locator for Agent Safety consumers. Defined in the global
+ * Global service locator for Belayline consumers. Defined in the global
  * namespace so ANY other plugin can call it without knowing this plugin's
  * namespace; guarded by function_exists, so an older/newer copy of the file
  * loading twice is a no-op.
  *
- * Usage (feature-detected — absent entirely on Agent Safety < 0.3):
+ * Usage (feature-detected — absent entirely on Belayline < 0.3):
  *
- *   if (function_exists('agent_safety')
- *       && ($container = agent_safety()) !== null
+ *   if (function_exists('belayline')
+ *       && ($container = belayline()) !== null
  *       && ($approvals = $container->approvals()) !== null) {
  *       $approvals->approve($approvalId, get_current_user_id());
  *   }
  *
  * Change history and undo (0.5, absent before it; feature-detect `changes()`):
  *
- *   $changes = agent_safety()?->changes();
+ *   $changes = belayline()?->changes();
  *   $run     = $changes?->forCorrelation($correlation_id);  // RecordedChanges
  *   foreach ($run ?? [] as $c) { $c->objectType(); $c->objectId(); $c->action(); $c->fieldDiff(); $c->restorable(); $c->reason(); }
  *   $items   = $changes?->preview($run->scope());           // list<UndoItem>, writes nothing
@@ -31,21 +31,21 @@
 
 declare(strict_types=1);
 
-use Specflux\AgentSafety\Plugin\Container;
+use Belayline\Plugin\Container;
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-if (!function_exists('agent_safety')) {
+if (!function_exists('belayline')) {
     /**
-     * The Agent Safety service container, or null before `plugins_loaded` —
+     * The Belayline service container, or null before `plugins_loaded` —
      * or when the plugin's autoloader is broken (the same fail-safe posture
      * as the rest of the bootstrap: degraded, never fatal).
      *
      * @return Container|null
      */
-    function agent_safety(): ?Container
+    function belayline(): ?Container
     {
         if (!class_exists(Container::class)) {
             return null;

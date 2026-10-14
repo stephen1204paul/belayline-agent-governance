@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
-use Specflux\AgentSafety\Approval\ApprovalBinding;
-use Specflux\AgentSafety\Packs\Pack;
+use Belayline\Approval\ApprovalBinding;
+use Belayline\Packs\Pack;
 
 /**
  * Two anomaly tripwires the rate limits cannot express, because a denial
@@ -16,7 +16,7 @@ use Specflux\AgentSafety\Packs\Pack;
  *    verb, not in pack, class-denied, a lying or destructive hint) is counted
  *    per identity token in a one-minute window; when the count reaches
  *    `denials_per_minute` the token is locked out for `lockout_seconds`, one
- *    `tripwire.locked` audit row is written, `agent_safety_tripwire_tripped`
+ *    `tripwire.locked` audit row is written, `belayline_tripwire_tripped`
  *    fires, and the approval recipient is emailed. While locked out, every
  *    governed call for that token — any tier, any would-be outcome — is
  *    denied `denial_lockout`. Lockout denials do not feed the count.
@@ -27,7 +27,7 @@ use Specflux\AgentSafety\Packs\Pack;
  *    threaded `_approval` token or a reordered key is still the same call.
  *    A refused repeat does not count (D26).
  *
- * Thresholds come from the `agent_safety_tripwire_limits` filter over
+ * Thresholds come from the `belayline_tripwire_limits` filter over
  * {@see DEFAULTS}; a value that is not a positive int keeps the default for
  * that key. The counters are per-request memoized the way {@see RateLimitGate}
  * is, because WordPress re-enters a permission callback many times per
@@ -37,11 +37,11 @@ use Specflux\AgentSafety\Packs\Pack;
  */
 final class Tripwires
 {
-    public const FILTER = 'agent_safety_tripwire_limits';
+    public const FILTER = 'belayline_tripwire_limits';
 
-    public const ACTION = 'agent_safety_tripwire_tripped';
+    public const ACTION = 'belayline_tripwire_tripped';
 
-    /** The deny reason for a locked-out token; also names the lockout in `agent_safety_tripwire_tripped`. */
+    /** The deny reason for a locked-out token; also names the lockout in `belayline_tripwire_tripped`. */
     public const LOCKOUT = 'denial_lockout';
 
     /** The deny reason for one identical write too many. */
@@ -62,7 +62,7 @@ final class Tripwires
     // Public: named by {@see UninstallManifest} as the transient-key prefix
     // an opted-in uninstall must sweep (this key is per identity, so no
     // fixed list of full names exists).
-    public const LOCKOUT_PREFIX = 'agsafe_lock_';
+    public const LOCKOUT_PREFIX = 'belayline_lock_';
 
     /** @var array<string, true> identity|verb|args already counted as a denial in THIS request. */
     private array $countedDenials = [];
@@ -137,14 +137,14 @@ final class Tripwires
 
     /**
      * The effective thresholds: {@see DEFAULTS} after the
-     * `agent_safety_tripwire_limits` filter, each key falling back to its
+     * `belayline_tripwire_limits` filter, each key falling back to its
      * default unless the filter returned a positive int for it.
      *
      * @return array{denials_per_minute: int, lockout_seconds: int, identical_calls_per_hour: int}
      */
     public function limits(): array
     {
-        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- self::FILTER is the literal, prefixed 'agent_safety_tripwire_limits' constant; PHPCS can't resolve a class constant statically.
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- self::FILTER is the literal, prefixed 'belayline_tripwire_limits' constant; PHPCS can't resolve a class constant statically.
         $filtered = apply_filters(self::FILTER, self::DEFAULTS);
 
         return [
@@ -168,7 +168,7 @@ final class Tripwires
 
         $this->changes->tripwireLocked($identity, $denials, $lockoutSeconds);
 
-        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- self::ACTION is the literal, prefixed 'agent_safety_tripwire_tripped' constant; PHPCS can't resolve a class constant statically.
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- self::ACTION is the literal, prefixed 'belayline_tripwire_tripped' constant; PHPCS can't resolve a class constant statically.
         do_action(self::ACTION, $identity, self::LOCKOUT, [
             'token' => $identity,
             'denials' => $denials,
@@ -179,17 +179,17 @@ final class Tripwires
         $this->notifier?->alert(
             sprintf(
                 /* translators: 1: denial count, 2: the locked-out credential/token identity */
-                __('Credential locked out after %1$d denials: %2$s', 'senrogate'),
+                __('Credential locked out after %1$d denials: %2$s', 'belayline-agent-governance'),
                 $denials,
                 $identity
             ),
             sprintf(
                 /* translators: 1: token identity, 2: denials in the last minute, 3: lockout seconds, 4: the review URL */
-                __("SenroGate has locked out an agent credential.\n\nToken: %1\$s\nDenials in the last minute: %2\$d\nLocked out for: %3\$d seconds\n\nEvery call it makes is denied until the lockout lapses. Review what it was refused (requires login):\n%4\$s\n", 'senrogate'),
+                __("Belayline Agent Governance has locked out an agent credential.\n\nToken: %1\$s\nDenials in the last minute: %2\$d\nLocked out for: %3\$d seconds\n\nEvery call it makes is denied until the lockout lapses. Review what it was refused (requires login):\n%4\$s\n", 'belayline-agent-governance'),
                 $identity,
                 $denials,
                 $lockoutSeconds,
-                admin_url('tools.php?page=agent-safety-audit'),
+                admin_url('tools.php?page=belayline-audit'),
             ),
         );
     }

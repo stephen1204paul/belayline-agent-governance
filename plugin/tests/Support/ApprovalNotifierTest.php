@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Support\ApprovalNotifier;
+use Belayline\Plugin\Support\ApprovalNotifier;
 
 final class ApprovalNotifierTest extends TestCase
 {
@@ -28,7 +28,7 @@ final class ApprovalNotifierTest extends TestCase
         $this->assertStringContainsString('woocommerce/orders-refund', $mail['subject']);
         $this->assertStringContainsString('orders-refund { amount=50 }', $mail['message']);
         $this->assertStringContainsString('apr_1', $mail['message']);
-        $this->assertStringContainsString('tools.php?page=agent-safety-pending', $mail['message']);
+        $this->assertStringContainsString('tools.php?page=belayline-pending', $mail['message']);
     }
 
     public function testConfiguredRecipientOptionBeatsTheAdminEmailDefault(): void
@@ -59,13 +59,13 @@ final class ApprovalNotifierTest extends TestCase
 
     public function testWebhookPostsIdentifiersOnlyJsonNeverTheSummary(): void
     {
-        $GLOBALS['wpas_test_options'][ApprovalNotifier::WEBHOOK_OPTION] = 'https://hooks.example.test/agsafe';
+        $GLOBALS['wpas_test_options'][ApprovalNotifier::WEBHOOK_OPTION] = 'https://hooks.example.test/belayline';
 
         (new ApprovalNotifier())->notify('apr_9', 'woocommerce/orders-refund', 'orders-refund { email=pii@example.test }');
 
         $this->assertCount(1, $GLOBALS['wpas_test_http']);
         $post = $GLOBALS['wpas_test_http'][0];
-        $this->assertSame('https://hooks.example.test/agsafe', $post['url']);
+        $this->assertSame('https://hooks.example.test/belayline', $post['url']);
         $this->assertFalse($post['args']['blocking']);
         $this->assertSame('application/json', $post['args']['headers']['Content-Type']);
 
@@ -73,7 +73,7 @@ final class ApprovalNotifierTest extends TestCase
         $this->assertSame('approval.requested', $payload['event']);
         $this->assertSame('apr_9', $payload['approval_id']);
         $this->assertSame('woocommerce/orders-refund', $payload['verb']);
-        $this->assertStringContainsString('tools.php?page=agent-safety-pending', $payload['review_url']);
+        $this->assertStringContainsString('tools.php?page=belayline-pending', $payload['review_url']);
         // The summary carries raw argument values; it must never leave the site.
         $this->assertStringNotContainsString('pii@example.test', (string) $post['args']['body']);
     }

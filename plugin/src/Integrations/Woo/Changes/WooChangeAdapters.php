@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\Woo\Changes;
+namespace Belayline\Plugin\Integrations\Woo\Changes;
 
-use Specflux\AgentSafety\Plugin\Changes\ChangeAdapters;
+use Belayline\Plugin\Changes\ChangeAdapters;
 
 /**
  * The WooCommerce adapters, appended to the registry through
- * `agent_safety_change_adapters`. Wired by the plugin bootstrap only inside
+ * `belayline_change_adapters`. Wired by the plugin bootstrap only inside
  * the WooIntegration::available() branch, so a site without WooCommerce never
  * loads them.
  */

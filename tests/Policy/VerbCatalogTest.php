@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Tests\Policy;
+namespace Belayline\Tests\Policy;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Policy\Tier;
+use Belayline\Policy\VerbCatalog;
 
 final class VerbCatalogTest extends TestCase
 {

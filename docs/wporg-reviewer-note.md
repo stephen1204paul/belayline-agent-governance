@@ -1,14 +1,14 @@
-# Reviewer note — Agent Safety 0.4.0
+# Reviewer note — Belayline 0.4.0
 
 This file is not part of the plugin zip. It's for the wordpress.org plugin review team.
 
 ## Custom tables
 
-The plugin creates three tables (prefix `{$wpdb->prefix}agsafe_`):
+The plugin creates three tables (prefix `{$wpdb->prefix}belayline_`):
 
-* `agsafe_audit_log` — one row per gate decision or executed agent action.
-* `agsafe_approvals` — pending, approved, rejected, and terminal approval requests.
-* `agsafe_grants` — pre-approval grants (renamed from `agent_safety_grants` in this release; the
+* `belayline_audit_log` — one row per gate decision or executed agent action.
+* `belayline_approvals` — pending, approved, rejected, and terminal approval requests.
+* `belayline_grants` — pre-approval grants (renamed from `belayline_grants` in this release; the
   upgrade path renames the table in place with `RENAME TABLE`, and leaves an admin notice if
   both old and new tables exist after an interrupted upgrade).
 
@@ -46,7 +46,7 @@ part of the audit record.
 
 Uninstall is opt-in: by default, deleting the plugin from the Plugins screen leaves all three
 tables, every plugin option, and every scheduled cron event in place. A site owner who wants
-everything removed defines `AGSAFE_REMOVE_DATA` as `true` before deleting the plugin, which drops
+everything removed defines `BELAYLINE_REMOVE_DATA` as `true` before deleting the plugin, which drops
 all three tables (`DROP TABLE IF EXISTS`, using `$wpdb->prepare('%i', ...)` for the table name),
 deletes every option the plugin uses, and clears every cron event it scheduled.
 
@@ -62,12 +62,12 @@ JSON body:
   "event": "approval.requested",
   "approval_id": "apr_...",
   "verb": "woocommerce/products-delete",
-  "review_url": "https://example.com/wp-admin/tools.php?page=agent-safety-pending"
+  "review_url": "https://example.com/wp-admin/tools.php?page=belayline-pending"
 }
 ```
 
 No call arguments, no customer data, and no PII are sent. The URL and payload are both filterable
-(`agent_safety_webhook_url`, `agent_safety_webhook_payload`) for a site that wants to route
+(`belayline_webhook_url`, `belayline_webhook_payload`) for a site that wants to route
 somewhere else or add fields, but the shipped default is exactly the four fields above. The
 plugin also sends one email, through `wp_mail()`, to the site's admin email address (or a
 recipient set on the same screen) for the same event; that's WordPress's own mail delivery, not a third-party service.

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\Woo;
+namespace Belayline\Plugin\Integrations\Woo;
 
-use Specflux\AgentSafety\Plugin\Approval\StateProbe;
+use Belayline\Plugin\Approval\StateProbe;
 
 /**
  * AS-6 state probe for the four product-mutation verbs

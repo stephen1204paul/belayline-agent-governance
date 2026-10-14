@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\SureCart;
+namespace Belayline\Plugin\Integrations\SureCart;
 
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Approval\StateProbe;
-use Specflux\AgentSafety\Plugin\Changes\ChangeAdapters;
-use Specflux\AgentSafety\Policy\ElevationRule;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Approval\StateProbe;
+use Belayline\Plugin\Changes\ChangeAdapters;
+use Belayline\Policy\ElevationRule;
+use Belayline\Policy\VerbCatalog;
 
 /**
  * The one place SureCart coupling lives (governance, starter packs, and remote change capture/restore).
@@ -68,11 +68,11 @@ final class SureCartIntegration
     {
         $catalog->register(SureCartVerbCatalog::MAP);
 
-        // Standing grants (agent_safety_enable_grants + eligibility filter) must
+        // Standing grants (belayline_enable_grants + eligibility filter) must
         // never cover refunds, cancellations or deletes. Run last so no other
         // eligibility callback can re-allow them.
         if (function_exists('add_filter')) {
-            add_filter('agent_safety_grant_eligible', [self::class, 'denyUngrantable'], PHP_INT_MAX, 3);
+            add_filter('belayline_grant_eligible', [self::class, 'denyUngrantable'], PHP_INT_MAX, 3);
         }
 
         // Change capture/restore for SureCart's remote objects joins the adapter registry.
@@ -102,7 +102,7 @@ final class SureCartIntegration
     }
 
     /**
-     * agent_safety_grant_eligible callback: ungrantable verbs are never eligible.
+     * belayline_grant_eligible callback: ungrantable verbs are never eligible.
      *
      * @param mixed $eligible
      * @param mixed $grant

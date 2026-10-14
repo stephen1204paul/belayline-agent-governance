@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
-use Specflux\AgentSafety\Plugin\Approval\WpdbGrantStore;
-use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
+use Belayline\Plugin\Approval\WpdbGrantStore;
+use Belayline\Plugin\Audit\WpdbApprovalStore;
 
 /**
  * Hourly cron sweep of the approvals table — and, when grants are wired, of the
@@ -16,12 +16,12 @@ use Specflux\AgentSafety\Plugin\Audit\WpdbApprovalStore;
  *
  * {@see activate()}/{@see deactivate()} own only the wp-cron scheduling and are
  * deliberately free of any class dependency beyond this one, so
- * `plugin/senrogate.php` can call them from its activation/deactivation
+ * `plugin/belayline-agent-governance.php` can call them from its activation/deactivation
  * callbacks after nothing more than confirming the autoloader ran.
  */
 final class ApprovalSweep
 {
-    public const HOOK = 'agsafe_sweep_approvals';
+    public const HOOK = 'belayline_sweep_approvals';
 
     /** Idempotent: a hook already on the cron schedule is left untouched. */
     public static function activate(): void

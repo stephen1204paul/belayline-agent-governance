@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\SureCart;
+namespace Belayline\Plugin\Tests\Integrations\SureCart;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Integrations\SureCart\DiscountElevationRule;
-use Specflux\AgentSafety\Plugin\Integrations\SureCart\SureCartIntegration;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Plugin\Integrations\SureCart\DiscountElevationRule;
+use Belayline\Plugin\Integrations\SureCart\SureCartIntegration;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 
 final class SureCartElevationRulesTest extends TestCase
 {

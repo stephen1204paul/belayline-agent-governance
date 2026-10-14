@@ -30,7 +30,7 @@ one script. It prints a `PASS`/`FAIL` line per check as it goes, then a final
 consolidated `P1`..`P8` table, and exits non-zero if any row failed.
 
 When done, `npx @wordpress/env stop` runs automatically (never `destroy` —
-`stop` leaves the environment for a re-run). Set `AGSAFE_KEEP_ENV=1` to skip
+`stop` leaves the environment for a re-run). Set `BELAYLINE_KEEP_ENV=1` to skip
 that and leave the environment running for manual poking afterwards.
 
 ## What each row proves
@@ -38,7 +38,7 @@ that and leave the environment running for manual poking afterwards.
 - **P1 Install** — the 0.4.0 zip installs and activates on a single site
   (`P1a`); network-activating it on a multisite conversion of the SAME
   install is refused with the exact string from
-  `plugin/src/Support/MultisiteGuard.php::message()`: *"Agent Safety does
+  `plugin/src/Support/MultisiteGuard.php::message()`: *"Belayline does
   not support WordPress multisite. It was not activated."* (`P1b`, run
   **last** — multisite conversion is one-way for this wp-env instance, and
   P8 has already uninstalled the plugin data by the time P1b reinstalls the
@@ -59,7 +59,7 @@ that and leave the environment running for manual poking afterwards.
   `environment.mismatch` audit row, the approval becomes `void_environment`,
   the shadow option empties, an admin notice appears, and rebinding clears
   only the mismatch lock — it restores nothing.
-- **P5 Check-approval** — polling `agent-safety/check-approval` on the
+- **P5 Check-approval** — polling `belayline/check-approval` on the
   **default** mcp-adapter server (not Woo's own endpoint) walks an approval
   through `pending` → `approved` → `used`; a second principal's poll is
   byte-identical to an unknown id's response (no existence oracle); an 11th
@@ -74,10 +74,10 @@ that and leave the environment running for manual poking afterwards.
   "tamper-evident" wording from `plugin/src/Privacy/PersonalDataEraser.php`,
   and the audit page still shows "Chain intact." afterwards (erasure never
   breaks the hash chain — the whole point of retaining, not erasing).
-- **P8 Uninstall** — `AGSAFE_REMOVE_DATA=true` + `wp plugin uninstall` leaves
-  no `agsafe_%` options, no `{prefix}agsafe_%` tables, no Agent Safety cron
-  events, and no leftover `_transient_agsafe_%` rows. Run near the end
-  (inside `run.js`, before P1b) because it deletes all Agent Safety data —
+- **P8 Uninstall** — `BELAYLINE_REMOVE_DATA=true` + `wp plugin uninstall` leaves
+  no `belayline_%` options, no `{prefix}belayline_%` tables, no Belayline cron
+  events, and no leftover `_transient_belayline_%` rows. Run near the end
+  (inside `run.js`, before P1b) because it deletes all Belayline data —
   P1b's later reinstall starts from a clean slate on purpose.
 
 ## Design choices worth knowing about
@@ -102,7 +102,7 @@ that and leave the environment running for manual poking afterwards.
   every row and option the plugin owns; P1b's later reinstall deliberately
   starts from that clean slate.
 - **`npx @wordpress/env stop`**, never `destroy`, runs automatically via a
-  bash `trap` on `EXIT` — set `AGSAFE_KEEP_ENV=1` to skip it.
+  bash `trap` on `EXIT` — set `BELAYLINE_KEEP_ENV=1` to skip it.
 
 ## Known deviations from a straight reading of the original brief
 
@@ -112,12 +112,12 @@ that and leave the environment running for manual poking afterwards.
   planning directory. `release-0.4.sh` resolves it as
   `"$REPO_ROOT/../research/mcp-adapter"` rather than
   `"$REPO_ROOT/research/mcp-adapter"`.
-- The rebind nonce action (`agsafe_rebind_environment`) carries **no id
+- The rebind nonce action (`belayline_rebind_environment`) carries **no id
   suffix** — confirmed by reading `plugin/src/Admin/CapabilityPacksPage.php`;
-  only the per-approval approve/reject nonces (`agsafe_approve_action<id>`)
+  only the per-approval approve/reject nonces (`belayline_approve_action<id>`)
   do.
 - **Correction (post-review):** the environment-bound/mismatch audit rows'
-  `ability` column is actually the OPTION name (`agsafe_site_binding`), not
+  `ability` column is actually the OPTION name (`belayline_site_binding`), not
   the event name — `AdminChangeRecorder::append(string $event, string
   $option, array $input)` stores `$option` as `ability` and `$event` only
   inside `record_json`'s `"reason"` key (confirmed against
@@ -125,6 +125,6 @@ that and leave the environment running for manual poking afterwards.
   `AuditRecord::toArray()`/`canonicalJson()` — the audit table has no
   standalone `reason` column, only `ability`, `decision`, `tier`, `result`,
   `wp_user`, `ip`, `record_json`). `run.js` was corrected to query
-  `ability='agsafe_site_binding' AND record_json LIKE
+  `ability='belayline_site_binding' AND record_json LIKE
   '%"reason":"environment.bound"%'` (and `...environment.mismatch...` for
   P4) rather than the original (wrong) `ability='environment.bound'`.

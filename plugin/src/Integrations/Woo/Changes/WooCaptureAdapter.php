@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\Woo\Changes;
+namespace Belayline\Plugin\Integrations\Woo\Changes;
 
-use Specflux\AgentSafety\Changes\CaptureWindow;
-use Specflux\AgentSafety\Changes\ChangeAction;
-use Specflux\AgentSafety\Changes\ChangeCaptureAdapter;
-use Specflux\AgentSafety\Plugin\Changes\Adapters\RecordsChanges;
+use Belayline\Changes\CaptureWindow;
+use Belayline\Changes\ChangeAction;
+use Belayline\Changes\ChangeCaptureAdapter;
+use Belayline\Plugin\Changes\Adapters\RecordsChanges;
 
 /**
  * Hook capture for WooCommerce. Products and variations, coupons, customers

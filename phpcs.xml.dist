@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
-<ruleset name="AgentSafety">
-    <description>PSR-12 coding standard for the Agent Safety core library and WordPress plugin host.</description>
+<ruleset name="Belayline">
+    <description>PSR-12 coding standard for the Belayline core library and WordPress plugin host.</description>
 
     <file>src</file>
     <file>tests</file>
@@ -43,7 +43,7 @@
         <exclude-pattern>plugin/tests/stubs/*</exclude-pattern>
         <exclude-pattern>plugin/tests/bootstrap.php</exclude-pattern>
         <!--
-            The global agent_safety() locator is the plugin's external API by
+            The global belayline() locator is the plugin's external API by
             definition: a function-only file other plugins reach through
             function_exists(). Side effects ARE its contract.
         -->

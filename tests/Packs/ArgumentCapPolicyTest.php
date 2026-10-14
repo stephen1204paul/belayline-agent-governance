@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Tests\Packs;
+namespace Belayline\Tests\Packs;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Packs\ArgumentCap;
-use Specflux\AgentSafety\Packs\ArgumentCapPolicy;
+use Belayline\Packs\ArgumentCap;
+use Belayline\Packs\ArgumentCapPolicy;
 
 /**
  * Exercises the pure argument-cap evaluator in isolation from the host's
- * storage ({@see \Specflux\AgentSafety\Plugin\Support\ArgumentCapGate} covers
+ * storage ({@see \Belayline\Plugin\Support\ArgumentCapGate} covers
  * the glue in the plugin suite). Mirrors {@see LimitPolicyTest}'s house
  * style: no mocking, one behaviour per test, boundary values named in the
  * method name.

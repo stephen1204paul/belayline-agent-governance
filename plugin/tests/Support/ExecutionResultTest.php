@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Support\ExecutionResult;
+use Belayline\Plugin\Support\ExecutionResult;
 use WP_Error;
 
 final class ExecutionResultTest extends TestCase

@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\SureCart;
+namespace Belayline\Plugin\Integrations\SureCart;
 
 use Closure;
-use Specflux\AgentSafety\Changes\CaptureWindow;
-use Specflux\AgentSafety\Changes\Change;
-use Specflux\AgentSafety\Changes\ChangeAction;
-use Specflux\AgentSafety\Changes\ChangeCaptureAdapter;
-use Specflux\AgentSafety\Changes\ChangeRestoreAdapter;
-use Specflux\AgentSafety\Changes\ResultAwareSnapshotter;
-use Specflux\AgentSafety\Changes\SnapshotRef;
-use Specflux\AgentSafety\Changes\StoredChange;
+use Belayline\Changes\CaptureWindow;
+use Belayline\Changes\Change;
+use Belayline\Changes\ChangeAction;
+use Belayline\Changes\ChangeCaptureAdapter;
+use Belayline\Changes\ChangeRestoreAdapter;
+use Belayline\Changes\ResultAwareSnapshotter;
+use Belayline\Changes\SnapshotRef;
+use Belayline\Changes\StoredChange;
 
 /**
  * Change capture and restore for SureCart's REMOTE objects (the data lives in
@@ -282,7 +282,7 @@ final class SureCartChangeAdapter implements ResultAwareSnapshotter, ChangeCaptu
             // is archived (hidden from the storefront), which keeps purchase history.
             ($this->updater)($model, $change->objectId, ['archived' => true]);
             if (function_exists('do_action')) {
-                do_action('agent_safety_surecart_archived_on_undo', $model, $change->objectId);
+                do_action('belayline_surecart_archived_on_undo', $model, $change->objectId);
             }
 
             return;

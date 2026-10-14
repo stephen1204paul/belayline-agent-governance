@@ -1,4 +1,4 @@
-# Agent Safety
+# Belayline
 
 The governed safety and audit layer for AI-agent tool calls in WordPress: every call an agent makes is judged against a Pack, and what happened to it is recorded.
 
@@ -23,7 +23,7 @@ A self-reported readonly or destructive annotation carried by the tool or abilit
 _Avoid_: annotation, flag
 
 **Governed namespace**:
-An ability namespace that Agent Safety judges; calls outside it pass through untouched.
+An ability namespace that Belayline judges; calls outside it pass through untouched.
 _Avoid_: scope, allowlist
 
 ### Judging a call

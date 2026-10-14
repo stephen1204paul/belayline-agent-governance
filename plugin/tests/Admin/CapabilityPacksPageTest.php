@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Admin;
+namespace Belayline\Plugin\Tests\Admin;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Admin\CapabilityPacksPage;
-use Specflux\AgentSafety\Plugin\Identity\IdentityChain;
-use Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Support\ShadowMode;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeIdentityProvider;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Plugin\Admin\CapabilityPacksPage;
+use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Support\AdminChangeRecorder;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Support\ShadowMode;
+use Belayline\Plugin\Tests\Fakes\FakeIdentityProvider;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
 
 /**
  * The Packs screen's two saves are exercised through their apply*() seams
@@ -88,10 +88,10 @@ final class CapabilityPacksPageTest extends TestCase
 
     public function testAValidDeepLinkPreselectsThePackHighlightsTheRowAndNotifies(): void
     {
-        $out = $this->renderWithGet(['senrogate_bind_token' => 'role:administrator', 'senrogate_bind_pack' => 'owner']);
+        $out = $this->renderWithGet(['belayline-agent-governance_bind_token' => 'role:administrator', 'belayline-agent-governance_bind_pack' => 'owner']);
 
-        $this->assertStringContainsString('SenroFlux asked to bind Administrator to owner. Review and Save.', $out);
-        $this->assertStringContainsString('<tr id="agsafe-bind-prefill"', $out);
+        $this->assertStringContainsString('Site Agent asked to bind Administrator to owner. Review and Save.', $out);
+        $this->assertStringContainsString('<tr id="belayline-bind-prefill"', $out);
         $this->assertStringContainsString('<option value="owner" selected=\'selected\'>owner</option>', $out);
         // Only that row is touched: the other row's dropdown selects nothing.
         $this->assertSame(1, substr_count($this->bindingsSection($out), 'selected='));
@@ -100,19 +100,19 @@ final class CapabilityPacksPageTest extends TestCase
     public function testAnUnknownTokenIsIgnoredSilently(): void
     {
         foreach (['role:nobody', 'garbage', '<script>x</script>'] as $token) {
-            $out = $this->renderWithGet(['senrogate_bind_token' => $token, 'senrogate_bind_pack' => 'owner']);
-            $this->assertStringNotContainsString('SenroFlux asked', $out);
-            $this->assertStringNotContainsString('agsafe-bind-prefill', $out);
+            $out = $this->renderWithGet(['belayline-agent-governance_bind_token' => $token, 'belayline-agent-governance_bind_pack' => 'owner']);
+            $this->assertStringNotContainsString('Site Agent asked', $out);
+            $this->assertStringNotContainsString('belayline-bind-prefill', $out);
             $this->assertStringNotContainsString('selected=', $this->bindingsSection($out));
         }
     }
 
     public function testAnUnregisteredPackIsIgnoredSilently(): void
     {
-        $out = $this->renderWithGet(['senrogate_bind_token' => 'role:administrator', 'senrogate_bind_pack' => 'no-such-pack']);
+        $out = $this->renderWithGet(['belayline-agent-governance_bind_token' => 'role:administrator', 'belayline-agent-governance_bind_pack' => 'no-such-pack']);
 
-        $this->assertStringNotContainsString('SenroFlux asked', $out);
-        $this->assertStringNotContainsString('agsafe-bind-prefill', $out);
+        $this->assertStringNotContainsString('Site Agent asked', $out);
+        $this->assertStringNotContainsString('belayline-bind-prefill', $out);
         $this->assertStringNotContainsString('selected=', $this->bindingsSection($out));
     }
 
@@ -120,7 +120,7 @@ final class CapabilityPacksPageTest extends TestCase
     {
         $GLOBALS['wpas_test_options'][PackResolver::BINDINGS_OPTION] = ['user:5' => 'default-agent'];
 
-        $this->renderWithGet(['senrogate_bind_token' => 'role:administrator', 'senrogate_bind_pack' => 'owner']);
+        $this->renderWithGet(['belayline-agent-governance_bind_token' => 'role:administrator', 'belayline-agent-governance_bind_pack' => 'owner']);
 
         $this->assertSame(['user:5' => 'default-agent'], $GLOBALS['wpas_test_options'][PackResolver::BINDINGS_OPTION]);
         $this->assertSame([], $this->sink->records);
@@ -349,14 +349,14 @@ final class CapabilityPacksPageTest extends TestCase
         // A registry filter that swaps bindings must not make the audit row
         // describe a "from" the option never held.
         $GLOBALS['wpas_test_options'][PackResolver::BINDINGS_OPTION] = ['app:1' => 'default-agent'];
-        add_filter('agent_safety_pack_registry', static function ($registry) {
-            return \Specflux\AgentSafety\Packs\PackRegistry::withBuiltins(['app:1' => 'owner']);
+        add_filter('belayline_pack_registry', static function ($registry) {
+            return \Belayline\Packs\PackRegistry::withBuiltins(['app:1' => 'owner']);
         });
 
         try {
             $this->page->applyBindings(['app:1' => 'owner']);
         } finally {
-            remove_all_filters('agent_safety_pack_registry');
+            remove_all_filters('belayline_pack_registry');
         }
 
         $this->assertCount(1, $this->sink->records);

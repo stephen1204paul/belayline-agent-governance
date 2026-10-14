@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Admin;
+namespace Belayline\Plugin\Admin;
 
-use Specflux\AgentSafety\Changes\ChangeLedger;
-use Specflux\AgentSafety\Changes\FieldDiff;
-use Specflux\AgentSafety\Changes\StoredChange;
-use Specflux\AgentSafety\Changes\UndoItem;
-use Specflux\AgentSafety\Changes\UndoResult;
-use Specflux\AgentSafety\Changes\UndoScope;
-use Specflux\AgentSafety\Plugin\Audit\AuditReader;
-use Specflux\AgentSafety\Plugin\Changes\UndoService;
-use Specflux\AgentSafety\Plugin\Support\ShadowMode;
+use Belayline\Changes\ChangeLedger;
+use Belayline\Changes\FieldDiff;
+use Belayline\Changes\StoredChange;
+use Belayline\Changes\UndoItem;
+use Belayline\Changes\UndoResult;
+use Belayline\Changes\UndoScope;
+use Belayline\Plugin\Audit\AuditReader;
+use Belayline\Plugin\Changes\UndoService;
+use Belayline\Plugin\Support\ShadowMode;
 
 /**
  * Tools -> "Agent Changes": what governed agent calls wrote, grouped by run
  * (correlation id) and then audit event, with a field-level before/after diff,
- * and the human-only undo flow of SPEC-SENROGATE-0.5 section 3.2: preview the
+ * and the human-only undo flow of the 0.5 spec section 3.2: preview the
  * scope, confirm, apply. Server-rendered like the other admin screens.
  *
  * The page gates on `manage_options`; the per-object capability (for example
@@ -28,10 +28,10 @@ use Specflux\AgentSafety\Plugin\Support\ShadowMode;
  */
 final class ChangesPage
 {
-    public const SLUG = 'agent-safety-changes';
-    public const UNDO = 'agsafe_undo';
-    public const PREVIEW = 'agsafe_undo_preview';
-    public const RESULT = 'agsafe_undo_result_';
+    public const SLUG = 'belayline-changes';
+    public const UNDO = 'belayline_undo';
+    public const PREVIEW = 'belayline_undo_preview';
+    public const RESULT = 'belayline_undo_result_';
     private const CAP = 'manage_options';
     private const PER_PAGE = 20;
 
@@ -52,8 +52,8 @@ final class ChangesPage
     public function menu(): void
     {
         add_management_page(
-            __('Agent Changes', 'senrogate'),
-            __('Agent Changes', 'senrogate'),
+            __('Agent Changes', 'belayline-agent-governance'),
+            __('Agent Changes', 'belayline-agent-governance'),
             self::CAP,
             self::SLUG,
             [$this, 'render']
@@ -67,8 +67,8 @@ final class ChangesPage
         }
 
         echo '<div class="wrap">';
-        echo '<h1>' . esc_html__('Agent Changes', 'senrogate') . '</h1>';
-        echo '<p>' . esc_html__('What governed agent calls changed on this site. "No changes recorded" does not mean nothing changed: direct database writes and unsupported object types are not captured. Undo is for people only; no agent can run it.', 'senrogate') . '</p>';
+        echo '<h1>' . esc_html__('Agent Changes', 'belayline-agent-governance') . '</h1>';
+        echo '<p>' . esc_html__('What governed agent calls changed on this site. "No changes recorded" does not mean nothing changed: direct database writes and unsupported object types are not captured. Undo is for people only; no agent can run it.', 'belayline-agent-governance') . '</p>';
         EnvironmentLabel::render($this->shadow);
         $this->maybeShowResult();
 
@@ -90,7 +90,7 @@ final class ChangesPage
         $runs = array_slice($runs, 0, self::PER_PAGE);
 
         if ($runs === []) {
-            echo '<p>' . esc_html__('No changes recorded yet.', 'senrogate') . '</p>';
+            echo '<p>' . esc_html__('No changes recorded yet.', 'belayline-agent-governance') . '</p>';
 
             return;
         }
@@ -112,10 +112,10 @@ final class ChangesPage
         if ($paged > 1 || $more) {
             echo '<p>';
             if ($paged > 1) {
-                echo '<a class="button" href="' . esc_url(add_query_arg(['page' => self::SLUG, 'paged' => $paged - 1], admin_url('tools.php'))) . '">' . esc_html__('Newer', 'senrogate') . '</a> ';
+                echo '<a class="button" href="' . esc_url(add_query_arg(['page' => self::SLUG, 'paged' => $paged - 1], admin_url('tools.php'))) . '">' . esc_html__('Newer', 'belayline-agent-governance') . '</a> ';
             }
             if ($more) {
-                echo '<a class="button" href="' . esc_url(add_query_arg(['page' => self::SLUG, 'paged' => $paged + 1], admin_url('tools.php'))) . '">' . esc_html__('Older', 'senrogate') . '</a>';
+                echo '<a class="button" href="' . esc_url(add_query_arg(['page' => self::SLUG, 'paged' => $paged + 1], admin_url('tools.php'))) . '">' . esc_html__('Older', 'belayline-agent-governance') . '</a>';
             }
             echo '</p>';
         }
@@ -128,8 +128,8 @@ final class ChangesPage
     private function renderRun(string $run, array $events, array $audit): void
     {
         echo '<div class="card" style="max-width:none;margin-top:16px;">';
-        echo '<h2 style="margin-top:0;">' . esc_html__('Run', 'senrogate') . ' <code>' . esc_html($run) . '</code> ';
-        echo $this->undoLink(UndoScope::correlation($run), __('Undo this run', 'senrogate')); // phpcs:ignore WordPress.Security.EscapeOutput -- undoLink() escapes.
+        echo '<h2 style="margin-top:0;">' . esc_html__('Run', 'belayline-agent-governance') . ' <code>' . esc_html($run) . '</code> ';
+        echo $this->undoLink(UndoScope::correlation($run), __('Undo this run', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- undoLink() escapes.
         echo '</h2>';
 
         foreach ($events as $eventId => $changes) {
@@ -137,17 +137,17 @@ final class ChangesPage
             $record = json_decode((string) ($row['record_json'] ?? '{}'), true);
             $token = is_array($record) && isset($record['actor']['token_id']) ? (string) $record['actor']['token_id'] : '';
             $user = (string) ($row['wp_user'] ?? '');
-            $actor = $token !== '' ? $token : ($user !== '' ? sprintf(/* translators: %s WordPress user id */ __('user #%s', 'senrogate'), $user) : '—');
+            $actor = $token !== '' ? $token : ($user !== '' ? sprintf(/* translators: %s WordPress user id */ __('user #%s', 'belayline-agent-governance'), $user) : '—');
 
             echo '<h3>' . esc_html((string) ($row['ability'] ?? '—')) . '</h3>';
             echo '<p>';
-            echo esc_html(sprintf(/* translators: 1: actor 2: UTC time */ __('By %1$s at %2$s (UTC).', 'senrogate'), $actor, (string) ($row['ts'] ?? ($changes[0]->ts ?? '—'))));
+            echo esc_html(sprintf(/* translators: 1: actor 2: UTC time */ __('By %1$s at %2$s (UTC).', 'belayline-agent-governance'), $actor, (string) ($row['ts'] ?? ($changes[0]->ts ?? '—'))));
             echo ' <code style="font-size:11px;">' . esc_html($eventId) . '</code> ';
-            echo $this->undoLink(UndoScope::event($eventId), __('Undo this event', 'senrogate')); // phpcs:ignore WordPress.Security.EscapeOutput -- undoLink() escapes.
+            echo $this->undoLink(UndoScope::event($eventId), __('Undo this event', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- undoLink() escapes.
             echo '</p>';
 
             echo '<table class="widefat striped"><thead><tr>';
-            foreach ([__('Object', 'senrogate'), __('Action', 'senrogate'), __('Changed fields', 'senrogate'), __('Restorable', 'senrogate'), ''] as $h) {
+            foreach ([__('Object', 'belayline-agent-governance'), __('Action', 'belayline-agent-governance'), __('Changed fields', 'belayline-agent-governance'), __('Restorable', 'belayline-agent-governance'), ''] as $h) {
                 echo '<th>' . esc_html($h) . '</th>';
             }
             echo '</tr></thead><tbody>';
@@ -171,10 +171,10 @@ final class ChangesPage
         echo '<td>' . esc_html($change->action->value) . '</td>';
         echo '<td>' . self::diffTable(FieldDiff::for($change)) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- diffTable() escapes every value.
         if ($refusal === null) {
-            echo '<td>' . esc_html__('Yes', 'senrogate') . '</td>';
-            echo '<td>' . $this->undoLink(UndoScope::change($change->id), __('Undo this change', 'senrogate')) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- undoLink() escapes.
+            echo '<td>' . esc_html__('Yes', 'belayline-agent-governance') . '</td>';
+            echo '<td>' . $this->undoLink(UndoScope::change($change->id), __('Undo this change', 'belayline-agent-governance')) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- undoLink() escapes.
         } else {
-            echo '<td>' . esc_html__('No', 'senrogate') . ': ' . esc_html(ChangeReasonLabels::label($refusal)) . '</td>';
+            echo '<td>' . esc_html__('No', 'belayline-agent-governance') . ': ' . esc_html(ChangeReasonLabels::label($refusal)) . '</td>';
             echo '<td></td>';
         }
         echo '</tr>';
@@ -191,9 +191,9 @@ final class ChangesPage
         }
         $changes = $this->changesIn($scope);
 
-        echo '<h2>' . esc_html__('Preview undo', 'senrogate') . '</h2>';
+        echo '<h2>' . esc_html__('Preview undo', 'belayline-agent-governance') . '</h2>';
         if ($items === []) {
-            echo '<p>' . esc_html__('No recorded changes in this scope.', 'senrogate') . '</p>';
+            echo '<p>' . esc_html__('No recorded changes in this scope.', 'belayline-agent-governance') . '</p>';
             $this->backLink();
 
             return;
@@ -201,14 +201,14 @@ final class ChangesPage
 
         echo '<p>' . esc_html(sprintf(
             /* translators: 1: restorable count 2: skipped count 3: blocked-by-drift count */
-            __('%1$d can be restored, %2$d will be skipped, %3$d would stop the undo.', 'senrogate'),
+            __('%1$d can be restored, %2$d will be skipped, %3$d would stop the undo.', 'belayline-agent-governance'),
             $count[UndoItem::RESTORABLE],
             $count[UndoItem::SKIPPED],
             $count[UndoItem::FAILED]
         )) . '</p>';
 
         echo '<table class="widefat striped"><thead><tr>';
-        foreach ([__('Object', 'senrogate'), __('Outcome', 'senrogate'), __('What would change', 'senrogate')] as $h) {
+        foreach ([__('Object', 'belayline-agent-governance'), __('Outcome', 'belayline-agent-governance'), __('What would change', 'belayline-agent-governance')] as $h) {
             echo '<th>' . esc_html($h) . '</th>';
         }
         echo '</tr></thead><tbody>';
@@ -230,7 +230,7 @@ final class ChangesPage
         echo '</tbody></table>';
 
         if ($count[UndoItem::FAILED] > 0) {
-            echo '<p><strong>' . esc_html__('Part of this scope has drifted or is missing. Confirming will undo what it can, in reverse order, and stop at the first problem. There is no force option.', 'senrogate') . '</strong></p>';
+            echo '<p><strong>' . esc_html__('Part of this scope has drifted or is missing. Confirming will undo what it can, in reverse order, and stop at the first problem. There is no force option.', 'belayline-agent-governance') . '</strong></p>';
         }
 
         if ($count[UndoItem::RESTORABLE] > 0) {
@@ -239,7 +239,7 @@ final class ChangesPage
             echo '<input type="hidden" name="scope" value="' . esc_attr($scope->kind) . '">';
             echo '<input type="hidden" name="scope_id" value="' . esc_attr($scope->id) . '">';
             echo wp_nonce_field(self::UNDO, '_wpnonce', true, false); // phpcs:ignore WordPress.Security.EscapeOutput -- core-built hidden fields.
-            echo '<button type="submit" class="button button-primary">' . esc_html__('Confirm undo', 'senrogate') . '</button>';
+            echo '<button type="submit" class="button button-primary">' . esc_html__('Confirm undo', 'belayline-agent-governance') . '</button>';
             echo '</form>';
         }
         $this->backLink();
@@ -247,7 +247,7 @@ final class ChangesPage
 
     private function backLink(): void
     {
-        echo '<a class="button" href="' . esc_url(add_query_arg(['page' => self::SLUG], admin_url('tools.php'))) . '">' . esc_html__('Back to changes', 'senrogate') . '</a>';
+        echo '<a class="button" href="' . esc_url(add_query_arg(['page' => self::SLUG], admin_url('tools.php'))) . '">' . esc_html__('Back to changes', 'belayline-agent-governance') . '</a>';
     }
 
     /** @return array<int, StoredChange> */
@@ -329,7 +329,7 @@ final class ChangesPage
     public function process(): UndoResult
     {
         if (!current_user_can(self::CAP)) {
-            wp_die(esc_html__('Insufficient permissions.', 'senrogate'));
+            wp_die(esc_html__('Insufficient permissions.', 'belayline-agent-governance'));
         }
         check_admin_referer(self::UNDO);
 
@@ -338,7 +338,7 @@ final class ChangesPage
             isset($_POST['scope_id']) ? sanitize_text_field(wp_unslash($_POST['scope_id'])) : ''
         );
         if ($scope === null) {
-            wp_die(esc_html__('Unknown undo scope.', 'senrogate'));
+            wp_die(esc_html__('Unknown undo scope.', 'belayline-agent-governance'));
         }
 
         $user = get_current_user_id();
@@ -374,11 +374,11 @@ final class ChangesPage
         };
 
         echo '<div class="notice ' . esc_attr($class) . '"><p><strong>' . esc_html(match ($status) {
-            UndoResult::COMPLETE => __('Undo complete.', 'senrogate'),
-            UndoResult::PARTIAL => __('Undo stopped part-way.', 'senrogate'),
-            UndoResult::FORBIDDEN => __('Undo not allowed.', 'senrogate'),
-            UndoResult::EMPTY => __('Nothing to undo: no recorded changes in that scope.', 'senrogate'),
-            default => __('Nothing was restored.', 'senrogate'),
+            UndoResult::COMPLETE => __('Undo complete.', 'belayline-agent-governance'),
+            UndoResult::PARTIAL => __('Undo stopped part-way.', 'belayline-agent-governance'),
+            UndoResult::FORBIDDEN => __('Undo not allowed.', 'belayline-agent-governance'),
+            UndoResult::EMPTY => __('Nothing to undo: no recorded changes in that scope.', 'belayline-agent-governance'),
+            default => __('Nothing was restored.', 'belayline-agent-governance'),
         }) . '</strong>';
         if (!empty($flash['reason'])) {
             echo ' ' . esc_html(ChangeReasonLabels::label((string) $flash['reason']));
@@ -386,10 +386,10 @@ final class ChangesPage
         echo '</p>';
 
         $groups = [
-            UndoItem::RESTORED => __('Restored', 'senrogate'),
-            UndoItem::SKIPPED => __('Skipped', 'senrogate'),
-            UndoItem::FAILED => __('Stopped at', 'senrogate'),
-            UndoItem::PENDING => __('Not attempted', 'senrogate'),
+            UndoItem::RESTORED => __('Restored', 'belayline-agent-governance'),
+            UndoItem::SKIPPED => __('Skipped', 'belayline-agent-governance'),
+            UndoItem::FAILED => __('Stopped at', 'belayline-agent-governance'),
+            UndoItem::PENDING => __('Not attempted', 'belayline-agent-governance'),
         ];
         foreach ($groups as $key => $heading) {
             $rows = array_filter($items, static fn ($i): bool => is_array($i) && ($i['status'] ?? '') === $key);
@@ -418,9 +418,9 @@ final class ChangesPage
     private static function outcomeLabel(UndoItem $item): string
     {
         if ($item->status === UndoItem::RESTORABLE) {
-            return __('Will be restored', 'senrogate');
+            return __('Will be restored', 'belayline-agent-governance');
         }
-        $prefix = $item->status === UndoItem::SKIPPED ? __('Skipped', 'senrogate') : __('Stops the undo', 'senrogate');
+        $prefix = $item->status === UndoItem::SKIPPED ? __('Skipped', 'belayline-agent-governance') : __('Stops the undo', 'belayline-agent-governance');
 
         return $item->reason === null ? $prefix : $prefix . ': ' . ChangeReasonLabels::label($item->reason);
     }
@@ -442,7 +442,7 @@ final class ChangesPage
     /** @param list<array{field: string, before: mixed, after: mixed, current: mixed}> $drift */
     private static function threeWay(array $drift): string
     {
-        $out = '<table class="widefat"><thead><tr><th>' . esc_html__('Field', 'senrogate') . '</th><th>' . esc_html__('Before the agent', 'senrogate') . '</th><th>' . esc_html__('Agent set', 'senrogate') . '</th><th>' . esc_html__('Now', 'senrogate') . '</th></tr></thead><tbody>';
+        $out = '<table class="widefat"><thead><tr><th>' . esc_html__('Field', 'belayline-agent-governance') . '</th><th>' . esc_html__('Before the agent', 'belayline-agent-governance') . '</th><th>' . esc_html__('Agent set', 'belayline-agent-governance') . '</th><th>' . esc_html__('Now', 'belayline-agent-governance') . '</th></tr></thead><tbody>';
         foreach ($drift as $d) {
             $out .= '<tr><th scope="row">' . esc_html((string) $d['field']) . '</th><td>' . self::value($d['before']) . '</td><td>' . self::value($d['after']) . '</td><td>' . self::value($d['current']) . '</td></tr>';
         }

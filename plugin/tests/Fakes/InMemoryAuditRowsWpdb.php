@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 /**
  * A wpdb stand-in that actually behaves like the audit-log table for the
- * queries {@see \Specflux\AgentSafety\Plugin\Privacy\PrivacyAuditReader} and
- * {@see \Specflux\AgentSafety\Plugin\Audit\AuditReader} issue against it,
+ * queries {@see \Belayline\Plugin\Privacy\PrivacyAuditReader} and
+ * {@see \Belayline\Plugin\Audit\AuditReader} issue against it,
  * instead of the base test stub's canned-return behaviour (tests/stubs/wpdb.php).
  * Both classes issue only a handful of recognisable query shapes, so this
  * fake recognises them from the rendered SQL string (wpdb::prepare() already
@@ -21,7 +21,7 @@ final class InMemoryAuditRowsWpdb extends wpdb
     /** @var list<array<string, mixed>> */
     private array $changeRows = [];
 
-    /** @param list<array<string, mixed>> $rows Row shape: id, event_id, ts, ... (the `agsafe_changes` columns). */
+    /** @param list<array<string, mixed>> $rows Row shape: id, event_id, ts, ... (the `belayline_changes` columns). */
     public function seedChanges(array $rows): void
     {
         $this->changeRows = $rows;
@@ -41,7 +41,7 @@ final class InMemoryAuditRowsWpdb extends wpdb
 
     public function query(string $query): int|bool
     {
-        if (preg_match('/^DELETE FROM wp_agsafe_changes WHERE event_id IN \((.*)\)$/s', $query, $m) === 1) {
+        if (preg_match('/^DELETE FROM wp_belayline_changes WHERE event_id IN \((.*)\)$/s', $query, $m) === 1) {
             $ids = self::quotedList($m[1]);
             $before = count($this->changeRows);
             $this->changeRows = array_values(array_filter(
@@ -52,7 +52,7 @@ final class InMemoryAuditRowsWpdb extends wpdb
             return $before - count($this->changeRows);
         }
 
-        if (preg_match("/^DELETE FROM wp_agsafe_changes WHERE ts < '([^']*)'$/", $query, $m) === 1) {
+        if (preg_match("/^DELETE FROM wp_belayline_changes WHERE ts < '([^']*)'$/", $query, $m) === 1) {
             $before = count($this->changeRows);
             $this->changeRows = array_values(array_filter(
                 $this->changeRows,
@@ -87,7 +87,7 @@ final class InMemoryAuditRowsWpdb extends wpdb
     /** @return list<array<string, mixed>> */
     public function get_results(?string $query = null, string $output = 'ARRAY_A'): array
     {
-        if ($query !== null && preg_match('/FROM wp_agsafe_changes WHERE event_id IN \((.*)\) ORDER BY id$/s', $query, $m) === 1) {
+        if ($query !== null && preg_match('/FROM wp_belayline_changes WHERE event_id IN \((.*)\) ORDER BY id$/s', $query, $m) === 1) {
             $ids = self::quotedList($m[1]);
 
             return array_values(array_filter(

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Packs;
+namespace Belayline\Packs;
 
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Policy\Tier;
 
 /**
  * A Capability Pack: a credentialed, purpose-scoped view of the verb catalog.
@@ -24,7 +24,7 @@ final class Pack
      *     CONVERSATION-LOG.md): a fixed-window cap on calls made under this pack by
      *     one identity token, independent of which verb is called. A null value, or
      *     an absent key, means unlimited for that window. Enforced by the host (see
-     *     {@see \Specflux\AgentSafety\Packs\LimitPolicy} for the pure evaluator and
+     *     {@see \Belayline\Packs\LimitPolicy} for the pure evaluator and
      *     the plugin's `RateCounter`/`RateLimitGate` for the transient-backed
      *     counting) — this class only carries the config, never the counts. Builtin
      *     packs (owner, default-agent) ship unlimited; the shape exists for site

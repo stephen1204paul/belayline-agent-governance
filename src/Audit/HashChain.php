@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Audit;
+namespace Belayline\Audit;
 
 /**
  * Tamper-evident hash chain for the append-only audit log. Each entry

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Privacy;
+namespace Belayline\Plugin\Privacy;
 
 use WP_User;
 
 /**
  * `wp_privacy_personal_data_erasers` callback (§3.6 item 2): never touches the
  * audit log. The audit log is an append-only hash chain — {@see
- * \Specflux\AgentSafety\Audit\HashChain} links each row's `entry_hash` from
+ * \Belayline\Audit\HashChain} links each row's `entry_hash` from
  * the one before it, so rewriting or dropping a row to satisfy an erasure
  * request would break that chain for every row recorded after it. A matching
  * user's rows are instead reported `items_retained`, with the reason stated
@@ -53,14 +53,14 @@ final class PersonalDataEraser
 
         $messages = [
             __(
-                'SenroGate audit records for this user are kept as a tamper-evident security record: each entry is chained to the one before it by hash, so altering or removing one would break that chain for every entry recorded after it.',
-                'senrogate'
+                'Belayline Agent Governance audit records for this user are kept as a tamper-evident security record: each entry is chained to the one before it by hash, so altering or removing one would break that chain for every entry recorded after it.',
+                'belayline-agent-governance'
             ),
         ];
         if ($removed > 0) {
             $messages[] = __(
-                'SenroGate change history (the before and after snapshots recorded for this user\'s calls) was deleted. The audit records keep only a hash of each change set.',
-                'senrogate'
+                'Belayline Agent Governance change history (the before and after snapshots recorded for this user\'s calls) was deleted. The audit records keep only a hash of each change set.',
+                'belayline-agent-governance'
             );
         }
 

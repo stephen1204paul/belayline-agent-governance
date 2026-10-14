@@ -2,27 +2,27 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Changes;
+namespace Belayline\Plugin\Tests\Changes;
 
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 use RuntimeException;
-use Specflux\AgentSafety\Changes\CaptureWindow;
-use Specflux\AgentSafety\Changes\Change;
-use Specflux\AgentSafety\Changes\ChangeAction;
-use Specflux\AgentSafety\Changes\ChangeSet;
-use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
-use Specflux\AgentSafety\Plugin\Changes\WpdbChangeStore;
-use Specflux\AgentSafety\Plugin\Hooks\AbilityAuditLog;
-use Specflux\AgentSafety\Plugin\Hooks\AbilityPermissionGate;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\AdapterBundle;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
-use Specflux\AgentSafety\Plugin\Verdict\VerdictPipeline;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Changes\CaptureWindow;
+use Belayline\Changes\Change;
+use Belayline\Changes\ChangeAction;
+use Belayline\Changes\ChangeSet;
+use Belayline\Plugin\Changes\ChangeCapture;
+use Belayline\Plugin\Changes\WpdbChangeStore;
+use Belayline\Plugin\Hooks\AbilityAuditLog;
+use Belayline\Plugin\Hooks\AbilityPermissionGate;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\AdapterBundle;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Plugin\Verdict\VerdictPipeline;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 use WP_Error;
 use wpdb;
 

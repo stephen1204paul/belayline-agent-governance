@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Support\ElevationRules;
-use Specflux\AgentSafety\Policy\ElevationRule;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Plugin\Support\ElevationRules;
+use Belayline\Policy\ElevationRule;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 
 /**
- * The `agent_safety_elevation_rules` seam: a site governing its own namespace
+ * The `belayline_elevation_rules` seam: a site governing its own namespace
  * can make one of its verbs argument-dependent instead of over-classifying it
  * as irreversible and gating every harmless call on a human.
  */

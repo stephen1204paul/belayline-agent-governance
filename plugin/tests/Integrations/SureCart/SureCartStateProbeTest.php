@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Integrations\SureCart;
+namespace Belayline\Plugin\Tests\Integrations\SureCart;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use Specflux\AgentSafety\Plugin\Integrations\SureCart\SureCartStateProbe;
+use Belayline\Plugin\Integrations\SureCart\SureCartStateProbe;
 use SureCart\Models\FoundModel;
 use SureCart\Models\Price;
 

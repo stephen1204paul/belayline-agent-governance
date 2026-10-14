@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: Agent Safety Smoke Fixtures
+ * Plugin Name: Belayline Smoke Fixtures
  * Description: LOCAL DEV ONLY. Registers a synthetic governed namespace with a
  *              spend-style ability, two smoke packs (capped + shadow), and
  *              captures wp_mail / webhook HTTP so the 0.2 features can be
@@ -14,12 +14,12 @@ defined('ABSPATH') || exit;
 add_action('wp_abilities_api_categories_init', static function (): void {
     wp_register_ability_category('smoke', [
         'label'       => 'Smoke',
-        'description' => 'Synthetic abilities for the Agent Safety live smoke test.',
+        'description' => 'Synthetic abilities for the Belayline live smoke test.',
     ]);
 });
 
 add_action('wp_abilities_api_init', static function (): void {
-    wp_register_ability('agsafe-smoke/spend', [
+    wp_register_ability('belayline-smoke/spend', [
         'label'         => 'Smoke spend',
         'description'   => 'Synthetic side-effecting ability that "spends" an amount.',
         'category'      => 'smoke',
@@ -33,15 +33,15 @@ add_action('wp_abilities_api_init', static function (): void {
         ],
         'output_schema' => ['type' => 'object'],
         'execute_callback' => static function (array $input): array {
-            $n = (int) get_option('agsafe_smoke_exec_spend', 0);
-            update_option('agsafe_smoke_exec_spend', $n + 1, false);
+            $n = (int) get_option('belayline_smoke_exec_spend', 0);
+            update_option('belayline_smoke_exec_spend', $n + 1, false);
             return ['ok' => true, 'spent' => $input['amount'] ?? null, 'executions' => $n + 1];
         },
         'permission_callback' => static fn (): bool => current_user_can('read'),
         'meta'          => ['show_in_rest' => true],
     ]);
 
-    wp_register_ability('agsafe-smoke/blocked', [
+    wp_register_ability('belayline-smoke/blocked', [
         'label'         => 'Smoke blocked',
         'description'   => 'Synthetic irreversible ability used for shadow-mode checks.',
         'category'      => 'smoke',
@@ -52,8 +52,8 @@ add_action('wp_abilities_api_init', static function (): void {
         ],
         'output_schema' => ['type' => 'object'],
         'execute_callback' => static function (array $input): array {
-            $n = (int) get_option('agsafe_smoke_exec_blocked', 0);
-            update_option('agsafe_smoke_exec_blocked', $n + 1, false);
+            $n = (int) get_option('belayline_smoke_exec_blocked', 0);
+            update_option('belayline_smoke_exec_blocked', $n + 1, false);
             return ['ok' => true, 'executions' => $n + 1];
         },
         'permission_callback' => static fn (): bool => current_user_can('read'),
@@ -61,16 +61,16 @@ add_action('wp_abilities_api_init', static function (): void {
     ]);
 });
 
-// ---- Agent Safety wiring ---------------------------------------------------
+// ---- Belayline wiring ---------------------------------------------------
 
-add_filter('agent_safety_governed_namespaces', static function (array $namespaces): array {
-    $namespaces[] = 'agsafe-smoke/';
+add_filter('belayline_governed_namespaces', static function (array $namespaces): array {
+    $namespaces[] = 'belayline-smoke/';
     return $namespaces;
 });
 
-add_filter('agent_safety_verb_map', static function (array $map): array {
-    $map['agsafe-smoke/spend']   = 1; // SideEffecting
-    $map['agsafe-smoke/blocked'] = 2; // Irreversible
+add_filter('belayline_verb_map', static function (array $map): array {
+    $map['belayline-smoke/spend']   = 1; // SideEffecting
+    $map['belayline-smoke/blocked'] = 2; // Irreversible
     return $map;
 });
 
@@ -104,7 +104,7 @@ add_action('wp_abilities_api_init', static function (): void {
         'input_schema'  => ['type' => 'object'],
         'output_schema' => ['type' => 'object'],
         'execute_callback' => static function (): array {
-            update_option('agsafe_smoke_exec_nope', (int) get_option('agsafe_smoke_exec_nope', 0) + 1, false);
+            update_option('belayline_smoke_exec_nope', (int) get_option('belayline_smoke_exec_nope', 0) + 1, false);
             return ['ok' => true];
         },
         'permission_callback' => static fn (): bool => current_user_can('read'),
@@ -131,20 +131,20 @@ add_filter('mcp_adapter_default_server_config', static function (array $config):
 
 // ---- Notification capture --------------------------------------------------
 
-add_filter('agent_safety_pack_registry', static function ($registry) {
-    $registry->register(new \Specflux\AgentSafety\Packs\Pack(
+add_filter('belayline_pack_registry', static function ($registry) {
+    $registry->register(new \Belayline\Packs\Pack(
         name: 'smoke-capped',
-        allow: ['agsafe-smoke/*'],
-        argumentCaps: [new \Specflux\AgentSafety\Packs\ArgumentCap(
+        allow: ['belayline-smoke/*'],
+        argumentCaps: [new \Belayline\Packs\ArgumentCap(
             id: 'smokecap',
-            verbs: 'agsafe-smoke/spend',
+            verbs: 'belayline-smoke/spend',
             argPath: 'amount',
             approvalAbove: 100.0,
             maxPerCall: 500.0,
             maxTotalPerDay: 400.0,
         )],
     ));
-    $registry->register(new \Specflux\AgentSafety\Packs\Pack(
+    $registry->register(new \Belayline\Packs\Pack(
         name: 'smoke-shadow',
         allow: [],
     ));
@@ -155,9 +155,9 @@ add_filter('agent_safety_pack_registry', static function ($registry) {
 
 // Short-circuit wp_mail and record what would have been sent.
 add_filter('pre_wp_mail', static function ($null, array $atts) {
-    $log   = (array) get_option('agsafe_smoke_mail_log', []);
+    $log   = (array) get_option('belayline_smoke_mail_log', []);
     $log[] = ['to' => $atts['to'], 'subject' => $atts['subject'], 'message' => $atts['message']];
-    update_option('agsafe_smoke_mail_log', $log, false);
+    update_option('belayline_smoke_mail_log', $log, false);
     return true;
 }, 10, 2);
 
@@ -166,8 +166,8 @@ add_filter('pre_http_request', static function ($pre, array $args, string $url) 
     if (!str_contains($url, 'smoke.invalid')) {
         return $pre;
     }
-    $log   = (array) get_option('agsafe_smoke_http_log', []);
+    $log   = (array) get_option('belayline_smoke_http_log', []);
     $log[] = ['url' => $url, 'body' => $args['body'] ?? null, 'blocking' => $args['blocking'] ?? null];
-    update_option('agsafe_smoke_http_log', $log, false);
+    update_option('belayline_smoke_http_log', $log, false);
     return ['headers' => [], 'body' => '', 'response' => ['code' => 200, 'message' => 'OK'], 'cookies' => [], 'filename' => null];
 }, 10, 3);

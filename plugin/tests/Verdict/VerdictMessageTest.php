@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Verdict;
+namespace Belayline\Plugin\Tests\Verdict;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Gate\Decision;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Verdict\ApprovalMessageVariant;
-use Specflux\AgentSafety\Plugin\Verdict\Verdict;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Gate\Decision;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Verdict\ApprovalMessageVariant;
+use Belayline\Plugin\Verdict\Verdict;
+use Belayline\Policy\Tier;
 
 /**
  * AS-6 §3.11: {@see Verdict::error()}'s `approval_required` message text, by
@@ -63,13 +63,13 @@ final class VerdictMessageTest extends TestCase
     }
 
     /**
-     * Proves the message is actually routed through __('...', 'senrogate')
+     * Proves the message is actually routed through __('...', 'belayline-agent-governance')
      * rather than being a plain sprintf() literal, the same way
      * McpRequestAuditHandlerTest proves upstream's translation routing.
      */
-    public function testBaseMessageIsRoutedThroughTheAgentSafetyTextDomain(): void
+    public function testBaseMessageIsRoutedThroughTheBelaylineTextDomain(): void
     {
-        $GLOBALS['wpas_test_translations']['senrogate']['"%1$s" needs human approval before it can run. A request has been filed for review.']
+        $GLOBALS['wpas_test_translations']['belayline-agent-governance']['"%1$s" needs human approval before it can run. A request has been filed for review.']
             = '„%1$s“ braucht erneut eine menschliche Freigabe.';
 
         $verdict = new Verdict(

@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Changes;
+namespace Belayline\Plugin\Changes;
 
-use Specflux\AgentSafety\Audit\AuditDecision;
-use Specflux\AgentSafety\Audit\AuditRecord;
-use Specflux\AgentSafety\Audit\AuditSink;
-use Specflux\AgentSafety\Changes\ChangeLedger;
-use Specflux\AgentSafety\Changes\Drift;
-use Specflux\AgentSafety\Changes\StoredChange;
-use Specflux\AgentSafety\Changes\UndoItem;
-use Specflux\AgentSafety\Changes\UndoResult;
-use Specflux\AgentSafety\Changes\UndoScope;
-use Specflux\AgentSafety\Plugin\Support\AdminChangeRecorder;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
+use Belayline\Audit\AuditDecision;
+use Belayline\Audit\AuditRecord;
+use Belayline\Audit\AuditSink;
+use Belayline\Changes\ChangeLedger;
+use Belayline\Changes\Drift;
+use Belayline\Changes\StoredChange;
+use Belayline\Changes\UndoItem;
+use Belayline\Changes\UndoResult;
+use Belayline\Changes\UndoScope;
+use Belayline\Plugin\Support\AdminChangeRecorder;
+use Belayline\Plugin\Support\RequestContext;
 
 /**
- * The undo engine (SPEC-SENROGATE-0.5 section 3.2). Humans only: undo is not
+ * The undo engine (the 0.5 spec section 3.2). Humans only: undo is not
  * an ability, the caller must be the logged-in user it names, must hold each
  * adapter's capability, and a request authenticated as an agent credential is
  * refused outright.

@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Approval\ApprovalBinding;
-use Specflux\AgentSafety\Plugin\Support\SummaryMarkup;
-use Specflux\AgentSafety\Gate\Decision;
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Support\DecisionRecorder;
-use Specflux\AgentSafety\Plugin\Support\EnvironmentGuard;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Support\SiteBinding;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\FakeApprovalStore;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryAuditSink;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Approval\ApprovalBinding;
+use Belayline\Plugin\Support\SummaryMarkup;
+use Belayline\Gate\Decision;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Support\DecisionRecorder;
+use Belayline\Plugin\Support\EnvironmentGuard;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Support\SiteBinding;
+use Belayline\Plugin\Tests\Fakes\FakeApprovalStore;
+use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
+use Belayline\Policy\Tier;
 
 /**
  * {@see DecisionRecorder} is the seam shared by both gate hooks (permission

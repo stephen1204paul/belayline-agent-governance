@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\Woo;
+namespace Belayline\Plugin\Integrations\Woo;
 
-use Specflux\AgentSafety\Packs\ArgumentCap;
-use Specflux\AgentSafety\Packs\Pack;
+use Belayline\Packs\ArgumentCap;
+use Belayline\Packs\Pack;
 
 /**
  * Woo-flavoured Capability Packs, registered into the core
- * {@see \Specflux\AgentSafety\Packs\PackRegistry} by {@see WooIntegration::register()}
+ * {@see \Belayline\Packs\PackRegistry} by {@see WooIntegration::register()}
  * on top of the (now generic, fail-closed) core builtins:
  *   - woo-default-agent — catalog read/write (both the MCP-bridge plural
  *                         verbs and the session-visible singular

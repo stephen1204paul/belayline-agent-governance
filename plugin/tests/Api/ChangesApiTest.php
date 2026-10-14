@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Api;
+namespace Belayline\Plugin\Tests\Api;
 
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Changes\UndoItem;
-use Specflux\AgentSafety\Changes\UndoResult;
-use Specflux\AgentSafety\Plugin\Api\Changes;
-use Specflux\AgentSafety\Plugin\Changes\ChangeCapture;
-use Specflux\AgentSafety\Plugin\Changes\UndoService;
-use Specflux\AgentSafety\Plugin\Container;
-use Specflux\AgentSafety\Plugin\Support\PackResolver;
-use Specflux\AgentSafety\Plugin\Support\RequestContext;
-use Specflux\AgentSafety\Plugin\Tests\Fakes\InMemoryChangeLedger;
-use Specflux\AgentSafety\Policy\Tier;
-use Specflux\AgentSafety\Policy\TierClassifier;
-use Specflux\AgentSafety\Policy\VerbCatalog;
+use Belayline\Changes\UndoItem;
+use Belayline\Changes\UndoResult;
+use Belayline\Plugin\Api\Changes;
+use Belayline\Plugin\Changes\ChangeCapture;
+use Belayline\Plugin\Changes\UndoService;
+use Belayline\Plugin\Container;
+use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\InMemoryChangeLedger;
+use Belayline\Policy\Tier;
+use Belayline\Policy\TierClassifier;
+use Belayline\Policy\VerbCatalog;
 
 /**
- * The contract SenroFlux 0.4 relies on: reach the API through the global
- * agent_safety() locator, list a run's changes, preview, then undo from a
+ * The contract Site Agent 0.4 relies on: reach the API through the global
+ * belayline() locator, list a run's changes, preview, then undo from a
  * simulated human request. Nonce and screen capability are the caller's job;
  * the API's own refusals are asserted here.
  */
@@ -69,7 +69,7 @@ final class ChangesApiTest extends TestCase
     {
         $corr = $this->agentRun('B');
 
-        $changes = agent_safety()?->changes();
+        $changes = belayline()?->changes();
         $this->assertNotNull($changes);
 
         $run = $changes->forCorrelation($corr);
@@ -99,13 +99,13 @@ final class ChangesApiTest extends TestCase
 
     public function testAnUnknownRunIsEmptyNotAnError(): void
     {
-        $this->assertTrue(agent_safety()?->changes()?->forCorrelation('nope')->isEmpty());
+        $this->assertTrue(belayline()?->changes()?->forCorrelation('nope')->isEmpty());
     }
 
     public function testUndoRefusesAUserWhoIsNotTheSignedInOne(): void
     {
         $corr = $this->agentRun('B');
-        $changes = agent_safety()?->changes();
+        $changes = belayline()?->changes();
 
         $result = $changes?->undo($changes->forCorrelation($corr)->scope(), 2);
 
@@ -117,7 +117,7 @@ final class ChangesApiTest extends TestCase
     {
         $corr = $this->agentRun('B');
         $GLOBALS['wpas_test_current_user_id'] = 2;
-        $changes = agent_safety()?->changes();
+        $changes = belayline()?->changes();
 
         $result = $changes?->undo($changes->forCorrelation($corr)->scope(), 2);
 
@@ -129,7 +129,7 @@ final class ChangesApiTest extends TestCase
     public function testUndoRefusesAnAgentContext(): void
     {
         $corr = $this->agentRun('B');
-        $changes = agent_safety()?->changes();
+        $changes = belayline()?->changes();
         RequestContext::configurePrincipalResolver(static fn (): string => 'app_pw_1');
 
         $result = $changes?->undo($changes->forCorrelation($corr)->scope(), 1);
@@ -142,6 +142,6 @@ final class ChangesApiTest extends TestCase
     public function testAContainerWithoutHistoryExposesNull(): void
     {
         Container::init(null);
-        $this->assertNull(agent_safety()?->changes());
+        $this->assertNull(belayline()?->changes());
     }
 }

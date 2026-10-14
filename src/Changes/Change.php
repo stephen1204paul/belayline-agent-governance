@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Changes;
+namespace Belayline\Changes;
 
-use Specflux\AgentSafety\Audit\Redactor;
+use Belayline\Audit\Redactor;
 
 /**
  * One recorded change to one object, with its before/after snapshots already

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Test-only clock override consumed by {@see \Specflux\AgentSafety\Plugin\Support\RateCounter}'s
+ * Test-only clock override consumed by {@see \Belayline\Plugin\Support\RateCounter}'s
  * fixed-window bucketing.
  *
  * PHP resolves an UNQUALIFIED function call by first checking whether a
@@ -17,7 +17,7 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Support;
+namespace Belayline\Plugin\Support;
 
 if (!function_exists(__NAMESPACE__ . '\\time')) {
     if (!isset($GLOBALS['wpas_test_time'])) {

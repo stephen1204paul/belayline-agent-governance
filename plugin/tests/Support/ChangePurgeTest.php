@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Tests\Support;
+namespace Belayline\Plugin\Tests\Support;
 
 use InMemoryAuditRowsWpdb;
 use PHPUnit\Framework\TestCase;
-use Specflux\AgentSafety\Plugin\Changes\WpdbChangeStore;
-use Specflux\AgentSafety\Plugin\Support\ChangePurge;
+use Belayline\Plugin\Changes\WpdbChangeStore;
+use Belayline\Plugin\Support\ChangePurge;
 
 final class ChangePurgeTest extends TestCase
 {

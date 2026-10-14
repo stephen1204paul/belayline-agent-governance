@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Integrations\SureCart;
+namespace Belayline\Plugin\Integrations\SureCart;
 
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Policy\Tier;
+use Belayline\Packs\Pack;
+use Belayline\Policy\Tier;
 
 /**
- * SureCart starter packs, mirroring {@see \Specflux\AgentSafety\Plugin\Integrations\Woo\WooPacks}:
+ * SureCart starter packs, mirroring {@see \Belayline\Plugin\Integrations\Woo\WooPacks}:
  *   - surecart-default-agent     — every SureCart ability, Tier 2 approval-gated.
  *   - surecart-readonly-analyst  — reads only (the Tier 0 catalog verbs), with
  *                                  both write classes hard-denied as well, so a

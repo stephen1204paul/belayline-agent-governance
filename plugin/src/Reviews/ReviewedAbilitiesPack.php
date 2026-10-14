@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Plugin\Reviews;
+namespace Belayline\Plugin\Reviews;
 
-use Specflux\AgentSafety\Packs\Pack;
-use Specflux\AgentSafety\Plugin\Api\AbilityReviews;
+use Belayline\Packs\Pack;
+use Belayline\Plugin\Api\AbilityReviews;
 
 /**
  * The one generic pack that admits reviewed third-party abilities.

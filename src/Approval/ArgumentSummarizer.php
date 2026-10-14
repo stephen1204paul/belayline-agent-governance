@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Specflux\AgentSafety\Approval;
+namespace Belayline\Approval;
 
-use Specflux\AgentSafety\Audit\Redactor;
+use Belayline\Audit\Redactor;
 
 /**
  * Renders a call's arguments as one compact, human-readable line for the
