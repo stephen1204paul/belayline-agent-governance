@@ -88,7 +88,7 @@ final class CapabilityPacksPageTest extends TestCase
 
     public function testAValidDeepLinkPreselectsThePackHighlightsTheRowAndNotifies(): void
     {
-        $out = $this->renderWithGet(['belayline-agent-governance_bind_token' => 'role:administrator', 'belayline-agent-governance_bind_pack' => 'owner']);
+        $out = $this->renderWithGet(['belayline_bind_token' => 'role:administrator', 'belayline_bind_pack' => 'owner']);
 
         $this->assertStringContainsString('Site Agent asked to bind Administrator to owner. Review and Save.', $out);
         $this->assertStringContainsString('<tr id="belayline-bind-prefill"', $out);
@@ -100,7 +100,7 @@ final class CapabilityPacksPageTest extends TestCase
     public function testAnUnknownTokenIsIgnoredSilently(): void
     {
         foreach (['role:nobody', 'garbage', '<script>x</script>'] as $token) {
-            $out = $this->renderWithGet(['belayline-agent-governance_bind_token' => $token, 'belayline-agent-governance_bind_pack' => 'owner']);
+            $out = $this->renderWithGet(['belayline_bind_token' => $token, 'belayline_bind_pack' => 'owner']);
             $this->assertStringNotContainsString('Site Agent asked', $out);
             $this->assertStringNotContainsString('belayline-bind-prefill', $out);
             $this->assertStringNotContainsString('selected=', $this->bindingsSection($out));
@@ -109,7 +109,7 @@ final class CapabilityPacksPageTest extends TestCase
 
     public function testAnUnregisteredPackIsIgnoredSilently(): void
     {
-        $out = $this->renderWithGet(['belayline-agent-governance_bind_token' => 'role:administrator', 'belayline-agent-governance_bind_pack' => 'no-such-pack']);
+        $out = $this->renderWithGet(['belayline_bind_token' => 'role:administrator', 'belayline_bind_pack' => 'no-such-pack']);
 
         $this->assertStringNotContainsString('Site Agent asked', $out);
         $this->assertStringNotContainsString('belayline-bind-prefill', $out);
@@ -120,7 +120,7 @@ final class CapabilityPacksPageTest extends TestCase
     {
         $GLOBALS['wpas_test_options'][PackResolver::BINDINGS_OPTION] = ['user:5' => 'default-agent'];
 
-        $this->renderWithGet(['belayline-agent-governance_bind_token' => 'role:administrator', 'belayline-agent-governance_bind_pack' => 'owner']);
+        $this->renderWithGet(['belayline_bind_token' => 'role:administrator', 'belayline_bind_pack' => 'owner']);
 
         $this->assertSame(['user:5' => 'default-agent'], $GLOBALS['wpas_test_options'][PackResolver::BINDINGS_OPTION]);
         $this->assertSame([], $this->sink->records);

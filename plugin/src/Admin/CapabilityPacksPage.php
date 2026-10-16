@@ -119,7 +119,7 @@ final class CapabilityPacksPage
     }
 
     /**
-     * Read-only deep-link pre-fill: `belayline-agent-governance_bind_token` + `belayline-agent-governance_bind_pack`
+     * Read-only deep-link pre-fill: `belayline_bind_token` + `belayline_bind_pack`
      * select a pack in a row's dropdown for the admin to review. Both must
      * match something this page lists (a token an identity provider offers, a
      * registered pack); anything else is ignored silently. Nothing is
@@ -132,10 +132,10 @@ final class CapabilityPacksPage
     private function bindPrefill(array $names): ?array
     {
         // phpcs:disable WordPress.Security.NonceVerification.Recommended -- display-only pre-fill; validated against the listed tokens/packs and never saved from GET.
-        $token = isset($_GET['belayline-agent-governance_bind_token']) && is_string($_GET['belayline-agent-governance_bind_token'])
-            ? sanitize_text_field(wp_unslash($_GET['belayline-agent-governance_bind_token'])) : '';
-        $pack = isset($_GET['belayline-agent-governance_bind_pack']) && is_string($_GET['belayline-agent-governance_bind_pack'])
-            ? sanitize_text_field(wp_unslash($_GET['belayline-agent-governance_bind_pack'])) : '';
+        $token = isset($_GET['belayline_bind_token']) && is_string($_GET['belayline_bind_token'])
+            ? sanitize_text_field(wp_unslash($_GET['belayline_bind_token'])) : '';
+        $pack = isset($_GET['belayline_bind_pack']) && is_string($_GET['belayline_bind_pack'])
+            ? sanitize_text_field(wp_unslash($_GET['belayline_bind_pack'])) : '';
         // phpcs:enable WordPress.Security.NonceVerification.Recommended
 
         if ($token === '' || $pack === '' || !in_array($pack, $names, true)) {
