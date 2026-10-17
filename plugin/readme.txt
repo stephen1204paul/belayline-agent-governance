@@ -247,6 +247,11 @@ daily (the `belayline_changes_retention_days` option changes the period). A pers
 includes a user's change rows, and an erasure request deletes them; unlike audit rows they aren't
 part of the hash chain.
 
+Audit rows are kept forever by default. Set a retention period on Tools → Agent Audit Log
+(`belayline_audit_retention_days`, in days) and a daily job deletes older rows, leaving a checkpoint
+(the last deleted row's hash, a count and a time) so the tamper check still verifies what remains.
+The same screen exports any date range as JSON Lines.
+
 == Upgrade Notice ==
 
 = 0.5.0 =
@@ -275,6 +280,11 @@ runs.
 == Changelog ==
 
 = 0.5.0 =
+* Pending approvals: the time a request stays open can be changed per request with the
+  `belayline_pending_ttl_seconds` filter (default 1 hour, 60 seconds to 30 days), and a
+  `belayline_approval_expired` action fires once when a request lapses unanswered.
+* Audit log: optional retention (off by default) with a checkpoint that keeps the tamper check
+  working after old rows are deleted, and a JSON Lines download for a date range.
 * Change history: every governed write records the fields it changed, before and after, linked
   to its audit row. Listed under Tools → Agent Changes and kept for 30 days by default.
 * Undo: restore one change, or everything one agent session changed, after a preview. Covers

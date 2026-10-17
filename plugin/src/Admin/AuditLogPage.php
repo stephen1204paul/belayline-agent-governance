@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace Belayline\Plugin\Admin;
 
+use Belayline\Plugin\Audit\AuditExporter;
 use Belayline\Plugin\Audit\AuditReader;
+use Belayline\Plugin\Support\AuditRetention;
 use Belayline\Plugin\Support\ShadowMode;
 
 /**
  * Tools → "Agent Audit Log": a read-only wp-admin viewer for the append-only audit
  * trail. Shows a tamper-evidence banner (re-verifies the hash chain on
- * every load), a paged table of recent events, and a CSV export of the full log.
+ * every load, from the latest retention checkpoint when the log has been pruned),
+ * a paged table of recent events, a CSV export of the full log, a JSON Lines
+ * export for a date range, and the audit retention setting.
  */
 final class AuditLogPage
 {
@@ -18,6 +22,8 @@ final class AuditLogPage
     private const PER_PAGE = 100;
     private const CAP = 'manage_options';
     private const EXPORT_ACTION = 'belayline_export_audit';
+    private const EXPORT_JSONL_ACTION = 'belayline_export_audit_jsonl';
+    private const RETENTION_ACTION = 'belayline_save_audit_retention';
 
     public function __construct(
         private readonly AuditReader $reader,
@@ -29,6 +35,8 @@ final class AuditLogPage
     {
         add_action('admin_menu', [$this, 'menu']);
         add_action('admin_post_' . self::EXPORT_ACTION, [$this, 'export']);
+        add_action('admin_post_' . self::EXPORT_JSONL_ACTION, [$this, 'exportJsonl']);
+        add_action('admin_post_' . self::RETENTION_ACTION, [$this, 'saveRetention']);
     }
 
     public function menu(): void
@@ -75,12 +83,28 @@ final class AuditLogPage
             );
         }
 
+        $checkpoint = $this->reader->checkpoint();
+        if ($checkpoint !== null) {
+            printf(
+                '<p>%s</p>',
+                esc_html(sprintf(
+                    /* translators: 1: number of pruned events 2: UTC time of the latest prune */
+                    __('%1$d older events were pruned by the retention setting (latest prune %2$s UTC). The chain is verified from that checkpoint.', 'belayline-agent-governance'),
+                    $checkpoint['pruned_count'],
+                    $checkpoint['created_ts']
+                ))
+            );
+        }
+
         // Export.
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="margin:12px 0;">';
         echo '<input type="hidden" name="action" value="' . esc_attr(self::EXPORT_ACTION) . '">';
         wp_nonce_field(self::EXPORT_ACTION);
         submit_button(__('Export CSV', 'belayline-agent-governance'), 'secondary', 'submit', false);
         echo '</form>';
+
+        $this->renderJsonlExport();
+        $this->renderRetentionSettings();
 
         // Table.
         echo '<table class="widefat striped"><thead><tr>';
@@ -153,6 +177,92 @@ final class AuditLogPage
             fputcsv($out, array_map(static fn ($c) => $r[$c] ?? '', $cols));
         }
         fclose($out); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- closes the same php://output stream opened above, not a filesystem handle.
+        exit;
+    }
+
+    /** Date-range JSON Lines export form. */
+    private function renderJsonlExport(): void
+    {
+        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="margin:12px 0;">';
+        echo '<input type="hidden" name="action" value="' . esc_attr(self::EXPORT_JSONL_ACTION) . '">';
+        wp_nonce_field(self::EXPORT_JSONL_ACTION);
+        printf(
+            '<label for="belayline_export_from">%s</label> <input type="date" id="belayline_export_from" name="from"> '
+            . '<label for="belayline_export_to">%s</label> <input type="date" id="belayline_export_to" name="to"> ',
+            esc_html__('From (UTC)', 'belayline-agent-governance'),
+            esc_html__('To (UTC)', 'belayline-agent-governance'),
+        );
+        submit_button(__('Download JSON Lines', 'belayline-agent-governance'), 'secondary', 'submit', false);
+        echo '<p class="description">' . esc_html__('One JSON object per line, oldest first, starting with the retention checkpoint when the log has been pruned. Leave a date empty for no limit. Export before shortening the retention window.', 'belayline-agent-governance') . '</p>';
+        echo '</form>';
+    }
+
+    /** Retention setting: days of audit history to keep, 0 = forever. */
+    private function renderRetentionSettings(): void
+    {
+        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="margin:12px 0;">';
+        echo '<input type="hidden" name="action" value="' . esc_attr(self::RETENTION_ACTION) . '">';
+        wp_nonce_field(self::RETENTION_ACTION);
+        printf(
+            '<label for="belayline_audit_retention_days">%s</label> <input type="number" min="0" max="%d" id="belayline_audit_retention_days" name="belayline_audit_retention_days" value="%d" class="small-text"> ',
+            esc_html__('Keep audit events for (days, 0 = forever)', 'belayline-agent-governance'),
+            AuditRetention::MAX_DAYS,
+            AuditRetention::days(),
+        );
+        submit_button(__('Save retention', 'belayline-agent-governance'), 'secondary', 'submit', false);
+        echo '<p class="description">' . esc_html__('A daily job deletes older events, oldest first, and records a checkpoint so the tamper check still works. Deleted events cannot be recovered.', 'belayline-agent-governance') . '</p>';
+        echo '</form>';
+    }
+
+    /**
+     * Streams a date range of the log as JSON Lines and exits. Refuses without
+     * manage_options or a valid nonce.
+     */
+    public function exportJsonl(): void
+    {
+        if (!current_user_can(self::CAP)) {
+            wp_die(esc_html__('Insufficient permissions.', 'belayline-agent-governance'));
+        }
+        check_admin_referer(self::EXPORT_JSONL_ACTION);
+
+        try {
+            $from = AuditExporter::normalizeDate(isset($_POST['from']) ? sanitize_text_field(wp_unslash($_POST['from'])) : '');
+            $to = AuditExporter::normalizeDate(isset($_POST['to']) ? sanitize_text_field(wp_unslash($_POST['to'])) : '');
+        } catch (\InvalidArgumentException $e) {
+            wp_die(esc_html($e->getMessage()));
+        }
+
+        nocache_headers();
+        header('Content-Type: application/x-ndjson; charset=utf-8');
+        header('Content-Disposition: attachment; filename=agent-audit-log.jsonl');
+
+        $out = fopen('php://output', 'w'); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- streaming a download to the response body, not touching the filesystem.
+        if ($out === false) {
+            wp_die(esc_html__('Unable to open output stream.', 'belayline-agent-governance'));
+        }
+        (new AuditExporter($this->reader))->stream($from, $to, static function (string $line) use ($out): void {
+            fwrite($out, $line); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- same php://output stream.
+        });
+        fclose($out); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- closes the php://output stream opened above.
+        exit;
+    }
+
+    /** Validates and stores the retention submission; no redirect, so it is testable. */
+    public function applyRetentionSubmission(): void
+    {
+        if (!current_user_can(self::CAP)) {
+            wp_die(esc_html__('Insufficient permissions.', 'belayline-agent-governance'));
+        }
+        check_admin_referer(self::RETENTION_ACTION);
+
+        $days = AuditRetention::sanitizeDays(isset($_POST['belayline_audit_retention_days']) ? wp_unslash($_POST['belayline_audit_retention_days']) : 0);
+        update_option(AuditRetention::OPTION, $days, false);
+    }
+
+    public function saveRetention(): void
+    {
+        $this->applyRetentionSubmission();
+        wp_safe_redirect(add_query_arg(['page' => self::SLUG], admin_url('tools.php')));
         exit;
     }
 
