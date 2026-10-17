@@ -147,6 +147,25 @@ if (!class_exists('wpdb', false)) {
             return $this->colReturn;
         }
 
+        /** @var list<array{table: string, data: array<string, mixed>, where: array<string, mixed>}> Every update() call, in order. */
+        public array $updates = [];
+
+        /** Canned return for update(). */
+        public int|false $updateReturn = 0;
+
+        /**
+         * @param array<string, mixed> $data
+         * @param array<string, mixed> $where
+         * @param list<string>|null $format
+         * @param list<string>|null $whereFormat
+         */
+        public function update(string $table, array $data, array $where, ?array $format = null, ?array $whereFormat = null): int|false
+        {
+            $this->updates[] = ['table' => $table, 'data' => $data, 'where' => $where];
+
+            return $this->updateReturn;
+        }
+
         /**
          * @param array<string, mixed> $data
          * @param list<string>|null $format

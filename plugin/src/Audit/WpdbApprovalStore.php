@@ -27,8 +27,24 @@ use wpdb;
  *  - The reserve→{@see finalize()}/{@see rollback()} split spends a grant only when
  *    the action actually executed (finalize). If execution fails/aborts the grant is
  *    released (rollback) and a retry within the original TTL can reuse it.
- *  - Pending requests carry their own TTL ({@see PENDING_TTL_SECONDS}); a stale
- *    request is swept to `expired` and can no longer be approved into a live grant.
+ *  - Pending requests carry their own TTL, stored per row in `pending_expires_ts`
+ *    ({@see pendingTtl()}); a stale request is swept to `expired` and can no longer
+ *    be approved into a live grant. Every expiry decision reads the stored
+ *    timestamp, never the default, so a per-request TTL survives later changes to
+ *    the filter.
+ *
+ * Hooks fired by this store:
+ *  - `do_action('belayline_approval_requested', string $approvalId, string $verb, string $summary)`
+ *    on a genuinely new pending row (not on the dedup reuse path).
+ *  - `do_action('belayline_approval_expired', string $approvalId, string $verb)` exactly
+ *    once per approval, at the moment a pending row passes `pending_expires_ts` and is
+ *    flipped to `expired` (hourly sweep, or earlier if the Pending Agent Actions screen
+ *    is opened first). Not fired again when the expired row is later deleted.
+ *  - `belayline_approval_resolved` is fired by {@see \Belayline\Plugin\Api\Approvals}.
+ *
+ * Filter: `apply_filters('belayline_pending_ttl_seconds', int $ttl, string $verb, string $correlationId)`
+ * returns the pending lifetime in seconds for a new request (default 3600, clamped to
+ * 60 s .. 30 days; a non-int result falls back to 3600).
  *  - All timestamps are stored and compared in UTC (UTC_TIMESTAMP()) to avoid
  *    server-timezone drift in the TTL checks.
  */
@@ -37,8 +53,16 @@ final class WpdbApprovalStore implements ApprovalStore, ApprovalMinter
     /** Approved-grant lifetime. After this the grant is dead even if unused. */
     private const TTL_SECONDS = 900; // 15 minutes
 
-    /** Pending-request lifetime. A request a human never acts on expires (item 3). */
+    /**
+     * Default pending-request lifetime. A request a human never acts on expires
+     * (item 3). Filterable per request via `belayline_pending_ttl_seconds`; the
+     * approved-grant TTL above is deliberately not.
+     */
     private const PENDING_TTL_SECONDS = 3600; // 1 hour
+
+    /** Floor / ceiling for the filtered pending TTL. */
+    private const PENDING_TTL_MIN = 60;
+    private const PENDING_TTL_MAX = 2592000; // 30 days
 
     private bool $ensured = false;
 
@@ -121,7 +145,7 @@ final class WpdbApprovalStore implements ApprovalStore, ApprovalMinter
                 // with an empty-but-present probe_args value.
                 'probe_args' => $fingerprint !== null && $fingerprintKind === 'probe' ? $probeArgs : null,
                 'created_ts' => gmdate('Y-m-d H:i:s'),
-                'pending_expires_ts' => gmdate('Y-m-d H:i:s', time() + self::PENDING_TTL_SECONDS),
+                'pending_expires_ts' => gmdate('Y-m-d H:i:s', time() + $this->pendingTtl($verb, $correlationId)),
             ],
             ['%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'],
         );
@@ -454,9 +478,9 @@ final class WpdbApprovalStore implements ApprovalStore, ApprovalMinter
      * hourly cron exists to control). Called with the current UTC time.
      *
      * Deleted — dead ends with no decision left to preserve:
-     *  - `pending` whose {@see PENDING_TTL_SECONDS} window has lapsed: nobody
-     *    ever reviewed it. Covers rows {@see expireStale()} hasn't (yet) flipped
-     *    to `expired`, so this sweep does not depend on that method having run.
+     *  - `pending` whose stored `pending_expires_ts` has lapsed: nobody ever
+     *    reviewed it. {@see expireStale()} flips (and announces) these first; the
+     *    pending arm below only backstops a row it could not flip.
      *  - `expired`: already-flipped stale pending requests.
      *  - `approved` whose {@see TTL_SECONDS} grant window has lapsed WITHOUT
      *    being reserved: a human said yes but the request was never redeemed
@@ -478,6 +502,10 @@ final class WpdbApprovalStore implements ApprovalStore, ApprovalMinter
     public function deleteExpired(string $nowUtc): int
     {
         $this->ensureTable();
+
+        // Flip first (firing `belayline_approval_expired` once per approval), so a
+        // pending row is never deleted without the hook having seen it.
+        $this->expireStale($nowUtc);
 
         $affected = $this->db->query(
             $this->db->prepare(
@@ -539,14 +567,63 @@ final class WpdbApprovalStore implements ApprovalStore, ApprovalMinter
         );
     }
 
-    /** Flip pending requests past their TTL to `expired` (item 3). */
-    private function expireStale(): void
+    /**
+     * Flip pending requests past their stored TTL to `expired` (item 3) and fire
+     * `belayline_approval_expired` once for each row this call actually flipped.
+     * The per-row conditional UPDATE is the once-only guard: a concurrent sweep
+     * that loses the race sees 0 affected rows and stays silent.
+     */
+    private function expireStale(?string $nowUtc = null): void
     {
-        // phpcs:ignore WordPress.DB.PreparedSQL -- trusted internal table name, no user input.
-        $this->db->query(
-            "UPDATE {$this->table()} SET status = 'expired'
-              WHERE status = 'pending' AND pending_expires_ts <= UTC_TIMESTAMP()"
-        );
+        $table = $this->table();
+        $now = $nowUtc ?? gmdate('Y-m-d H:i:s');
+        $batch = 500;
+
+        do {
+            $rows = $this->db->get_results(
+                $this->db->prepare(
+                    "SELECT approval_id, verb FROM %i
+                      WHERE status = 'pending' AND pending_expires_ts <= %s ORDER BY id LIMIT %d",
+                    $table,
+                    $now,
+                    $batch
+                ),
+                ARRAY_A
+            );
+            $rows = is_array($rows) ? $rows : [];
+            $flipped = 0;
+
+            foreach ($rows as $row) {
+                $approvalId = (string) ($row['approval_id'] ?? '');
+                if ($approvalId === '') {
+                    continue;
+                }
+                // Equality-only WHERE: the row was just read as pending and past its
+                // stored expiry; `status = 'pending'` is the once-only guard.
+                $affected = $this->db->update(
+                    $table,
+                    ['status' => 'expired'],
+                    ['approval_id' => $approvalId, 'status' => 'pending'],
+                    ['%s'],
+                    ['%s', '%s'],
+                );
+                if ($affected === 1) {
+                    ++$flipped;
+                    do_action('belayline_approval_expired', $approvalId, (string) ($row['verb'] ?? ''));
+                }
+            }
+        } while ($flipped > 0 && count($rows) === $batch);
+    }
+
+    /** Pending lifetime for a new request: filtered, clamped to [60 s, 30 days], non-int falls back to the default. */
+    private function pendingTtl(string $verb, string $correlationId): int
+    {
+        $ttl = apply_filters('belayline_pending_ttl_seconds', self::PENDING_TTL_SECONDS, $verb, $correlationId);
+        if (!is_int($ttl)) {
+            return self::PENDING_TTL_SECONDS;
+        }
+
+        return max(self::PENDING_TTL_MIN, min(self::PENDING_TTL_MAX, $ttl));
     }
 
     private function uuid(): string
