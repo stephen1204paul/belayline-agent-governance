@@ -44,6 +44,7 @@ use Belayline\Plugin\Admin\PendingActionsPage;
 use Belayline\Plugin\Api\Approvals;
 use Belayline\Plugin\Api\Grants;
 use Belayline\Plugin\Approval\WpdbGrantStore;
+use Belayline\Plugin\Audit\AuditPruner;
 use Belayline\Plugin\Audit\AuditReader;
 use Belayline\Plugin\Audit\WpdbApprovalStore;
 use Belayline\Plugin\Audit\WpdbAuditSink;
@@ -76,6 +77,7 @@ use Belayline\Plugin\Support\ApprovalNotifier;
 use Belayline\Plugin\Support\AdminChangeRecorder;
 use Belayline\Plugin\Support\ApprovalSweep;
 use Belayline\Plugin\Support\ArgumentCapGate;
+use Belayline\Plugin\Support\AuditRetention;
 use Belayline\Plugin\Support\ChangePurge;
 use Belayline\Plugin\Support\DecisionRecorder;
 use Belayline\Plugin\Support\ElevationRules;
@@ -153,6 +155,7 @@ function belayline_activate(): void
 
     ApprovalSweep::activate();
     ChangePurge::activate();
+    AuditRetention::activate();
 }
 
 /** Stop the approval sweep. Table data is intentionally kept — see uninstall.php. */
@@ -163,6 +166,9 @@ function belayline_deactivate(): void
     }
     if (class_exists(ChangePurge::class)) {
         ChangePurge::deactivate();
+    }
+    if (class_exists(AuditRetention::class)) {
+        AuditRetention::deactivate();
     }
 }
 
@@ -520,6 +526,14 @@ add_action('plugins_loaded', static function (): void {
         add_action(ChangePurge::HOOK, static function () use ($wpdb): void {
             ChangePurge::run(new WpdbChangeStore($wpdb));
         });
+
+        // Daily audit-log retention (see AuditRetention). Off (0 days) unless
+        // the operator sets the retention option on the Agent Audit Log screen.
+        if ($belayline_sink !== null) {
+            add_action(AuditRetention::HOOK, static function () use ($wpdb, $belayline_sink): void {
+                AuditRetention::run(new AuditPruner($wpdb, $belayline_sink));
+            });
+        }
 
         // Route each NEW pending approval to the humans who must clear it:
         // email (+ optional webhook), on the belayline_approval_requested

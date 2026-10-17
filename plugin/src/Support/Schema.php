@@ -8,7 +8,7 @@ use Belayline\Plugin\Audit\WpdbAuditSink;
 use wpdb;
 
 /**
- * Single source of truth for the plugin's five custom tables
+ * Single source of truth for the plugin's six custom tables
  * ({@see \Belayline\Plugin\Audit\WpdbAuditSink},
  * {@see \Belayline\Plugin\Audit\WpdbApprovalStore} and
  * {@see \Belayline\Plugin\Approval\WpdbGrantStore}) and their
@@ -50,8 +50,11 @@ final class Schema
      * 6: new `belayline_changes` table ({@see changesTable()}) holding the
      *    per-call change history (before/after snapshots) captured while a
      *    governed call runs ({@see \Belayline\Plugin\Changes\ChangeCapture}).
+     * 7: new `belayline_audit_checkpoint` table ({@see checkpointTable()}) recording
+     *    the last pruned audit entry, and the daily audit-retention cron
+     *    ({@see AuditRetention}).
      */
-    public const VERSION = '6';
+    public const VERSION = '7';
 
     public const VERSION_OPTION = 'belayline_schema_version';
 
@@ -84,6 +87,7 @@ final class Schema
     public const GRANTS_TABLE = 'belayline_grants';
     public const COUNTERS_TABLE = 'belayline_counters';
     public const CHANGES_TABLE = 'belayline_changes';
+    public const CHECKPOINT_TABLE = 'belayline_audit_checkpoint';
 
     public static function auditLogTable(wpdb $db): string
     {
@@ -125,6 +129,33 @@ final class Schema
     public static function changesTable(wpdb $db): string
     {
         return $db->prefix . self::CHANGES_TABLE;
+    }
+
+    /**
+     * Audit retention checkpoint: where the hash chain was cut by a prune. A
+     * SEPARATE table (not an option) so it is written and read in the same
+     * database and the same lock as the rows it summarises, and so a tampered
+     * value is just another row to detect.
+     */
+    public static function checkpointTable(wpdb $db): string
+    {
+        return $db->prefix . self::CHECKPOINT_TABLE;
+    }
+
+    /**
+     * Column/key body for the checkpoint table. `pruned_through_id` /
+     * `pruned_through_entry_hash` name the last deleted audit row; the first
+     * surviving row's `prev_hash` must equal that hash. `pruned_count` is the
+     * running total of rows ever pruned.
+     */
+    public static function checkpointColumns(): string
+    {
+        return "id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                created_ts DATETIME NOT NULL,
+                pruned_through_id BIGINT UNSIGNED NOT NULL,
+                pruned_through_entry_hash CHAR(64) NOT NULL,
+                pruned_count BIGINT UNSIGNED NOT NULL DEFAULT 0,
+                PRIMARY KEY  (id)";
     }
 
     /** Column/key body (no surrounding `CREATE TABLE ... ( )`) for the audit log table. */
@@ -289,6 +320,7 @@ final class Schema
             'CREATE TABLE ' . self::grantsTable($db) . " (\n" . self::grantsColumns() . "\n) {$charset};",
             'CREATE TABLE ' . self::countersTable($db) . " (\n" . self::countersColumns() . "\n) {$charset};",
             'CREATE TABLE ' . self::changesTable($db) . " (\n" . self::changesColumns() . "\n) {$charset};",
+            'CREATE TABLE ' . self::checkpointTable($db) . " (\n" . self::checkpointColumns() . "\n) {$charset};",
         ]);
 
         // Option migrations ride the same version gate as the tables. Each is
@@ -300,6 +332,9 @@ final class Schema
         // than only on activation, because an upgrade from 0.4.x never
         // re-activates the plugin.
         ChangePurge::activate();
+
+        // v7: the audit-retention cron (a no-op until the retention option is set).
+        AuditRetention::activate();
 
         // §3.4 item 3: first site bind, idempotent and shape-gated (already
         // bound is a no-op) rather than version-gated, exactly like the

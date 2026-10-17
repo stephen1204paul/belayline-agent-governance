@@ -95,5 +95,6 @@
         -->
         <exclude-pattern>plugin/tests/Fakes/InMemoryAuditRowsWpdb.php</exclude-pattern>
         <exclude-pattern>plugin/tests/Fakes/CounterTableWpdb.php</exclude-pattern>
+        <exclude-pattern>plugin/tests/Fakes/SqliteWpdb.php</exclude-pattern>
     </rule>
 </ruleset>

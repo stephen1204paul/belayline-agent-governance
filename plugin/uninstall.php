@@ -46,14 +46,14 @@ if (is_readable($belaylineUninstallAutoload)) {
     $belaylineManifestLoaded = class_exists(\Belayline\Plugin\Support\UninstallManifest::class);
 }
 
-// Tables: five current, plus the pre-v4 grants table name a crashed v4
+// Tables: six current, plus the pre-v4 grants table name a crashed v4
 // upgrade can leave behind (Schema::renameLegacyGrantsTable() never deletes
 // it, only renames-or-leaves it -- see Schema.php). %i is the WP 6.2+
 // identifier placeholder; each table name here is this plugin's own trusted,
 // hard-coded constant, never request input.
 $belaylineTableBasenames = $belaylineManifestLoaded
     ? \Belayline\Plugin\Support\UninstallManifest::TABLE_BASENAMES
-    : ['belayline_audit_log', 'belayline_approvals', 'belayline_grants', 'belayline_counters', 'belayline_changes', 'belayline_grants'];
+    : ['belayline_audit_log', 'belayline_approvals', 'belayline_grants', 'belayline_counters', 'belayline_changes', 'belayline_audit_checkpoint', 'belayline_grants'];
 
 foreach ($belaylineTableBasenames as $belaylineTableBasename) {
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.DirectDatabaseQuery.NoCaching -- opt-in uninstall dropping a table this plugin owns exclusively; %i is the WP 6.2+ identifier placeholder, the name is a hard-coded constant, never request input; nothing to cache for a table being dropped.

@@ -53,6 +53,7 @@ final class UninstallManifest
         ApprovalNotifier::EMAIL_OPTION,
         ApprovalNotifier::WEBHOOK_OPTION,
         ChangePurge::RETENTION_OPTION,
+        AuditRetention::OPTION,
         AbilityReviews::OPTION,
     ];
 
@@ -65,6 +66,7 @@ final class UninstallManifest
     public const CRON_HOOKS = [
         ApprovalSweep::HOOK,
         ChangePurge::HOOK,
+        AuditRetention::HOOK,
     ];
 
     /**
@@ -86,12 +88,12 @@ final class UninstallManifest
     ];
 
     /**
-     * The plugin's five current custom tables (base names, without the
+     * The plugin's six current custom tables (base names, without the
      * `$wpdb` prefix; the rate/quota/tripwire counters live in
      * {@see Schema::COUNTERS_TABLE}, not transients) plus the pre-v4 grants
      * table name a crashed upgrade can leave behind
      * ({@see Schema::renameLegacyGrantsTable()}) — an opted-in uninstall
-     * drops all six if present.
+     * drops all of them if present.
      *
      * @var list<string>
      */
@@ -101,6 +103,7 @@ final class UninstallManifest
         Schema::GRANTS_TABLE,
         Schema::COUNTERS_TABLE,
         Schema::CHANGES_TABLE,
+        Schema::CHECKPOINT_TABLE,
         Schema::LEGACY_GRANTS_TABLE,
     ];
 }

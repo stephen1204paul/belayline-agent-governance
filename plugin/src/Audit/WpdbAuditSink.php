@@ -80,6 +80,21 @@ final class WpdbAuditSink implements AuditSink
         }
     }
 
+    /**
+     * Take the append lock for a caller that must exclude appenders (the audit
+     * pruner). Unlike the append path this reports failure, so a pruner that
+     * cannot get the lock skips its run instead of racing.
+     */
+    public function tryAppendLock(): bool
+    {
+        return (int) $this->db->get_var($this->db->prepare('SELECT GET_LOCK(%s, %d)', self::LOCK, 5)) === 1;
+    }
+
+    public function releaseAppendLock(): void
+    {
+        $this->unlock();
+    }
+
     /** Serialize appends so concurrent writers can't read the same prev hash. */
     private function lock(): void
     {
@@ -98,7 +113,18 @@ final class WpdbAuditSink implements AuditSink
         // phpcs:ignore WordPress.DB.PreparedSQL -- table name is a trusted internal constant.
         $hash = $this->db->get_var("SELECT entry_hash FROM {$table} ORDER BY id DESC LIMIT 1");
 
-        return is_string($hash) && $hash !== '' ? $hash : HashChain::GENESIS;
+        if (is_string($hash) && $hash !== '') {
+            return $hash;
+        }
+
+        // Empty log. A fresh install starts at GENESIS, but a log whose every row was
+        // pruned must continue from its checkpoint, or the next row would claim
+        // GENESIS as its predecessor and fail verification.
+        $anchor = $this->db->get_var(
+            $this->db->prepare('SELECT pruned_through_entry_hash FROM %i ORDER BY id DESC LIMIT 1', Schema::checkpointTable($this->db))
+        );
+
+        return is_string($anchor) && $anchor !== '' ? $anchor : HashChain::GENESIS;
     }
 
     private function ensureTable(): void

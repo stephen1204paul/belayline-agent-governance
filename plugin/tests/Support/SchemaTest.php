@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Belayline\Plugin\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
+use Belayline\Plugin\Support\AuditRetention;
 use Belayline\Plugin\Support\ChangePurge;
 use Belayline\Plugin\Support\EnvironmentGuard;
 use Belayline\Plugin\Support\Schema;
@@ -73,12 +74,13 @@ final class SchemaTest extends TestCase
     {
         Schema::install(new wpdb());
 
-        $this->assertCount(5, $GLOBALS['wpas_test_dbdelta_queries']);
+        $this->assertCount(6, $GLOBALS['wpas_test_dbdelta_queries']);
         $this->assertStringContainsString('wp_belayline_audit_log', $GLOBALS['wpas_test_dbdelta_queries'][0]);
         $this->assertStringContainsString('wp_belayline_approvals', $GLOBALS['wpas_test_dbdelta_queries'][1]);
         $this->assertStringContainsString('wp_belayline_grants', $GLOBALS['wpas_test_dbdelta_queries'][2]);
         $this->assertStringContainsString('wp_belayline_counters', $GLOBALS['wpas_test_dbdelta_queries'][3]);
         $this->assertStringContainsString('wp_belayline_changes', $GLOBALS['wpas_test_dbdelta_queries'][4]);
+        $this->assertStringContainsString('wp_belayline_audit_checkpoint', $GLOBALS['wpas_test_dbdelta_queries'][5]);
     }
 
     // --- version 6: change history table ----------------------------------------
@@ -110,6 +112,29 @@ final class SchemaTest extends TestCase
         }
     }
 
+    public function testUpgradingFromVersionSixCreatesTheCheckpointTableAndSchedulesTheAuditRetentionCron(): void
+    {
+        $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION] = '6';
+        $GLOBALS['wpas_test_cron'] = [];
+
+        Schema::maybeUpgrade(new wpdb());
+
+        $this->assertSame('7', $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
+        $this->assertStringContainsString('wp_belayline_audit_checkpoint', implode("\n", $GLOBALS['wpas_test_dbdelta_queries']));
+        $this->assertArrayHasKey(AuditRetention::HOOK, $GLOBALS['wpas_test_cron']);
+        $this->assertArrayNotHasKey(AuditRetention::OPTION, $GLOBALS['wpas_test_options'], 'upgrading never turns retention on');
+    }
+
+    public function testTheCheckpointTableCarriesTheDocumentedColumns(): void
+    {
+        Schema::install(new wpdb());
+
+        $sql = $GLOBALS['wpas_test_dbdelta_queries'][5];
+        foreach (['created_ts DATETIME NOT NULL', 'pruned_through_id BIGINT UNSIGNED NOT NULL', 'pruned_through_entry_hash CHAR(64) NOT NULL', 'pruned_count BIGINT UNSIGNED NOT NULL'] as $fragment) {
+            $this->assertStringContainsString($fragment, $sql);
+        }
+    }
+
     public function testUpgradingFromVersionFiveCreatesTheChangesTableAndSchedulesThePurge(): void
     {
         $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION] = '5';
@@ -117,8 +142,8 @@ final class SchemaTest extends TestCase
 
         Schema::maybeUpgrade(new wpdb());
 
-        $this->assertSame('6', Schema::VERSION);
-        $this->assertSame('6', $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
+        $this->assertSame('7', Schema::VERSION);
+        $this->assertSame('7', $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
         $this->assertStringContainsString('wp_belayline_changes', implode("\n", $GLOBALS['wpas_test_dbdelta_queries']));
         $this->assertArrayHasKey(ChangePurge::HOOK, $GLOBALS['wpas_test_cron'], 'an upgrade never re-activates, so install() must schedule the purge');
     }
@@ -169,7 +194,7 @@ final class SchemaTest extends TestCase
 
         Schema::maybeUpgrade(new wpdb());
 
-        $this->assertCount(5, $GLOBALS['wpas_test_dbdelta_queries']);
+        $this->assertCount(6, $GLOBALS['wpas_test_dbdelta_queries']);
         $this->assertSame(Schema::VERSION, $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
     }
 
