@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Belayline\Plugin\Audit;
 
+use Belayline\Audit\HashChain;
 use InvalidArgumentException;
 
 /**
@@ -13,9 +14,16 @@ use InvalidArgumentException;
  * into `record`. Rows are read in keyset batches and handed to the writer as
  * they come, so memory does not grow with the table.
  *
- * Decoding `record_json` is for readability: the chain hashes the stored bytes,
- * so re-verifying an export offline needs the original text, which the screen's
- * CSV export keeps.
+ * Offline verification: `entry_hash = sha256(prev_hash . "\n" . canonical_json)`
+ * and the stored `record_json` IS those canonical bytes, so every entry line
+ * carries it verbatim as both `record_json` and `canonical_json` (the field name
+ * {@see \Belayline\Audit\HashChain::verify()} takes), next to the decoded
+ * `record` kept for readability. Anchor for verification: the `range` line's
+ * `anchor_prev_hash` when present, else the checkpoint's
+ * `pruned_through_entry_hash`, else GENESIS. A `range` line is written only when
+ * the first exported entry does not follow that default anchor directly (a date
+ * range that starts mid-log), so a partial export still verifies as a contiguous
+ * segment.
  */
 final class AuditExporter
 {
@@ -51,6 +59,7 @@ final class AuditExporter
         $beforeTs = $to !== null ? gmdate('Y-m-d', (int) strtotime($to . ' UTC') + 86400) : '9999-12-31';
 
         $checkpoint = $this->reader->checkpoint();
+        $defaultAnchor = $checkpoint !== null ? $checkpoint['pruned_through_entry_hash'] : HashChain::GENESIS;
         if ($checkpoint !== null) {
             $write($this->line(['type' => 'checkpoint'] + $checkpoint));
         }
@@ -60,6 +69,9 @@ final class AuditExporter
         do {
             $rows = $this->reader->after($afterId, self::BATCH, $fromTs, $beforeTs);
             foreach ($rows as $row) {
+                if ($count === 0 && (string) ($row['prev_hash'] ?? '') !== $defaultAnchor) {
+                    $write($this->line(['type' => 'range', 'anchor_prev_hash' => (string) ($row['prev_hash'] ?? '')]));
+                }
                 $write($this->line($this->entry($row)));
                 $afterId = (int) $row['id'];
                 ++$count;
@@ -93,6 +105,8 @@ final class AuditExporter
             'result' => $row['result'] ?? null,
             'wp_user' => $nullableInt($row['wp_user'] ?? null),
             'ip' => $row['ip'] ?? null,
+            'record_json' => $json,
+            'canonical_json' => $json,
             'record' => $decoded ?? $json,
             'prev_hash' => (string) ($row['prev_hash'] ?? ''),
             'entry_hash' => (string) ($row['entry_hash'] ?? ''),

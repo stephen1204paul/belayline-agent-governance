@@ -6,6 +6,7 @@ namespace Belayline\Plugin\Tests\Audit;
 
 use Belayline\Audit\AuditDecision;
 use Belayline\Audit\AuditRecord;
+use Belayline\Audit\HashChain;
 use Belayline\Plugin\Audit\AuditExporter;
 use Belayline\Plugin\Audit\AuditPruner;
 use Belayline\Plugin\Audit\AuditReader;
@@ -167,7 +168,7 @@ final class AuditRetentionTest extends TestCase
         for ($i = 1; $i <= 5; ++$i) {
             $this->append('2026-01-0' . $i . 'T00:00:00Z');
         }
-        $this->pruner->prune(30, strtotime('2026-02-03 00:00:00 UTC')); // rows 1..3 pruned
+        $this->pruner->prune(30, strtotime('2026-02-03 00:00:00 UTC')); // rows 1..2 pruned
         $this->db->exec('DELETE FROM wp_belayline_audit_log WHERE id = 4');
 
         $this->assertFalse($this->reader->verifyChain(), 'deleting the row right after the checkpoint breaks the join');
@@ -246,6 +247,53 @@ final class AuditRetentionTest extends TestCase
         $this->assertSame($out[0]['pruned_through_entry_hash'], $out[1]['prev_hash']);
     }
 
+    /** @param list<array<string, mixed>> $lines */
+    private function verifyExport(array $lines): bool
+    {
+        $anchor = HashChain::GENESIS;
+        $entries = [];
+        foreach ($lines as $l) {
+            if ($l['type'] === 'checkpoint') {
+                $anchor = $l['pruned_through_entry_hash'];
+            } elseif ($l['type'] === 'range') {
+                $anchor = $l['anchor_prev_hash'];
+            } else {
+                $entries[] = ['prev_hash' => $l['prev_hash'], 'canonical_json' => $l['canonical_json'], 'entry_hash' => $l['entry_hash']];
+            }
+        }
+
+        return HashChain::verify($entries, $anchor);
+    }
+
+    public function testExportOfAPrunedLogVerifiesOfflineAndFailsWhenARecordIsEdited(): void
+    {
+        for ($i = 1; $i <= 5; ++$i) {
+            $this->append('2026-03-0' . $i . 'T10:00:00Z');
+        }
+        $this->pruner->prune(1, strtotime('2026-03-03 12:00:00 UTC')); // rows 1..2 pruned
+
+        $lines = $this->export(null, null);
+        $this->assertSame(['checkpoint', 'entry', 'entry', 'entry'], array_column($lines, 'type'));
+        $this->assertTrue($this->verifyExport($lines));
+
+        $lines[2]['canonical_json'][10] = $lines[2]['canonical_json'][10] === 'x' ? 'y' : 'x';
+        $this->assertFalse($this->verifyExport($lines));
+    }
+
+    public function testPartialRangeExportCarriesARangeAnchorAndVerifiesAsASegment(): void
+    {
+        foreach (['2026-03-01', '2026-03-02', '2026-03-03', '2026-03-04'] as $d) {
+            $this->append($d . 'T10:00:00Z');
+        }
+
+        $lines = $this->export('2026-03-02', '2026-03-03');
+
+        $this->assertSame(['range', 'entry', 'entry'], array_column($lines, 'type'));
+        $this->assertSame($lines[1]['prev_hash'], $lines[0]['anchor_prev_hash']);
+        $this->assertTrue($this->verifyExport($lines));
+        $this->assertSame([], array_filter($this->export(null, null), static fn (array $l): bool => $l['type'] === 'range'), 'a full export needs no range line');
+    }
+
     public function testExportRowsCarryEveryColumnWithTheRecordDecoded(): void
     {
         $this->append('2026-03-01T10:00:00Z');
@@ -254,7 +302,7 @@ final class AuditRetentionTest extends TestCase
 
         $this->assertCount(1, $out);
         $row = $out[0];
-        foreach (['id', 'event_id', 'ts', 'correlation_id', 'pack', 'ability', 'tier', 'decision', 'result', 'wp_user', 'ip', 'record', 'prev_hash', 'entry_hash'] as $key) {
+        foreach (['id', 'event_id', 'ts', 'correlation_id', 'pack', 'ability', 'tier', 'decision', 'result', 'wp_user', 'ip', 'record_json', 'canonical_json', 'record', 'prev_hash', 'entry_hash'] as $key) {
             $this->assertArrayHasKey($key, $row);
         }
         $this->assertSame(1, $row['id']);
