@@ -159,6 +159,24 @@ final class AuditTest extends TestCase
         $this->assertFalse(HashChain::verify($entries));
     }
 
+    public function testChainVerifiesFromACheckpointAnchorAfterThePrefixIsPruned(): void
+    {
+        $entries = $this->chainFrom(
+            $this->record('evt_1', 'woocommerce/products-list', AuditDecision::Allowed),
+            $this->record('evt_2', 'woocommerce/orders-update', AuditDecision::Pending),
+            $this->record('evt_3', 'woocommerce/orders-update', AuditDecision::Approved),
+        );
+        $anchor = $entries[0]['entry_hash'];
+        $remaining = array_slice($entries, 1);
+
+        $this->assertTrue(HashChain::verify($remaining, $anchor));
+        $this->assertFalse(HashChain::verify($remaining), 'without the anchor the pruned chain no longer starts at GENESIS');
+        $this->assertFalse(HashChain::verify($remaining, str_repeat('a', 64)), 'a wrong anchor must fail');
+
+        $remaining[1]['canonical_json'] = str_replace('orders-update', 'products-list', $remaining[1]['canonical_json']);
+        $this->assertFalse(HashChain::verify($remaining, $anchor), 'tampering after the checkpoint is still detected');
+    }
+
     private function execution(?string $changesSha256): AuditRecord
     {
         return AuditRecord::execution(

@@ -26,13 +26,19 @@ final class HashChain
     }
 
     /**
-     * Verify an ordered list of entries forms an unbroken chain from GENESIS.
+     * Verify an ordered list of entries forms an unbroken chain from $anchor.
+     *
+     * $anchor defaults to GENESIS (a log that has never been pruned). After a
+     * retention prune it is the checkpoint's `pruned_through_entry_hash`: the
+     * hash of the last deleted entry, which the first remaining entry must name
+     * as its prev_hash. Pass the last entry_hash of one batch as the next
+     * batch's anchor to verify a long log without holding it in memory.
      *
      * @param list<array{prev_hash: string, canonical_json: string, entry_hash: string}> $entries
      */
-    public static function verify(array $entries): bool
+    public static function verify(array $entries, string $anchor = self::GENESIS): bool
     {
-        $prev = self::GENESIS;
+        $prev = $anchor;
         foreach ($entries as $entry) {
             if ($entry['prev_hash'] !== $prev) {
                 return false; // a record was deleted or reordered
