@@ -7,6 +7,7 @@ namespace Belayline\Plugin\Admin;
 use Belayline\Plugin\Admin\Map\CallOutcome;
 use Belayline\Plugin\Admin\Map\MapData;
 use Belayline\Plugin\Admin\Map\WhoResolver;
+use Belayline\Plugin\Admin\Ui\AbilityLabel;
 use Belayline\Plugin\Admin\Ui\Html;
 use Belayline\Plugin\Admin\Ui\Icons;
 use Belayline\Plugin\Admin\Ui\Time;
@@ -212,7 +213,7 @@ final class OverviewPage
             'outcome' => [__('Outcome', 'belayline-agent-governance'), __('What happened to the call', 'belayline-agent-governance')],
         ];
 
-        echo '<div id="belayline-map-view"><div class="aui-map" id="belayline-map" data-table="belayline-map-table" data-period="' . esc_attr__('Last 7 days', 'belayline-agent-governance')
+        echo '<div id="belayline-map-view"><div class="aui-map-scroll" tabindex="0" role="region" aria-label="' . esc_attr__('Map of where agent calls go', 'belayline-agent-governance') . '"><div class="aui-map" id="belayline-map" data-table="belayline-map-table" data-period="' . esc_attr__('Last 7 days', 'belayline-agent-governance')
             . '" data-labels="' . esc_attr(implode('|', [
                 __('Lane', 'belayline-agent-governance'),
                 __('Box', 'belayline-agent-governance'),
@@ -228,8 +229,17 @@ final class OverviewPage
             }
             echo '</div></div>';
         }
-        echo '</div><p class="aui-map-note" role="status" aria-live="polite">' . esc_html__('Click a box to open Activity filtered to it.', 'belayline-agent-governance') . '</p>';
-        echo '<p class="aui-map-note">' . esc_html__('A call that needed approval shows up as waiting, approved and ran, one count each. In shadow mode a call that would have been refused counts as refused even though it ran.', 'belayline-agent-governance') . '</p></div>';
+        echo '</div></div><p class="aui-map-note" role="status" aria-live="polite">' . esc_html__('Click a box to open Activity filtered to it.', 'belayline-agent-governance') . '</p>';
+        $would = 0;
+        foreach ($lanes['outcome'] ?? [] as $node) {
+            if ($node['id'] === 'o-' . CallOutcome::WOULD) {
+                $would = $node['count'];
+            }
+        }
+        if ($would > 0) {
+            echo '<p class="aui-map-note">' . esc_html__('Would refuse counts calls that ran in shadow mode but that a pack would have refused. They also count under Ran.', 'belayline-agent-governance') . '</p>';
+        }
+        echo '</div>';
         echo '<div id="belayline-map-table-view" hidden><div id="belayline-map-table"></div></div>';
         echo '</div></section>';
     }
@@ -274,7 +284,7 @@ final class OverviewPage
             $who = $this->who->describe((string) ($r['key_id'] ?? ''));
             echo '<li class="aui-item belayline-flush"><span class="aui-tile aui-tile--sm">' . Icons::svg('robot') . '</span><div class="aui-grow"><div class="aui-item-name">'
                 . esc_html($who['label']) . ': ' . PendingActionsPage::summaryHtml((string) ($r['summary'] ?? '')) . '</div><div class="aui-muted">' // phpcs:ignore WordPress.Security.EscapeOutput -- summaryHtml() escapes by provenance.
-                . esc_html(PendingActionsPage::heldReason($events[(string) ($r['audit_event_id'] ?? '')] ?? null)) . '</div></div><span class="aui-mono aui-muted">'
+                . esc_html(PendingActionsPage::heldReason($events[(string) ($r['audit_event_id'] ?? '')] ?? null)) . '</div></div><span class="aui-mono aui-muted belayline-nowrap">'
                 . esc_html(sprintf(
                     /* translators: %s: "in 6 d 23 h" */
                     __('expires %s', 'belayline-agent-governance'),
@@ -322,7 +332,7 @@ final class OverviewPage
             };
             $tone = CallOutcome::tone($outcome);
             echo '<li><span class="aui-dot' . ($tone !== '' ? ' aui-dot--' . esc_attr($tone) : '') . '"></span><div>'
-                . esc_html($this->who->describe($token)['label'] . ' ' . $verb) . ' <code class="aui-code">' . esc_html((string) $r['ability']) . '</code><time datetime="'
+                . esc_html($this->who->describe($token)['label'] . ' ' . $verb . ' ' . AbilityLabel::text((string) $r['ability'])) . '<time datetime="'
                 . esc_attr((string) $r['ts']) . '">' . esc_html(Time::ago((string) $r['ts'], $now)) . '</time></div></li>';
         }
         echo '</ul><p class="belayline-more"><a href="' . esc_url(AdminUrls::activity(AdminUrls::CALLS)) . '">' . esc_html__('View all activity', 'belayline-agent-governance') . '</a></p></div></section>';

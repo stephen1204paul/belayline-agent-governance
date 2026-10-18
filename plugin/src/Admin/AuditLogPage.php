@@ -6,6 +6,8 @@ namespace Belayline\Plugin\Admin;
 
 use Belayline\Plugin\Admin\Map\CallOutcome;
 use Belayline\Plugin\Admin\Map\WhoResolver;
+use Belayline\Plugin\Admin\Map\PackLabel;
+use Belayline\Plugin\Admin\Ui\AbilityLabel;
 use Belayline\Plugin\Admin\Ui\Html;
 use Belayline\Plugin\Admin\Ui\Icons;
 use Belayline\Plugin\Admin\Ui\Time;
@@ -182,7 +184,7 @@ final class AuditLogPage
         echo '<div class="aui-field"><label class="aui-label" for="belayline-f-pack">' . esc_html__('Pack', 'belayline-agent-governance') . '</label><select class="aui-select" id="belayline-f-pack" name="pack">';
         echo '<option value="">' . esc_html__('All packs', 'belayline-agent-governance') . '</option>';
         foreach ($packs as $pack) {
-            echo '<option value="' . esc_attr($pack) . '"' . selected($f->pack, $pack, false) . '>' . esc_html($pack) . '</option>';
+            echo '<option value="' . esc_attr($pack) . '"' . selected($f->pack, $pack, false) . '>' . esc_html(PackLabel::of($pack)) . '</option>';
         }
         echo '<option value="__none"' . selected($f->pack, '__none', false) . '>' . esc_html__('No pack', 'belayline-agent-governance') . '</option></select></div>';
 
@@ -224,9 +226,11 @@ final class AuditLogPage
         $who = $this->who !== null ? $this->who->label($token) : ($token !== '' ? $token : '—');
 
         echo '<tr>';
-        echo '<td class="aui-mono belayline-nowrap">' . esc_html(str_replace(['T', 'Z'], [' ', ''], (string) $r['ts'])) . '</td>';
+        $stamp = str_replace(['T', 'Z'], [' ', ''], (string) $r['ts']);
+        echo '<td class="aui-mono belayline-nowrap" title="' . esc_attr($stamp . ' UTC') . '">' . esc_html(substr($stamp, 5)) . '</td>';
         echo '<td>' . esc_html($who) . '</td>';
-        echo '<td><span class="aui-mono belayline-nowrap">' . esc_html((string) $r['ability']) . '</span>'
+        echo '<td>' . AbilityLabel::html((string) $r['ability']) // phpcs:ignore WordPress.Security.EscapeOutput -- AbilityLabel::html() escapes.
+            . ''
             . ($input !== '' && $input !== '[]' ? '<div class="aui-mono belayline-input" title="' . esc_attr(self::truncate($input, 400)) . '">' . esc_html(self::truncate($input, 70)) . '</div>' : '') . '</td>';
         echo '<td>' . self::badge((string) $r['decision'], isset($r['result']) ? (string) $r['result'] : null) . ($dryRun ? ' ' . Html::badge('', __('Shadow', 'belayline-agent-governance')) : '') . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- badge() and Html::badge() escape.
         echo '<td>';
@@ -395,7 +399,7 @@ final class AuditLogPage
         return [
             __('Time (UTC)', 'belayline-agent-governance'),
             __('Who', 'belayline-agent-governance'),
-            __('Ability and input', 'belayline-agent-governance'),
+            __('Ability', 'belayline-agent-governance'),
             __('Decision', 'belayline-agent-governance'),
             __('Reason', 'belayline-agent-governance'),
             __('IP', 'belayline-agent-governance'),

@@ -93,7 +93,7 @@ final class CapabilityPacksPageTest extends TestCase
 
         $this->assertStringContainsString('It would like Administrator to use the owner pack. Check the highlighted row and save.', $out);
         $this->assertStringContainsString('<tr id="belayline-bind-prefill"', $out);
-        $this->assertStringContainsString('<option value="owner" selected=\'selected\'>owner</option>', $out);
+        $this->assertStringContainsString('<option value="owner" selected=\'selected\'>Owner</option>', $out);
         // Only that row is touched: the other row's dropdown selects nothing.
         $this->assertSame(1, substr_count($this->bindingsSection($out), 'selected='));
     }

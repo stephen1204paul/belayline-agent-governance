@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Belayline\Plugin\Audit;
 
 use Belayline\Audit\HashChain;
+use Belayline\Plugin\Admin\Map\CallOutcome;
 use Belayline\Plugin\Support\Schema;
 use wpdb;
 
@@ -51,12 +52,14 @@ final class AuditReader
      * The shared WHERE of {@see filtered()} and {@see countFiltered()}: a fixed
      * template (every optional filter is `(%d = 0 OR ...)`), so no SQL is ever
      * assembled from request input. The outcome expression mirrors
-     * {@see \Belayline\Plugin\Admin\Map\CallOutcome}.
+     * {@see CallOutcome::SQL}.
      */
-    private const FILTER_WHERE = " WHERE ts >= %s AND (%d = 0 OR pack = %s) AND (%d = 0 OR ability LIKE %s)"
-        . " AND (%d = 0 OR record_json LIKE %s OR record_json LIKE %s OR record_json LIKE %s OR record_json LIKE %s OR record_json LIKE %s)"
-        . " AND (%d = 0 OR %s = CASE WHEN decision = 'allowed' THEN (CASE WHEN result IS NULL OR result = '' OR result = 'success' THEN 'ran' ELSE 'failed' END)"
-        . " WHEN decision IN ('denied', 'rejected') THEN 'refused' WHEN decision = 'pending' THEN 'waiting' WHEN decision = 'approved' THEN 'approved' ELSE '' END)";
+    private const FILTER_WHERE = " WHERE l.ts >= %s AND (%d = 0 OR l.pack = %s) AND (%d = 0 OR l.ability LIKE %s)"
+        . " AND (%d = 0 OR l.record_json LIKE %s OR l.record_json LIKE %s OR l.record_json LIKE %s OR l.record_json LIKE %s OR l.record_json LIKE %s)"
+        . " AND (%d = 0 OR " . CallOutcome::SQL . " = %s)";
+
+    /** The audit log joined to the approvals table, so an outcome filter sees how a held request ended. */
+    private const FILTER_FROM = ' FROM %i l LEFT JOIN %i a ON a.audit_event_id = l.event_id';
 
     /**
      * Newest-first page of rows matching a filter.
@@ -67,8 +70,8 @@ final class AuditReader
     {
         $rows = $this->db->get_results(
             $this->db->prepare(
-                'SELECT * FROM %i' . self::FILTER_WHERE . ' ORDER BY id DESC LIMIT %d OFFSET %d',
-                ...[...[$this->table()], ...$this->filterArgs($f, $now), ...[$limit, $offset]]
+                'SELECT l.*' . self::FILTER_FROM . self::FILTER_WHERE . ' ORDER BY l.id DESC LIMIT %d OFFSET %d',
+                ...[...[$this->table(), Schema::approvalsTable($this->db)], ...$this->filterArgs($f, $now), ...[$limit, $offset]]
             ),
             ARRAY_A
         );
@@ -80,8 +83,8 @@ final class AuditReader
     {
         return (int) $this->db->get_var(
             $this->db->prepare(
-                'SELECT COUNT(*) FROM %i' . self::FILTER_WHERE,
-                ...[...[$this->table()], ...$this->filterArgs($f, $now)]
+                'SELECT COUNT(*)' . self::FILTER_FROM . self::FILTER_WHERE,
+                ...[...[$this->table(), Schema::approvalsTable($this->db)], ...$this->filterArgs($f, $now)]
             )
         );
     }

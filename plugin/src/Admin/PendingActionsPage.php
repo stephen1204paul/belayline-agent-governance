@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Belayline\Plugin\Admin;
 
 use Belayline\Plugin\Admin\Map\WhoResolver;
+use Belayline\Plugin\Admin\Map\PackLabel;
+use Belayline\Plugin\Admin\Ui\AbilityLabel;
 use Belayline\Plugin\Admin\Ui\Html;
 use Belayline\Plugin\Admin\Ui\Icons;
 use Belayline\Plugin\Admin\Ui\Time;
@@ -116,7 +118,7 @@ final class PendingActionsPage
         echo '<h2 class="aui-approval-sum" id="' . esc_attr($titleId . '-s') . '">' . self::summaryHtml((string) ($r['summary'] ?? '')) . '</h2>';
         echo $this->why($event);
 
-        echo '<dl class="aui-kv"><dt>' . esc_html__('Ability', 'belayline-agent-governance') . '</dt><dd class="aui-mono">' . esc_html((string) ($r['verb'] ?? '')) . '</dd>';
+        echo '<dl class="aui-kv"><dt>' . esc_html__('Ability', 'belayline-agent-governance') . '</dt><dd>' . AbilityLabel::html((string) ($r['verb'] ?? '')) . '</dd>'; // phpcs:ignore WordPress.Security.EscapeOutput -- AbilityLabel::html() escapes.
         echo '<dt>' . esc_html__('Asked at', 'belayline-agent-governance') . '</dt><dd class="aui-mono">' . esc_html((string) ($r['created_ts'] ?? '')) . ' UTC</dd>';
         echo '<dt>' . esc_html__('Expires', 'belayline-agent-governance') . '</dt><dd class="aui-mono">' . esc_html(Time::until((string) ($r['pending_expires_ts'] ?? ''), $now)) . '</dd>';
         if ($unchecked) {
@@ -137,7 +139,7 @@ final class PendingActionsPage
     public static function heldReason(?array $event): string
     {
         $tier = isset($event['tier']) ? (int) $event['tier'] : null;
-        $pack = isset($event['pack']) ? (string) $event['pack'] : '';
+        $pack = isset($event['pack']) ? PackLabel::of((string) $event['pack']) : '';
         if ($tier === 2) {
             return $pack !== ''
                 /* translators: %s: pack name */

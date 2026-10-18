@@ -63,9 +63,9 @@ final class PendingActionsPageCardsTest extends TestCase
 
         $this->assertStringContainsString('Claude <span class="aui-muted">&middot; AI app</span>', $out);
         $this->assertStringContainsString('>Refund order #1043</h2>', $out);
-        $this->assertStringContainsString('always asks first, in the commerce pack', $out);
+        $this->assertStringContainsString('always asks first, in the Commerce pack', $out);
         $this->assertStringContainsString('in 6 d 23 h', $out);
-        $this->assertStringContainsString('<dd class="aui-mono">woocommerce/order-refund</dd>', $out);
+        $this->assertStringContainsString('<dd><span class="aui-mono">woocommerce/order-refund</span></dd>', $out);
 
         // Approve and Deny post to the existing handlers, each with the nonce the handler checks.
         $this->assertStringContainsString('value="belayline_approve_action"', $out);
@@ -80,7 +80,7 @@ final class PendingActionsPageCardsTest extends TestCase
     {
         $out = $this->render([self::row()], [['event_id' => 'evt_1', 'tier' => 1, 'pack' => 'content', 'ability' => 'x/y']]);
 
-        $this->assertStringContainsString('This needs approval in the content pack.', $out);
+        $this->assertStringContainsString('This needs approval in the Content pack.', $out);
         $this->assertStringNotContainsString('always asks first', $out);
     }
 

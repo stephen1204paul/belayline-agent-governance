@@ -52,15 +52,19 @@ final class MapDataTest extends TestCase
     }
 
     /** One audit row through the real sink. */
-    private function row(string $decision, ?string $result, string $ability, ?string $token, string $pack = 'content', int $daysAgo = 0, array $input = []): void
+    private function row(string $decision, ?string $result, string $ability, ?string $token, string $pack = 'content', int $daysAgo = 0, array $input = [], ?string $approval = null, bool $dryRun = false): void
     {
         $ts = gmdate('Y-m-d\TH:i:s\Z', self::NOW - $daysAgo * 86400 - 60);
         $actor = ['token_id' => $token, 'wp_user' => 1];
         $id = 'evt_' . ++$this->seq;
         $record = $result !== null
             ? AuditRecord::execution($id, $ts, 'corr_' . $this->seq, $pack, $actor, $ability, 0, $input, $result)
-            : AuditRecord::decision($id, $ts, 'corr_' . $this->seq, $pack, $actor, $ability, 1, $input, AuditDecision::from($decision));
+            : AuditRecord::decision($id, $ts, 'corr_' . $this->seq, $pack, $actor, $ability, 1, $input, AuditDecision::from($decision), dryRun: $dryRun);
         $this->sink->append($record);
+        if ($approval !== null) {
+            // The approvals row that the pending audit row filed (audit_event_id = the row's event id).
+            $this->db->insert('wp_belayline_approvals', ['approval_id' => 'apr_' . $this->seq, 'audit_event_id' => $id, 'status' => $approval, 'verb' => $ability]);
+        }
     }
 
     /** @return array<string, mixed> */
@@ -99,17 +103,97 @@ final class MapDataTest extends TestCase
         }
     }
 
-    public function testEveryAuditDecisionHasADeliberateMapping(): void
+    public function testOnlyThreeDecisionsCanBeACallAndTheOthersNeverAre(): void
     {
-        $calls = [];
-        foreach (AuditDecision::cases() as $decision) {
-            if (CallOutcome::classify($decision->value, null) !== null) {
-                $calls[] = $decision->value;
-            }
-        }
+        $this->assertSame(['allowed', 'denied', 'pending'], CallOutcome::CALL_DECISIONS);
+        $notCalls = array_map(static fn (AuditDecision $d): string => $d->value, array_filter(AuditDecision::cases(), static fn (AuditDecision $d): bool => !in_array($d->value, CallOutcome::CALL_DECISIONS, true)));
+        $this->assertSame(['approved', 'rejected', 'grant', 'admin', 'restored', 'stale'], array_values($notCalls), 'a new audit decision must be placed deliberately');
 
-        $this->assertSame(['allowed', 'denied', 'pending', 'approved', 'rejected'], $calls, 'a new audit decision must be mapped in CallOutcome on purpose');
-        $this->assertSame($calls, CallOutcome::CALL_DECISIONS);
+        foreach ($notCalls as $decision) {
+            $this->row($decision, null, 'core/get-site-info', 'user:1');
+        }
+        $this->assertSame(0, $this->map()['total'], 'a person\'s decision or a settings change is not a call');
+    }
+
+    /** @return array<string, array{0: ?string, 1: ?string}> approval status => [outcome id or null for not counted] */
+    public static function approvalEndings(): array
+    {
+        return [
+            'still waiting' => ['pending', 'o-waiting'],
+            'approved, not run yet' => ['approved', 'o-approved'],
+            'running now' => ['in_flight', 'o-approved'],
+            'rejected by a person' => ['rejected', 'o-refused'],
+            'ran after approval: the run is the call' => ['consumed', null],
+            'expired' => ['expired', 'o-expired'],
+            'went stale' => ['stale', 'o-expired'],
+            'voided' => ['void_environment', 'o-expired'],
+            'approval row already swept' => [null, 'o-expired'],
+        ];
+    }
+
+    /** @dataProvider approvalEndings */
+    public function testAHeldRequestIsOneCallWhoseOutcomeIsHowItsApprovalEnded(?string $status, ?string $outcome): void
+    {
+        $this->row('pending', null, 'woocommerce/order-refund', 'user:1', 'commerce', 0, [], $status);
+        // The human decision rows are written too, and must not add calls.
+        $this->row('approved', null, 'woocommerce/order-refund', 'user:1', 'commerce');
+        $this->row('rejected', null, 'woocommerce/order-refund', 'user:1', 'commerce');
+
+        $map = $this->map();
+
+        if ($outcome === null) {
+            $this->assertSame(0, $map['total']);
+            $this->assertSame('', $map['tuples']);
+
+            return;
+        }
+        $this->assertSame(1, $map['total']);
+        $this->assertSame('w-user-1,t-woocommerce,p-commerce,' . $outcome . ',1', $map['tuples']);
+    }
+
+    public function testAnApprovedCallThatRanIsCountedOnceThroughItsRun(): void
+    {
+        $this->row('pending', null, 'woocommerce/order-refund', 'user:1', 'commerce', 0, [], 'consumed');
+        $this->row('approved', null, 'woocommerce/order-refund', 'user:1', 'commerce');
+        $this->row('allowed', 'success', 'woocommerce/order-refund', 'user:1', 'commerce');
+
+        $map = $this->map();
+
+        $this->assertSame(1, $map['total'], 'request, decision and run are one call');
+        $this->assertSame('w-user-1,t-woocommerce,p-commerce,o-ran,1', $map['tuples']);
+    }
+
+    public function testShadowModeWouldRefuseIsItsOwnBoxAndNotAnotherCall(): void
+    {
+        $this->row('allowed', 'success', 'core/get-user-info', 'user:1', 'site-readonly');
+        $this->row('denied', null, 'core/get-user-info', 'user:1', 'site-readonly', 0, [], null, true);
+        $this->row('pending', null, 'woocommerce/order-refund', 'user:1', 'commerce', 0, [], 'expired', true);
+        $this->row('denied', null, 'core/get-user-info', 'user:1', 'site-readonly');
+
+        $map = $this->map();
+
+        $this->assertSame(2, $map['total'], 'the shadowed call ran (Ran) and one real refusal; the observations are not extra calls');
+        $c = self::counts($map);
+        $this->assertSame(2, $c['outcome']['o-would']);
+        $this->assertSame(1, $c['outcome']['o-ran']);
+        $this->assertSame(1, $c['outcome']['o-refused']);
+        $this->assertArrayNotHasKey('o-expired', $c['outcome'], 'a shadow-mode request is not an expired approval');
+    }
+
+    public function testExpiredAndWouldRefuseBoxesAppearOnlyWhenTheyHaveCalls(): void
+    {
+        $this->row('allowed', 'success', 'core/get-site-info', 'user:1');
+
+        $ids = array_column($this->map()['lanes']['outcome'], 'id');
+
+        $this->assertSame(['o-ran', 'o-approved', 'o-waiting', 'o-refused', 'o-failed'], $ids);
+    }
+
+    public function testAnInjectedDryRunKeyInAgentInputCannotHideARefusal(): void
+    {
+        $this->row('denied', null, 'core/get-user-info', 'user:1', 'site-readonly', 0, ['x' => ['dry_run' => true, 'decision' => 'denied']]);
+
+        $this->assertSame('w-user-1,t-core,p-site-readonly,o-refused,1', $this->map()['tuples']);
     }
 
     public function testAggregatesWhoThroughPackAndOutcomeIntoTuples(): void
@@ -118,15 +202,15 @@ final class MapDataTest extends TestCase
         $this->row('allowed', 'success', 'specflux-site-agent/update-page', 'app:uuid-claude');
         $this->row('allowed', 'failure', 'woocommerce/orders-list', 'app:uuid-gpt', 'commerce');
         $this->row('denied', null, 'core/get-user-info', 'user:1', 'site-readonly');
-        $this->row('pending', null, 'woocommerce/order-refund', 'user:2', 'commerce');
-        $this->row('approved', null, 'woocommerce/order-refund', 'user:1', 'commerce');
+        $this->row('pending', null, 'woocommerce/order-refund', 'user:2', 'commerce', 0, [], 'pending');
+        $this->row('pending', null, 'woocommerce/order-refund', 'user:1', 'commerce', 0, [], 'approved');
         // Not agent calls: left out of the map.
         $this->row('admin', null, 'belayline_shadow_packs', 'user:1', 'admin');
         $this->row('grant', null, 'woocommerce/order-refund', 'user:1', 'grants');
 
         $map = $this->map();
 
-        $this->assertSame(6, $map['total'], 'two ran, one failed, one refused, one waiting, one approved; the admin and grant rows are not calls');
+        $this->assertSame(6, $map['total'], 'two ran, one failed, one refused, one waiting, one approved-and-not-yet-run; the admin and grant rows are not calls');
         $tuples = explode(';', $map['tuples']);
         $this->assertContains('w-app-claude,t-specflux-site-agent,p-content,o-ran,2', $tuples);
         $this->assertContains('w-app-chatgpt,t-woocommerce,p-commerce,o-failed,1', $tuples);
@@ -274,9 +358,11 @@ final class MapDataTest extends TestCase
         $this->assertCount(1, $this->db->queries);
         $sql = $this->db->queries[0];
         $this->assertStringContainsString('FROM `wp_belayline_audit_log`', $sql);
-        $this->assertStringContainsString("WHERE ts >= '2027-01-08T00:00:00Z'", $sql);
-        $this->assertStringContainsString('GROUP BY who, ns, pack, decision, result', $sql);
-        $this->assertStringContainsString("decision IN ('allowed', 'denied', 'pending', 'approved', 'rejected')", $sql);
+        $this->assertStringContainsString("WHERE l.ts >= '2027-01-08T00:00:00Z'", $sql);
+        $this->assertStringContainsString('GROUP BY who, ns, pack, outcome', $sql);
+        $this->assertStringContainsString("l.decision IN ('allowed', 'denied', 'pending')", $sql);
+        $this->assertStringContainsString('LEFT JOIN `wp_belayline_approvals` a ON a.audit_event_id = l.event_id', $sql);
+        $this->assertStringContainsString("HAVING outcome <> ''", $sql);
         $this->assertSame(1, substr_count($sql, 'GROUP BY'));
     }
 
@@ -285,8 +371,8 @@ final class MapDataTest extends TestCase
         $this->row('allowed', 'success', 'core/get-site-info', 'app:uuid-claude', 'content', 0);
         $this->row('allowed', 'success', 'core/get-site-info', 'app:uuid-claude', 'content', 0);
         $this->row('denied', null, 'core/get-site-info', 'app:uuid-claude', 'content', 0);
-        $this->row('rejected', null, 'core/get-site-info', 'user:1', 'content', 1);
-        $this->row('pending', null, 'core/get-site-info', 'user:1', 'content', 1);
+        $this->row('pending', null, 'core/get-site-info', 'user:1', 'content', 1, [], 'rejected');
+        $this->row('pending', null, 'core/get-site-info', 'user:1', 'content', 1, [], 'pending');
         $this->row('approved', null, 'core/get-site-info', 'user:1', 'content', 1);
 
         $days = $this->map()['days'];
@@ -294,7 +380,7 @@ final class MapDataTest extends TestCase
         $this->assertCount(7, $days);
         $this->assertSame(gmdate('Y-m-d', self::NOW), $days[6]['date']);
         $this->assertSame(['calls' => 3, 'refused' => 1], ['calls' => $days[6]['calls'], 'refused' => $days[6]['refused']]);
-        $this->assertSame(['calls' => 1, 'refused' => 1], ['calls' => $days[5]['calls'], 'refused' => $days[5]['refused']], 'rejected is refused, pending is a call, approved is neither');
+        $this->assertSame(['calls' => 2, 'refused' => 1], ['calls' => $days[5]['calls'], 'refused' => $days[5]['refused']], 'a rejected request is one refused call, a waiting one is a call, the approved decision row is neither');
         $this->assertSame(0, $days[0]['calls']);
     }
 

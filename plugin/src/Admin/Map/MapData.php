@@ -86,19 +86,23 @@ final class MapData
     }
 
     /**
-     * The map query: one row per distinct (who, plugin namespace, pack, decision, result).
+     * The map query: one row per distinct (who, plugin namespace, pack, outcome),
+     * the outcome worked out in SQL by {@see CallOutcome::SQL} (which joins the
+     * approvals table to see how a held request ended). One `GROUP BY` over a
+     * `ts` range.
      *
-     * @return list<array{who: string, ns: string, pack: string, decision: string, result: ?string, n: int}>
+     * @return list<array{who: string, ns: string, pack: string, outcome: string, n: int}>
      */
     public function pathRows(string $since): array
     {
         $rows = $this->db->get_results(
             $this->db->prepare(
-                "SELECT CASE WHEN INSTR(record_json, '\"token_id\":\"') > 0 THEN SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(record_json, '\"token_id\":\"', 2), '\"token_id\":\"', -1), '\"', 1) ELSE '' END AS who, "
-                . "SUBSTRING_INDEX(ability, '/', 1) AS ns, pack, decision, result, COUNT(*) AS n "
-                . "FROM %i WHERE ts >= %s AND decision IN ('allowed', 'denied', 'pending', 'approved', 'rejected') "
-                . 'GROUP BY who, ns, pack, decision, result',
+                "SELECT CASE WHEN INSTR(l.record_json, '\"token_id\":\"') > 0 THEN SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(l.record_json, '\"token_id\":\"', 2), '\"token_id\":\"', -1), '\"', 1) ELSE '' END AS who, "
+                . "SUBSTRING_INDEX(l.ability, '/', 1) AS ns, l.pack AS pack, " . CallOutcome::SQL . ' AS outcome, COUNT(*) AS n '
+                . "FROM %i l LEFT JOIN %i a ON a.audit_event_id = l.event_id WHERE l.ts >= %s AND l.decision IN ('allowed', 'denied', 'pending') "
+                . "GROUP BY who, ns, pack, outcome HAVING outcome <> ''",
                 Schema::auditLogTable($this->db),
+                Schema::approvalsTable($this->db),
                 $since
             ),
             ARRAY_A
@@ -106,12 +110,15 @@ final class MapData
 
         $out = [];
         foreach (is_array($rows) ? $rows : [] as $r) {
+            $outcome = (string) ($r['outcome'] ?? '');
+            if (!in_array($outcome, CallOutcome::ALL, true)) {
+                continue;
+            }
             $out[] = [
                 'who' => (string) ($r['who'] ?? ''),
                 'ns' => (string) ($r['ns'] ?? ''),
                 'pack' => (string) ($r['pack'] ?? ''),
-                'decision' => (string) ($r['decision'] ?? ''),
-                'result' => isset($r['result']) ? (string) $r['result'] : null,
+                'outcome' => $outcome,
                 'n' => (int) ($r['n'] ?? 0),
             ];
         }
@@ -120,16 +127,19 @@ final class MapData
     }
 
     /**
-     * Calls per day and decision, for the stat cards.
+     * Calls per day and outcome, for the stat cards.
      *
-     * @return list<array{d: string, decision: string, n: int}>
+     * @return list<array{d: string, outcome: string, n: int}>
      */
     public function dayRows(string $since): array
     {
         $rows = $this->db->get_results(
             $this->db->prepare(
-                "SELECT SUBSTRING(ts, 1, 10) AS d, decision, COUNT(*) AS n FROM %i WHERE ts >= %s AND decision IN ('allowed', 'denied', 'pending', 'rejected') GROUP BY d, decision",
+                "SELECT SUBSTRING(l.ts, 1, 10) AS d, " . CallOutcome::SQL . ' AS outcome, COUNT(*) AS n '
+                . "FROM %i l LEFT JOIN %i a ON a.audit_event_id = l.event_id WHERE l.ts >= %s AND l.decision IN ('allowed', 'denied', 'pending') "
+                . "GROUP BY d, outcome HAVING outcome <> ''",
                 Schema::auditLogTable($this->db),
+                Schema::approvalsTable($this->db),
                 $since
             ),
             ARRAY_A
@@ -137,17 +147,17 @@ final class MapData
 
         $out = [];
         foreach (is_array($rows) ? $rows : [] as $r) {
-            $out[] = ['d' => (string) ($r['d'] ?? ''), 'decision' => (string) ($r['decision'] ?? ''), 'n' => (int) ($r['n'] ?? 0)];
+            $out[] = ['d' => (string) ($r['d'] ?? ''), 'outcome' => (string) ($r['outcome'] ?? ''), 'n' => (int) ($r['n'] ?? 0)];
         }
 
         return $out;
     }
 
     /**
-     * Seven days, oldest first. `calls` counts first-contact rows (allowed,
-     * denied, pending); `refused` counts denied and rejected.
+     * Seven days, oldest first. `calls` counts every call that day (a Would-refuse
+     * observation is not a call); `refused` counts Refused.
      *
-     * @param list<array{d: string, decision: string, n: int}> $rows
+     * @param list<array{d: string, outcome: string, n: int}> $rows
      * @return list<array{date: string, calls: int, refused: int}>
      */
     public static function dailySeries(array $rows, int $now): array
@@ -160,10 +170,10 @@ final class MapData
             if (!isset($days[$r['d']])) {
                 continue;
             }
-            if (in_array($r['decision'], CallOutcome::ATTEMPT_DECISIONS, true)) {
+            if ($r['outcome'] !== CallOutcome::WOULD) {
                 $days[$r['d']]['calls'] += $r['n'];
             }
-            if ($r['decision'] === 'denied' || $r['decision'] === 'rejected') {
+            if ($r['outcome'] === CallOutcome::REFUSED) {
                 $days[$r['d']]['refused'] += $r['n'];
             }
         }
@@ -174,7 +184,7 @@ final class MapData
     /**
      * Fold query rows into lanes and tuples.
      *
-     * @param list<array{who: string, ns: string, pack: string, decision: string, result: ?string, n: int}> $rows
+     * @param list<array{who: string, ns: string, pack: string, outcome: string, n: int}> $rows
      * @return array{total: int, tuples: string, lanes: array<string, list<array{id: string, label: string, sub: string, count: int, filter: ?array{key: string, value: string}}>>}
      */
     public static function build(array $rows, WhoResolver $who): array
@@ -188,8 +198,8 @@ final class MapData
         $paths = [];
 
         foreach ($rows as $r) {
-            $outcome = CallOutcome::classify($r['decision'], $r['result']);
-            if ($outcome === null || $r['n'] <= 0) {
+            $outcome = $r['outcome'];
+            if ($r['n'] <= 0) {
                 continue;
             }
             $g = $groups[$r['who']];
@@ -201,7 +211,7 @@ final class MapData
 
             $meta[$w] ??= ['id' => $w, 'label' => $g['label'], 'sub' => $g['sub'], 'filter' => self::whoFilter($g)];
             $meta[$t] ??= ['id' => $t, 'label' => self::THROUGH[$ns] ?? $ns, 'sub' => '', 'filter' => ['key' => 'through', 'value' => $ns]];
-            $meta[$p] ??= ['id' => $p, 'label' => $packName === '' ? __('No pack', 'belayline-agent-governance') : $packName, 'sub' => '', 'filter' => ['key' => 'pack', 'value' => $packName === '' ? '__none' : $packName]];
+            $meta[$p] ??= ['id' => $p, 'label' => $packName === '' ? __('No pack', 'belayline-agent-governance') : PackLabel::of($packName), 'sub' => '', 'filter' => ['key' => 'pack', 'value' => $packName === '' ? '__none' : $packName]];
             $meta['o-' . $outcome] ??= ['id' => 'o-' . $outcome, 'label' => CallOutcome::label($outcome), 'sub' => '', 'filter' => ['key' => 'outcome', 'value' => $outcome]];
 
             $key = $w . '|' . $t . '|' . $p . '|o-' . $outcome;
@@ -260,10 +270,15 @@ final class MapData
                 return [$am, $b['count'], $a['label']] <=> [$bm, $a['count'], $b['label']];
             });
         }
-        // The outcome lane is always all five, in a fixed order, so the map keeps its shape.
+        // The outcome lane keeps its five boxes in a fixed order so the map holds its shape;
+        // Expired and Would refuse appear only once something landed there.
         $outcomes = [];
         foreach (CallOutcome::ALL as $o) {
-            $outcomes[] = ($meta['o-' . $o] ?? ['id' => 'o-' . $o, 'label' => CallOutcome::label($o), 'sub' => '', 'filter' => ['key' => 'outcome', 'value' => $o]]) + ['count' => $counts['o-' . $o] ?? 0];
+            $n = $counts['o-' . $o] ?? 0;
+            if ($n === 0 && !in_array($o, CallOutcome::ALWAYS, true)) {
+                continue;
+            }
+            $outcomes[] = ($meta['o-' . $o] ?? ['id' => 'o-' . $o, 'label' => CallOutcome::label($o), 'sub' => '', 'filter' => ['key' => 'outcome', 'value' => $o]]) + ['count' => $n];
         }
         $lanes['outcome'] = $outcomes;
 
@@ -273,7 +288,15 @@ final class MapData
             $tuples[] = str_replace('|', ',', $key) . ',' . $n;
         }
 
-        return ['total' => array_sum($paths), 'tuples' => implode(';', $tuples), 'lanes' => $lanes];
+        // Calls: a Would-refuse path is a call that also ran (counted under Ran), so it is not added again.
+        $total = 0;
+        foreach ($paths as $key => $n) {
+            if (!str_ends_with(explode('|', $key)[3], 'o-' . CallOutcome::WOULD)) {
+                $total += $n;
+            }
+        }
+
+        return ['total' => $total, 'tuples' => implode(';', $tuples), 'lanes' => $lanes];
     }
 
     /**

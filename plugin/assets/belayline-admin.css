@@ -31,3 +31,4 @@
 .belayline-aui .aui-stack > .aui-notice + .aui-card, .belayline-aui .aui-stack > .aui-seg + .aui-notice { margin-top: 0; }
 .belayline-aui .belayline-nowrap { white-space: nowrap; }
 .belayline-aui .belayline-input { max-width: 420px; font-size: 11px; }
+.belayline-aui .belayline-flush { flex-wrap: wrap; }

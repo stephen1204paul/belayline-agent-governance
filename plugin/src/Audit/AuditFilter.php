@@ -48,7 +48,7 @@ final class AuditFilter
         $days = (int) $text('days');
 
         return new self(
-            in_array($outcome, ['ran', 'approved', 'waiting', 'refused', 'failed'], true) ? $outcome : '',
+            in_array($outcome, ['ran', 'approved', 'waiting', 'refused', 'expired', 'failed', 'would'], true) ? $outcome : '',
             sanitize_text_field($text('pack')),
             sanitize_text_field($text('through')),
             array_slice($tokens, 0, self::TOKEN_SLOTS),

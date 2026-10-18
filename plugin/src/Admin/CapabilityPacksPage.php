@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Belayline\Plugin\Admin;
 
 use Belayline\Packs\Pack;
+use Belayline\Plugin\Admin\Map\PackLabel;
 use Belayline\Plugin\Admin\Ui\Html;
 use Belayline\Plugin\Admin\Ui\Icons;
 use Belayline\Plugin\Admin\Ui\Tiers;
@@ -135,7 +136,7 @@ final class CapabilityPacksPage
             echo '<p class="aui-muted">' . esc_html(sprintf(
                 /* translators: %s: pack name */
                 __('Nobody is bound to a pack yet, so everyone uses the %s pack.', 'belayline-agent-governance'),
-                $registry->defaultPack()
+                PackLabel::of($registry->defaultPack())
             )) . '</p></div></section>';
 
             return;
@@ -143,12 +144,12 @@ final class CapabilityPacksPage
         echo '<ul class="aui-feed">';
         foreach ($bindings as $token => $pack) {
             $icon = str_starts_with((string) $token, 'user:') || str_starts_with((string) $token, 'role:') ? 'user' : 'key';
-            echo '<li>' . Icons::svg($icon) . '<div>' . esc_html($labels[(string) $token] ?? (string) $token) . '<time>' . esc_html($pack) . '</time></div></li>';
+            echo '<li>' . Icons::svg($icon) . '<div>' . esc_html($labels[(string) $token] ?? (string) $token) . '<time>' . esc_html(PackLabel::of($pack)) . '</time></div></li>';
         }
         echo '</ul><p class="aui-help">' . esc_html(sprintf(
             /* translators: %s: pack name */
             __('Everyone else uses the %s pack.', 'belayline-agent-governance'),
-            $registry->defaultPack()
+            PackLabel::of($registry->defaultPack())
         )) . '</p></div></section>';
     }
 
@@ -476,7 +477,7 @@ final class CapabilityPacksPage
         $total = $view === null ? 0 : count($view['rows']);
 
         echo '<div class="aui-group"><div class="aui-group-h"><button type="button" class="aui-group-toggle" aria-expanded="' . ($open ? 'true' : 'false') . '" aria-controls="' . esc_attr($id) . '">'
-            . '<span class="aui-group-name">' . esc_html($pack->name) . '</span>';
+            . '<span class="aui-group-name">' . esc_html(PackLabel::of($pack->name)) . ' <code class="aui-code aui-muted">' . esc_html($pack->name) . '</code></span>';
         if ($storedExpiry !== null || $effectiveExpiry !== null) {
             echo ' ' . Html::badge('warn', __('Watch only', 'belayline-agent-governance'), 'clock'); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::badge() escapes.
         }
@@ -707,7 +708,7 @@ final class CapabilityPacksPage
             . esc_html(sprintf(
                 /* translators: %s: default pack name */
                 __('Choose a pack for each role, person, application password or API key. Anything left on the default uses the %s pack.', 'belayline-agent-governance'),
-                $default
+                PackLabel::of($default)
             )) . '</p></div></div>';
 
         $providers = array_values(array_filter(
@@ -791,9 +792,9 @@ final class CapabilityPacksPage
     private function packSelect(string $id, string $subject, array $names, string $default, string $current): string
     {
         $out = '<select class="aui-select" id="' . esc_attr($id) . '" name="bindings[' . esc_attr($subject) . ']">';
-        $out .= '<option value="">' . esc_html(sprintf(/* translators: %s default pack name */ __('Default (%s)', 'belayline-agent-governance'), $default)) . '</option>';
+        $out .= '<option value="">' . esc_html(sprintf(/* translators: %s default pack name */ __('Default (%s)', 'belayline-agent-governance'), PackLabel::of($default))) . '</option>';
         foreach ($names as $name) {
-            $out .= '<option value="' . esc_attr($name) . '"' . selected($current, $name, false) . '>' . esc_html($name) . '</option>';
+            $out .= '<option value="' . esc_attr($name) . '"' . selected($current, $name, false) . '>' . esc_html(PackLabel::of($name)) . '</option>';
         }
         $out .= '</select>';
 

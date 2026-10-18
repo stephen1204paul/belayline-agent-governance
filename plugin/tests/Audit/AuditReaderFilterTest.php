@@ -38,6 +38,7 @@ final class AuditReaderFilterTest extends TestCase
         $row('allowed', 'failure', 'woocommerce/orders-list', 'app:aaa', 'commerce');
         $row('denied', null, 'core/get-user-info', 'user:7', 'site-readonly');
         $row('pending', null, 'woocommerce/order-refund', 'user:8', 'commerce');
+        $this->db->insert('wp_belayline_approvals', ['approval_id' => 'apr_a', 'audit_event_id' => 'e4', 'status' => 'pending', 'verb' => 'woocommerce/order-refund']);
         $row('rejected', null, 'woocommerce/order-refund', 'user:8', 'commerce');
         $row('allowed', 'success', 'specflux-site-agent/update-page', 'app:bbb', 'content', 10);
         $row('allowed', 'success', 'core/get-site-info', null, '');
@@ -61,7 +62,8 @@ final class AuditReaderFilterTest extends TestCase
     {
         $this->assertSame(['e7', 'e6', 'e1'], $this->ids(['outcome' => 'ran']));
         $this->assertSame(['e2'], $this->ids(['outcome' => 'failed']));
-        $this->assertSame(['e5', 'e3'], $this->ids(['outcome' => 'refused']));
+        $this->assertSame(['e3'], $this->ids(['outcome' => 'refused']), 'a person\'s rejected decision row is not a call');
+        $this->assertSame([], $this->ids(['outcome' => 'expired']));
         $this->assertSame(['e4'], $this->ids(['outcome' => 'waiting']));
         $this->assertSame([], $this->ids(['outcome' => 'approved']));
         $this->assertSame(7, count($this->ids(['outcome' => 'nonsense'])), 'an unknown outcome is ignored, not an empty page');

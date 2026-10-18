@@ -51,9 +51,21 @@
     if (e.shiftKey && d.activeElement === a) { e.preventDefault(); z.focus(); }
     else if (!e.shiftKey && d.activeElement === z) { e.preventDefault(); a.focus(); }
   }
+  /* Copy: icon-only buttons keep their icon. Only an optional [data-aui-copy-label] span changes text; the
+     result is announced in a polite live region. The word comes from data-copied-label (default "Copied"). */
+  function say(t) {
+    var r = $('.aui-live', d.body);
+    if (!r) { r = d.createElement('div'); r.className = 'aui-live aui-sr'; r.setAttribute('aria-live', 'polite'); r.setAttribute('role', 'status'); d.body.appendChild(r); }
+    r.textContent = ''; setTimeout(function () { r.textContent = t; }, 30);
+  }
   function copy(b) {
-    var s = tgt(b), t = s ? (s.value || s.textContent) : '', l = $('[data-aui-copy-label]', b) || b, o = l.textContent;
-    var ok = function () { l.textContent = 'Copied'; emit(b, 'aui:copy', { text: t }); setTimeout(function () { l.textContent = o; }, 1500); };
+    var s = tgt(b), t = s ? (s.value || s.textContent) : '', l = $('[data-aui-copy-label]', b), o = l && l.textContent,
+      msg = b.getAttribute('data-copied-label') || 'Copied';
+    var ok = function () {
+      if (l) { l.textContent = msg; setTimeout(function () { l.textContent = o; }, 1500); }
+      b.classList.add('is-copied'); setTimeout(function () { b.classList.remove('is-copied'); }, 1500);
+      say(msg); emit(b, 'aui:copy', { text: t });
+    };
     if (w.navigator.clipboard) w.navigator.clipboard.writeText(t).then(ok, ok);
     else { s.select(); try { d.execCommand('copy'); } catch (e) {} ok(); }
   }
@@ -67,7 +79,7 @@
   }
 
   w.AUI = {
-    version: '0.2.0',
+    version: '0.2.1',
     init: function (root) {
       root = root || d;
       $$('.aui-seg[data-name]', root).forEach(syncSeg);
@@ -87,7 +99,7 @@
           syncSeg(b.parentNode);
           if ((f = b.closest('[data-aui-filterbox]'))) filter(f);
           emit(b, 'aui:change', { value: b.getAttribute('data-value') || b.textContent.trim(), control: b.parentNode });
-          dirty(b);
+          if (b.parentNode.hasAttribute('data-name')) dirty(b); /* pure filters carry no form value */
         } else if ((b = t.closest('.aui-switch'))) {
           if (b.disabled) return;
           var on = b.getAttribute('aria-pressed') !== 'true', c = b.getAttribute('data-aui-class');

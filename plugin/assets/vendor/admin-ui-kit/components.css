@@ -28,6 +28,7 @@
 .aui .aui-end { margin-left: auto; }
 
 /* ---------- App header ---------- */
+.aui .wp-header-end { height: 0; margin: 0; padding: 0; border: 0; visibility: hidden; } /* wp-admin's notice anchor must not draw a rule under the header */
 .aui .aui-header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; min-height: 56px; padding: 8px 24px; background: var(--aui-surface); border-bottom: 1px solid var(--aui-border); }
 .aui .aui-brand { display: flex; align-items: center; gap: 12px; }
 .aui .aui-mark { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--aui-r-sm); background: var(--aui-accent-soft); color: var(--aui-brand); }
@@ -283,13 +284,15 @@
 
 /* ---------- Map ---------- */
 .aui .aui-map { position: relative; }
+.aui .aui-map-scroll { overflow-x: auto; }
+.aui .aui-map-scroll:focus-visible { outline: 2px solid var(--aui-accent); outline-offset: 2px; }
 .aui .aui-map-svg { position: absolute; z-index: 2; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-.aui .aui-lane { position: relative; z-index: 1; display: grid; grid-template-columns: 176px minmax(0, 1fr); gap: 16px; align-items: center; padding: 12px 16px; border: 1px solid var(--aui-border); border-radius: var(--aui-r-lg); background: #FAFBFC; }
+.aui .aui-lane { position: relative; z-index: 1; display: grid; grid-template-columns: 148px minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px 16px; border: 1px solid var(--aui-border); border-radius: var(--aui-r-lg); background: #FAFBFC; }
 .aui .aui-lane + .aui-lane { margin-top: 40px; }
 .aui .aui-lane-t { font-weight: 600; }
 .aui .aui-lane-d { font-size: 12px; line-height: 16px; color: var(--aui-text-3); }
-.aui .aui-lane-nodes { display: flex; flex-wrap: nowrap; justify-content: space-around; gap: 8px; min-width: 0; }
-.aui .aui-node { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 12px; border: 1px solid var(--aui-control); border-radius: var(--aui-r-lg); background: var(--aui-surface); color: var(--aui-text); font-weight: 500; text-align: left; line-height: 16px; cursor: pointer; min-width: 0; transition: opacity var(--aui-med) var(--aui-ease), border-color var(--aui-fast) var(--aui-ease); }
+.aui .aui-lane-nodes { display: flex; flex-wrap: nowrap; justify-content: space-around; gap: 4px; min-width: 0; }
+.aui .aui-node { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 4px 8px; border: 1px solid var(--aui-control); border-radius: var(--aui-r-lg); background: var(--aui-surface); white-space: nowrap; color: var(--aui-text); font-weight: 500; text-align: left; line-height: 16px; cursor: pointer; min-width: 0; transition: opacity var(--aui-med) var(--aui-ease), border-color var(--aui-fast) var(--aui-ease); }
 .aui .aui-node b { font-weight: 500; }
 .aui .aui-node small { display: block; font-size: 12px; font-weight: 400; color: var(--aui-text-3); }
 .aui .aui-node .aui-num { font-size: 12px; color: var(--aui-text-3); }
@@ -316,6 +319,7 @@
   .aui .aui-savebar { padding: 12px 16px; flex-wrap: wrap; }
   .aui .aui-lane { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .aui .aui-lane { z-index: auto; }
+  .aui .aui-map-scroll > .aui-map { min-width: 620px; }
   .aui .aui-lane-h { position: relative; z-index: 3; width: fit-content; padding-right: 8px; background: #FAFBFC; }
   .aui .aui-lane + .aui-lane { margin-top: 40px; }
   .aui .aui-lane-d { display: none; }

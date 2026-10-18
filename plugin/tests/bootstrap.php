@@ -1083,6 +1083,21 @@ if (!function_exists('wp_register_ability')) {
     }
 }
 
+require_once __DIR__ . '/stubs/wp-ability.php';
+
+if (!function_exists('wp_get_ability')) {
+    /** Reads what wp_register_ability() recorded; null when the ability is not registered. */
+    function wp_get_ability(string $name): ?object
+    {
+        $args = $GLOBALS['wpas_test_abilities'][$name] ?? null;
+        if (!is_array($args)) {
+            return null;
+        }
+
+        return new WP_Ability((string) ($args['label'] ?? ''));
+    }
+}
+
 if (!function_exists('wp_register_ability_category')) {
     $GLOBALS['wpas_test_ability_categories'] = [];
 

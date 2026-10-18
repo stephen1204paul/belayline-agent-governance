@@ -117,6 +117,9 @@ $thirdParty = [
     $ability('jetpack/newsletter-send', 'Send a newsletter', 'Emails every subscriber. This cannot be undone.'),
 ];
 $lister = static fn (): array => [...$registered, ...$thirdParty];
+foreach ([...$registered, ...$thirdParty] as $a) {
+    $GLOBALS['wpas_test_abilities'][$a['name']] = ['label' => $a['label']];
+}
 
 $packs = [
     new Pack('content-editor', ['specflux-site-agent/*', 'core/*'], denyClass: [], approvalByClass: ['tier1' => false, 'tier2' => true]),
@@ -137,21 +140,25 @@ function snapshotDatabase(): array
     return ['db' => $db, 'sink' => new WpdbAuditSink($db)];
 }
 
-function snapshotRow(WpdbAuditSink $sink, int $ts, string $decision, ?string $result, string $ability, ?string $token, string $pack, int &$seq, ?int $tier = 0, ?string $reason = null, string $event = ''): string
+function snapshotRow(WpdbAuditSink $sink, int $ts, string $decision, ?string $result, string $ability, ?string $token, string $pack, int &$seq, ?int $tier = 0, ?string $reason = null, string $event = '', bool $dryRun = false): string
 {
     $id = $event !== '' ? $event : 'evt_' . ++$seq;
     $stamp = gmdate('Y-m-d\TH:i:s\Z', $ts);
     $actor = ['token_id' => $token, 'wp_user' => $token !== null && str_starts_with($token, 'user:') ? (int) substr($token, 5) : null];
     $sink->append($result !== null
         ? AuditRecord::execution($id, $stamp, 'corr_' . $seq, $pack, $actor, $ability, $tier, ['id' => mt_rand(10, 99)], $result, ip: '203.0.113.' . mt_rand(2, 40))
-        : AuditRecord::decision($id, $stamp, 'corr_' . $seq, $pack, $actor, $ability, $tier, ['id' => mt_rand(10, 99)], AuditDecision::from($decision), ip: '203.0.113.' . mt_rand(2, 40), reason: $reason));
+        : AuditRecord::decision($id, $stamp, 'corr_' . $seq, $pack, $actor, $ability, $tier, ['id' => mt_rand(10, 99)], AuditDecision::from($decision), ip: '203.0.113.' . mt_rand(2, 40), dryRun: $dryRun, reason: $reason));
 
     return $id;
 }
 
-function snapshotSeed(WpdbAuditSink $sink, int $now): void
+/**
+ * ~150 calls over 7 days plus the two waiting approvals, written in timestamp order so
+ * that ids grow with time and "newest first" reads right. Held requests get the approvals
+ * row that says how they ended (waiting, approved, rejected, expired, or used and consumed).
+ */
+function snapshotSeed(SqliteWpdb $db, WpdbAuditSink $sink, int $now, bool $withPending): void
 {
-    $seq = 0;
     // [token, pack, abilities...] personas with a weight each.
     $personas = [
         ['app:claude-1', 'content-editor', ['specflux-site-agent/list-pages', 'specflux-site-agent/get-page', 'specflux-site-agent/update-page', 'specflux-site-agent/search-content', 'specflux-site-agent/update-post'], 46],
@@ -159,12 +166,13 @@ function snapshotSeed(WpdbAuditSink $sink, int $now): void
         ['user:1', 'woo-default-agent', ['woocommerce/products-list', 'woocommerce/orders-get', 'woocommerce/products-update', 'core/get-site-info'], 38],
         ['wc:3', 'readonly-analyst', ['woocommerce/orders-list', 'woocommerce/products-list', 'woocommerce/orders-query'], 22],
     ];
-    $total = 150;
     $day = 86400;
-    for ($i = 0; $i < $total; $i++) {
+    /** @var list<array<string, mixed>> $specs */
+    $specs = [];
+    for ($i = 0; $i < 150; $i++) {
         // More traffic on recent days.
         $daysAgo = (int) floor(7 * (mt_rand(0, 1000) / 1000) ** 1.6);
-        $ts = $now - $daysAgo * $day - mt_rand(60, $day - 60);
+        $ts = $now - $daysAgo * $day - mt_rand(1800, $day - 60);
         $weights = array_column($personas, 3);
         $pick = mt_rand(1, array_sum($weights));
         foreach ($personas as $p) {
@@ -177,38 +185,57 @@ function snapshotSeed(WpdbAuditSink $sink, int $now): void
         $name = $abilities[array_rand($abilities)];
         $roll = mt_rand(1, 100);
         $tier = str_contains($name, 'update') ? 1 : 0;
-        if ($roll <= 82) {
-            snapshotRow($sink, $ts, 'allowed', 'success', $name, $token, $pack, $seq, $tier);
-        } elseif ($roll <= 88) {
-            snapshotRow($sink, $ts, 'allowed', 'failure', $name, $token, $pack, $seq, $tier);
-        } elseif ($roll <= 94) {
-            snapshotRow($sink, $ts, 'denied', null, $name, $token, $pack, $seq, $tier, $roll % 2 ? 'not_in_pack' : 'denied_by_class');
-        } elseif ($roll <= 97) {
-            snapshotRow($sink, $ts, 'pending', null, $name, $token, $pack, $seq, 1, 'approval_required');
-        } else {
-            snapshotRow($sink, $ts, 'approved', null, $name, $token, $pack, $seq, 1);
+        $spec = ['ts' => $ts, 'ability' => $name, 'token' => $token, 'pack' => $pack, 'tier' => $tier, 'decision' => 'allowed', 'result' => 'success', 'reason' => null, 'approval' => null, 'dry' => false];
+        if ($roll > 82 && $roll <= 88) {
+            $spec['result'] = 'failure';
+        } elseif ($roll > 88 && $roll <= 94) {
+            $spec = ['decision' => 'denied', 'result' => null, 'reason' => $roll % 2 ? 'not_in_pack' : 'denied_by_class'] + $spec;
+        } elseif ($roll > 94 && $roll <= 96) {
+            // A held request a person later approved; the agent's retry is its own `allowed` row below.
+            $spec = ['decision' => 'pending', 'result' => null, 'reason' => 'approval_required', 'approval' => 'consumed', 'tier' => 1] + $spec;
+            $specs[] = ['ts' => $ts + 600, 'decision' => 'allowed', 'result' => 'success', 'reason' => null, 'approval' => null, 'dry' => false] + $spec;
+        } elseif ($roll === 97) {
+            $spec = ['decision' => 'pending', 'result' => null, 'reason' => 'approval_required', 'approval' => 'rejected', 'tier' => 1] + $spec;
+        } elseif ($roll === 98) {
+            $spec = ['decision' => 'pending', 'result' => null, 'reason' => 'approval_required', 'approval' => 'expired', 'tier' => 1] + $spec;
+        } elseif ($roll === 99) {
+            $spec = ['decision' => 'pending', 'result' => null, 'reason' => 'approval_required', 'approval' => 'approved', 'tier' => 1] + $spec;
+        } elseif ($roll === 100) {
+            // Shadow mode: the call ran anyway; the row only records what would have happened.
+            $spec = ['decision' => 'denied', 'result' => null, 'reason' => 'not_in_pack', 'dry' => true] + $spec;
+        }
+        $specs[] = $spec;
+    }
+    $specs[] = ['ts' => $now - 3 * $day, 'ability' => 'belayline_pack_bindings', 'token' => 'user:1', 'pack' => 'admin', 'tier' => null, 'decision' => 'admin', 'result' => null, 'reason' => 'binding.changed', 'approval' => null, 'dry' => false];
+
+    $waiting = [
+        ['apr_1043', 'woocommerce/order-refund', 'Refund order #1043 ($48.00)', 'app:chatgpt-1', 'woo-default-agent', 2, $now - 7200, $now + 6 * $day + 21 * 3600],
+        ['apr_pg42', 'specflux-site-agent/publish-page', 'Publish "Spring sale" (page 42)', 'app:claude-1', 'content-editor', 1, $now - 3 * 3600, $now + 6 * $day + 23 * 3600],
+    ];
+    if ($withPending) {
+        foreach ($waiting as [$id, $verb, , $token, $pack, $tier, $created]) {
+            $specs[] = ['ts' => $created, 'ability' => $verb, 'token' => $token, 'pack' => $pack, 'tier' => $tier, 'decision' => 'pending', 'result' => null, 'reason' => 'approval_required', 'approval' => 'pending', 'dry' => false, 'event' => 'evt_' . $id];
         }
     }
-    // Settings changes and a grant are in the log too, but are not agent calls.
-    snapshotRow($sink, $now - 3 * $day, 'admin', null, 'belayline_pack_bindings', 'user:1', 'admin', $seq, null, 'binding.changed');
-}
 
-/** Two waiting approvals, with the audit rows that filed them. */
-function snapshotPending(SqliteWpdb $db, WpdbAuditSink $sink, int $now): void
-{
-    $seq = 500;
-    $rows = [
-        ['apr_1043', 'woocommerce/order-refund', 'Refund order #1043 ($48.00)', 'app:chatgpt-1', 'woo-default-agent', 2, 'evt_apr_a', $now - 7200, $now + 6 * 86400 + 21 * 3600],
-        ['apr_pg42', 'specflux-site-agent/publish-page', 'Publish "Spring sale" (page 42)', 'app:claude-1', 'content-editor', 1, 'evt_apr_b', $now - 3 * 3600, $now + 6 * 86400 + 23 * 3600],
-    ];
-    foreach ($rows as [$id, $verb, $summary, $token, $pack, $tier, $event, $created, $expires]) {
-        snapshotRow($sink, $created, 'pending', null, $verb, $token, $pack, $seq, $tier, 'approval_required', $event);
-        $db->insert('wp_belayline_approvals', [
-            'approval_id' => $id, 'verb' => $verb, 'args_hash' => md5($id), 'summary' => $summary, 'correlation_id' => 'corr_' . $id,
-            'audit_event_id' => $event, 'key_id' => $token, 'status' => 'pending', 'fingerprint' => null, 'fingerprint_kind' => $tier === 2 ? 'probe' : 'none',
-            'probe_args' => null, 'created_ts' => gmdate('Y-m-d H:i:s', $created), 'pending_expires_ts' => gmdate('Y-m-d H:i:s', $expires),
-            'expires_ts' => gmdate('Y-m-d H:i:s', $expires),
-        ]);
+    usort($specs, static fn (array $a, array $b): int => $a['ts'] <=> $b['ts']);
+    $seq = 0;
+    foreach ($specs as $sp) {
+        $event = snapshotRow($sink, (int) $sp['ts'], (string) $sp['decision'], $sp['result'], (string) $sp['ability'], $sp['token'], (string) $sp['pack'], $seq, $sp['tier'], $sp['reason'], (string) ($sp['event'] ?? ''), (bool) $sp['dry']);
+        if ($sp['approval'] !== null) {
+            $db->insert('wp_belayline_approvals', [
+                'approval_id' => 'apr_' . $event, 'verb' => $sp['ability'], 'args_hash' => md5($event), 'summary' => 'x', 'correlation_id' => 'corr_' . $event,
+                'audit_event_id' => $event, 'key_id' => $sp['token'], 'status' => $sp['approval'], 'fingerprint' => null, 'fingerprint_kind' => 'none',
+                'probe_args' => null, 'created_ts' => gmdate('Y-m-d H:i:s', (int) $sp['ts']), 'pending_expires_ts' => gmdate('Y-m-d H:i:s', $now + 6 * $day),
+                'expires_ts' => gmdate('Y-m-d H:i:s', $now + 6 * $day),
+            ]);
+        }
+    }
+    // The two waiting approvals read as real cards: set the readable ids and summaries.
+    if ($withPending) {
+        foreach ($waiting as [$id, , $summary, , , , , $expires]) {
+            $db->exec("UPDATE wp_belayline_approvals SET approval_id = '{$id}', summary = '" . str_replace("'", "''", $summary) . "', pending_expires_ts = '" . gmdate('Y-m-d H:i:s', $expires) . "', fingerprint_kind = '" . ($id === 'apr_1043' ? 'probe' : 'none') . "' WHERE audit_event_id = 'evt_{$id}'");
+        }
     }
 }
 
@@ -229,10 +256,7 @@ function snapshotRender(string $tab, bool $full, bool $pending, array $get, bool
 
     ['db' => $db, 'sink' => $sink] = snapshotDatabase();
     if ($full) {
-        snapshotSeed($sink, $now);
-    }
-    if ($pending) {
-        snapshotPending($db, $sink, $now);
+        snapshotSeed($db, $sink, $now, $pending);
     }
 
     $GLOBALS['wpas_test_options'][PackResolver::BINDINGS_OPTION] = ['role:administrator' => 'owner', 'app:claude-1' => 'content-editor', 'app:chatgpt-1' => 'woo-default-agent', 'wc:3' => 'readonly-analyst'];
@@ -264,7 +288,7 @@ function snapshotRender(string $tab, bool $full, bool $pending, array $get, bool
         foreach ([['post_title' => 'Spring sale 2026'], ['post_status' => 'publish']] as $patch) {
             $capture->run('specflux-site-agent/update-page', [], static fn () => wp_update_post(wp_slash(['ID' => 42] + $patch)));
             $event = (string) $capture->takeSettled('specflux-site-agent/update-page')['event_id'];
-            $sink->append(AuditRecord::execution($event, gmdate('Y-m-d\TH:i:s\Z', $now - 600), RequestContext::correlation(), 'content-editor', ['token_id' => 'app:claude-1', 'wp_user' => null], 'specflux-site-agent/update-page', 1, ['id' => 42], 'success'));
+            $sink->append(AuditRecord::execution($event, gmdate('Y-m-d\TH:i:s\Z', $now - 30), RequestContext::correlation(), 'content-editor', ['token_id' => 'app:claude-1', 'wp_user' => null], 'specflux-site-agent/update-page', 1, ['id' => 42], 'success'));
         }
     }
     $undo = new UndoService($ledger, $capture->adapters(), $capture);

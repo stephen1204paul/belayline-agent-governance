@@ -150,8 +150,8 @@ final class OverviewPageTest extends TestCase
         $this->page()->renderRail();
         $out = (string) ob_get_clean();
 
-        $this->assertStringContainsString('Claude ran <code class="aui-code">core/get-site-info</code>', $out);
-        $this->assertStringContainsString('Stephen was refused: <code class="aui-code">core/get-user-info</code>', $out);
+        $this->assertStringContainsString('Claude ran core/get-site-info<time', $out);
+        $this->assertStringContainsString('Stephen was refused: core/get-user-info<time', $out);
         $this->assertStringNotContainsString('belayline_shadow_packs', $out, 'settings changes are not agent calls');
     }
 
