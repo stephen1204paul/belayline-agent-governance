@@ -64,7 +64,7 @@ final class NetworkLifecycleTest extends TestCase
         $this->assertCount(1, $calls);
     }
 
-    public function testNetworkActivationInstallsTheCurrentSiteAndAnotherSiteInstallsLazilyOnFirstCronInit(): void
+    public function testNetworkActivationInstallsTheCurrentSiteAndAnotherSiteInstallsLazilyOnFirstInit(): void
     {
         $db = $this->sites([1, 2]);
         $this->networkActivate();
@@ -80,8 +80,9 @@ final class NetworkLifecycleTest extends TestCase
 
         // Site 2's first cron request.
         NetworkFake::switchTo(2);
-        $GLOBALS['wpas_test_net']['doing_cron'] = true;
         $GLOBALS['wpas_test_dbdelta_queries'] = [];
+        // The plugin's own init hook (schema check, any request type), then this class's cron check.
+        Schema::ensureCurrent($db);
         NetworkFake::fire('init');
 
         $this->assertSame(Schema::VERSION, $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
@@ -91,7 +92,7 @@ final class NetworkLifecycleTest extends TestCase
         }
     }
 
-    public function testFrontEndInitSchedulesMissingCronsButDoesNotInstall(): void
+    public function testFrontEndInitSchedulesMissingCrons(): void
     {
         $db = $this->sites([1, 2], 2);
         $this->networkActivate();
@@ -99,23 +100,9 @@ final class NetworkLifecycleTest extends TestCase
 
         NetworkFake::fire('init');
 
-        $this->assertArrayNotHasKey(Schema::VERSION_OPTION, $GLOBALS['wpas_test_options']);
-        $this->assertSame([], $GLOBALS['wpas_test_dbdelta_queries']);
         foreach (self::ALL_CRONS as $hook) {
             $this->assertArrayHasKey($hook, $GLOBALS['wpas_test_cron']);
         }
-    }
-
-    public function testAnAdminInitOnAnUpToDateSiteDoesNotReinstall(): void
-    {
-        $db = $this->sites([1]);
-        NetworkLifecycle::register($db, self::FILE);
-        $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION] = Schema::VERSION;
-        $GLOBALS['wpas_test_net']['is_admin'] = true;
-
-        NetworkFake::fire('init');
-
-        $this->assertSame([], $GLOBALS['wpas_test_dbdelta_queries']);
     }
 
     public function testNewSiteInstallsWhenNetworkActiveAndTheCurrentBlogIsRestored(): void

@@ -117,6 +117,23 @@ final class AbilityPermissionGateTest extends TestCase
         $this->assertSame($original, $wrapped['permission_callback']);
     }
 
+    public function testAGovernedAbilityFailsClosedWhenTheSchemaInstallFailed(): void
+    {
+        $gate = $this->gate(['woocommerce/']);
+        $wrapped = $gate->wrap(['permission_callback' => static fn () => true], 'woocommerce/orders-list');
+        $db = new \Belayline\Plugin\Tests\Fakes\FailingInstallWpdb();
+        \Belayline\Plugin\Support\Schema::ensureCurrent($db);
+
+        try {
+            $result = ($wrapped['permission_callback'])([]);
+        } finally {
+            \Belayline\Plugin\Support\Schema::resetInstallFailure();
+        }
+
+        $this->assertInstanceOf(\WP_Error::class, $result);
+        $this->assertSame('belayline_not_installed', $result->get_error_code());
+    }
+
     public function testGovernedNamespaceReplacesThePermissionCallback(): void
     {
         $gate = $this->gate(['woocommerce/']);

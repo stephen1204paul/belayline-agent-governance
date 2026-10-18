@@ -6,6 +6,7 @@ namespace Belayline\Plugin\Hooks;
 
 use Belayline\Plugin\Integrations\Woo\VerbMapper;
 use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\Schema;
 use Belayline\Plugin\Verdict\Hints;
 use Belayline\Plugin\Verdict\VerdictMode;
 use Belayline\Plugin\Verdict\VerdictPipeline;
@@ -65,6 +66,10 @@ final class PreToolCallGate
         // check before this filter fires.
         if (!$this->isGoverned($verb)) {
             return $args;
+        }
+
+        if (Schema::installFailed()) {
+            return Schema::installFailedError();
         }
 
         $verdict = $this->pipeline->judge(

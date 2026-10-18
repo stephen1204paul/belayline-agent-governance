@@ -9,6 +9,7 @@ use Belayline\Plugin\Changes\ChangeCapture;
 use Belayline\Plugin\Support\ExecutionResult;
 use Belayline\Plugin\Verdict\GrantGate;
 use Belayline\Plugin\Support\PackResolver;
+use Belayline\Plugin\Support\Schema;
 use Belayline\Plugin\Verdict\Hints;
 use Belayline\Plugin\Verdict\VerdictMode;
 use Belayline\Plugin\Verdict\VerdictPipeline;
@@ -148,6 +149,11 @@ final class AbilityPermissionGate
                 if (true !== $orig) {
                     return $orig; // original denial / WP_Error wins
                 }
+            }
+
+            // Fail closed when this site's tables could not be set up.
+            if (Schema::installFailed()) {
+                return Schema::installFailedError();
             }
 
             // Resolve the pack AT CALL TIME, never at registration time: wrap()

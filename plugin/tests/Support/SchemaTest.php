@@ -31,11 +31,39 @@ final class SchemaTest extends TestCase
 
     protected function tearDown(): void
     {
+        Schema::resetInstallFailure();
         $GLOBALS['wpas_test_options'] = [];
         $GLOBALS['wpas_test_dbdelta_queries'] = [];
         $GLOBALS['wpas_test_time'] = \time();
         $GLOBALS['wpas_test_user_caps'] = [];
         unset($GLOBALS['wpas_test_home_url']);
+    }
+
+    // --- init schema check: every request type, fail closed ---------------------
+
+    public function testEnsureCurrentInstallsAMissingSchemaAndReportsSuccess(): void
+    {
+        $this->assertTrue(Schema::ensureCurrent(new wpdb()));
+        $this->assertFalse(Schema::installFailed());
+        $this->assertSame(Schema::VERSION, $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
+    }
+
+    public function testEnsureCurrentIsOnlyAnOptionCompareWhenUpToDate(): void
+    {
+        $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION] = Schema::VERSION;
+
+        $this->assertTrue(Schema::ensureCurrent(new wpdb()));
+        $this->assertSame([], $GLOBALS['wpas_test_dbdelta_queries']);
+    }
+
+    public function testAThrowingInstallIsRememberedNotPropagated(): void
+    {
+        $this->assertFalse(Schema::ensureCurrent(new \Belayline\Plugin\Tests\Fakes\FailingInstallWpdb()));
+        $this->assertTrue(Schema::installFailed());
+        $this->assertSame('belayline_not_installed', Schema::installFailedError()->get_error_code());
+
+        Schema::resetInstallFailure();
+        $this->assertFalse(Schema::installFailed());
     }
 
     // --- AS-7 §3.4 item 3: first site bind ------------------------------------

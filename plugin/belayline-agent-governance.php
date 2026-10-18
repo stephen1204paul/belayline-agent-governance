@@ -208,13 +208,15 @@ add_action('plugins_loaded', static function (): void {
         NetworkLifecycle::register($wpdb, __FILE__);
     }
 
-    // Cheap version check on every wp-admin load: an admin visiting after a
-    // plugin UPDATE (not a fresh activation) still gets the table upgraded,
-    // since register_activation_hook only fires on activate, never on update.
+    // Cheap version check on EVERY request type (one autoloaded option
+    // compare): after a plugin update, or on a site first reached by MCP/REST,
+    // the tables are created/upgraded before any governed call runs, since
+    // register_activation_hook fires only on activate. A failed install makes
+    // governed calls fail closed (Schema::installFailed()).
     if (isset($wpdb)) {
-        add_action('admin_init', static function () use ($wpdb): void {
-            Schema::maybeUpgrade($wpdb);
-        });
+        add_action('init', static function () use ($wpdb): void {
+            Schema::ensureCurrent($wpdb);
+        }, 1);
     }
 
     // Unconditional (option-gated internally, like CapabilityPacksPage's

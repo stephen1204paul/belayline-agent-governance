@@ -95,6 +95,22 @@ final class PreToolCallGateTest extends TestCase
         $this->assertSame(['id' => 1], $gate->handle(['id' => 1], 'demo-write'));
     }
 
+    public function testAGovernedCallFailsClosedWhenTheSchemaInstallFailed(): void
+    {
+        $gate = $this->gateFor(['demo/write' => Tier::SideEffecting], new Pack(name: 'owner', allow: ['*']));
+        $db = new \Belayline\Plugin\Tests\Fakes\FailingInstallWpdb();
+        \Belayline\Plugin\Support\Schema::ensureCurrent($db);
+
+        try {
+            $result = $gate->handle(['id' => 1], 'demo-write');
+        } finally {
+            \Belayline\Plugin\Support\Schema::resetInstallFailure();
+        }
+
+        $this->assertInstanceOf(WP_Error::class, $result);
+        $this->assertSame('belayline_not_installed', $result->get_error_code());
+    }
+
     public function testABlockedCallReturnsTheVerdictsDenyError(): void
     {
         $gate = $this->gateFor(['demo/write' => Tier::SideEffecting], new Pack(name: 'walled', allow: []));

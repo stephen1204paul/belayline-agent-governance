@@ -348,7 +348,8 @@ final class Schema
         // method runs from both activation and {@see maybeUpgrade()}.
         self::firstSiteBind($db);
 
-        update_option(self::VERSION_OPTION, self::VERSION, false);
+        // Autoloaded on purpose: ensureCurrent() compares it on every request.
+        update_option(self::VERSION_OPTION, self::VERSION, true);
     }
 
     /** @see EnvironmentGuard::firstBindIfNeeded() — duplicated here (no AuditSink/AdminChangeRecorder to inject into Schema::install()) rather than instantiating a full EnvironmentGuard. */
@@ -434,6 +435,49 @@ final class Schema
         }
 
         self::install($db);
+    }
+
+    private static bool $installFailed = false;
+
+    /**
+     * The per-request schema check, wired to `init` for every request type
+     * (REST/MCP, front end, admin, cron, CLI). One autoloaded option compare
+     * when current. Never throws: a failed install (exception, or the version
+     * still behind afterwards) is remembered so governed calls fail closed
+     * ({@see installFailed()}).
+     */
+    public static function ensureCurrent(wpdb $db): bool
+    {
+        try {
+            self::maybeUpgrade($db);
+            self::$installFailed = get_option(self::VERSION_OPTION, '') !== self::VERSION;
+        } catch (\Throwable) {
+            self::$installFailed = true;
+        }
+
+        return !self::$installFailed;
+    }
+
+    /** Whether this request's schema check failed; governed calls must then be denied. */
+    public static function installFailed(): bool
+    {
+        return self::$installFailed;
+    }
+
+    /** The denial a governed call gets while {@see installFailed()}. */
+    public static function installFailedError(): \WP_Error
+    {
+        return new \WP_Error(
+            'belayline_not_installed',
+            __('Belayline Agent Governance could not set up its database tables on this site, so governed actions are blocked until it can. Deactivate and reactivate the plugin, or check the database user can create tables.', 'belayline-agent-governance'),
+            ['status' => 503]
+        );
+    }
+
+    /** Clear the remembered failure (tests only). */
+    public static function resetInstallFailure(): void
+    {
+        self::$installFailed = false;
     }
 
     private static function ensureDbDelta(): void

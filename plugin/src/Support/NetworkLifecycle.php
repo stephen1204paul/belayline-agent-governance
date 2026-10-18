@@ -185,16 +185,11 @@ final class NetworkLifecycle
         // whenever the blog changes.
         add_action('switch_blog', [RequestContext::class, 'forgetPrincipal']);
 
-        // Lazy install for sites that never saw the activation hook
-        // (network activation, or a site created before the plugin existed):
-        // admin and cron requests run the schema version check, then every
-        // request makes sure the crons exist.
-        add_action('init', static function () use ($db): void {
-            $admin = function_exists('is_admin') && is_admin();
-            $cron = function_exists('wp_doing_cron') && wp_doing_cron();
-            if ($admin || $cron) {
-                Schema::maybeUpgrade($db);
-            }
+        // Lazy install for sites that never saw the activation hook (network
+        // activation, or a site created before the plugin existed) is the
+        // plugin's own `init` schema check, which runs on every request type.
+        // Here: make sure the crons exist.
+        add_action('init', static function (): void {
             self::ensureCrons();
         });
 
