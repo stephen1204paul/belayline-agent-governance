@@ -52,8 +52,7 @@ final class Container
     /**
      * The programmatic approvals API (AS-10), or null on the pathological
      * no-database path. Feature-detect THIS rather than assuming: a consumer
-     * must handle null by falling back to the wp-admin Pending Agent Actions
-     * screen.
+     * must handle null by falling back to the wp-admin Pending tab.
      */
     public function approvals(): ?Approvals
     {

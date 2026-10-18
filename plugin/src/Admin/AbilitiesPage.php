@@ -4,31 +4,36 @@ declare(strict_types=1);
 
 namespace Belayline\Plugin\Admin;
 
+use Belayline\Plugin\Admin\Ui\Html;
+use Belayline\Plugin\Admin\Ui\Icons;
+use Belayline\Plugin\Admin\Ui\Tiers;
 use Belayline\Plugin\Api\AbilityReviews;
 use Belayline\Plugin\Reviews\ReviewedAbilitiesPack;
 use Belayline\Plugin\Reviews\ReviewTier;
 use Belayline\Plugin\Support\AdminChangeRecorder;
 
 /**
- * Tools, "Agent Abilities": review third-party abilities without code.
+ * Packs tab, "Abilities from other plugins": review third-party abilities
+ * without code.
  *
  * Lists every registered ability that no integration already governs, grouped
  * by namespace, with its label, description and annotations, and lets an
- * administrator give each one a tier: Read, Write (approval needed),
- * Irreversible, or Blocked. One form per namespace, with a bulk selector.
+ * administrator give each one a tier: Runs freely (Read), Needs approval
+ * (Write), Always asks (Irreversible) or Blocked. One form per namespace, with a
+ * bulk selector.
  *
  * Annotations suggest, the administrator decides: an ability that declares
- * `readonly: true` is PRE-SELECTED as Read, but the choice only counts once the
- * form is saved. Saving reviews the whole namespace's governance too: the
- * namespace becomes governed, and its unreviewed abilities are then refused
+ * `readonly: true` is PRE-SELECTED as Runs freely, but the choice only counts
+ * once the form is saved. Saving reviews the whole namespace's governance too:
+ * the namespace becomes governed, and its unreviewed abilities are then refused
  * `unknown_verb`. The form says so and, for a namespace with no review yet,
  * refuses to save until the administrator ticks that they understand.
  *
- * Page slug `belayline-abilities`: Site Agent's setup check links to it.
+ * The old `tools.php?page=belayline-abilities` URL (which Site Agent's setup
+ * check links to) redirects to this section, see {@see AdminUrls::LEGACY}.
  */
 final class AbilitiesPage
 {
-    public const SLUG = 'belayline-abilities';
     private const CAP = 'manage_options';
     private const SAVE = 'belayline_save_ability_reviews';
 
@@ -50,19 +55,7 @@ final class AbilitiesPage
 
     public function register(): void
     {
-        add_action('admin_menu', [$this, 'menu']);
         add_action('admin_post_' . self::SAVE, [$this, 'save']);
-    }
-
-    public function menu(): void
-    {
-        add_management_page(
-            __('Agent Abilities', 'belayline-agent-governance'),
-            __('Agent Abilities', 'belayline-agent-governance'),
-            self::CAP,
-            self::SLUG,
-            [$this, 'render']
-        );
     }
 
     /**
@@ -142,39 +135,51 @@ final class AbilitiesPage
         if (!current_user_can(self::CAP)) {
             return;
         }
+        $this->renderMain();
+    }
 
-        echo '<div class="wrap">';
-        echo '<h1>' . esc_html__('Agent Abilities', 'belayline-agent-governance') . '</h1>';
-        echo '<p>' . esc_html__('Abilities added by other plugins are not governed until you review them here. Each one gets a tier; a call is then judged like any other governed call. What an ability says about itself (its annotations) is a suggestion only: nothing applies until you save.', 'belayline-agent-governance') . '</p>';
-        echo '<p>' . esc_html(sprintf(
-            /* translators: %s: pack name */
-            __('A reviewed ability is only callable by a credential bound to the "%s" pack (Tools, Agent Capability Packs), or to a pack that allows it.', 'belayline-agent-governance'),
-            ReviewedAbilitiesPack::NAME
-        )) . '</p>';
+    /** The "Abilities from other plugins" card for the Packs tab. Renders nothing when there is nothing to review. */
+    public function renderMain(): void
+    {
+        $groups = $this->reviewable();
         $this->notices();
 
-        $groups = $this->reviewable();
+        echo '<section class="aui-card" id="abilities" aria-labelledby="belayline-abilities-t"><div class="aui-card-h"><div><h2 class="aui-card-t" id="belayline-abilities-t">'
+            . esc_html__('Abilities from other plugins', 'belayline-agent-governance') . '</h2><p class="aui-card-d">'
+            . esc_html__('Other plugins can offer abilities to AI agents. Until you review them here, Belayline does not govern them. Pick what should happen when an agent calls each one. What an ability says about itself is only a suggestion: nothing applies until you save.', 'belayline-agent-governance')
+            . '</p></div></div>';
+
         if ($groups === []) {
-            echo '<p>' . esc_html__('No abilities to review. Abilities in namespaces Belayline Agent Governance already governs are not listed.', 'belayline-agent-governance') . '</p></div>';
+            echo '<div class="aui-empty"><span class="aui-tile">' . Icons::svg('plug', 'aui-i--lg') . '</span><h3 class="aui-card-t">' . esc_html__('Nothing to review', 'belayline-agent-governance') . '</h3><p>'
+                . esc_html__('No other plugin offers abilities that Belayline does not already cover.', 'belayline-agent-governance') . '</p></div></section>';
 
             return;
         }
 
+        echo '<div class="aui-card-b"><p class="aui-muted">' . esc_html(sprintf(
+            /* translators: %s: pack name */
+            __('An agent can only call a reviewed ability if its credential is bound to the "%s" pack, or to a pack that allows it.', 'belayline-agent-governance'),
+            ReviewedAbilitiesPack::NAME
+        )) . '</p></div>';
+
         $entries = $this->reviews->entries();
+        echo '<div class="aui-groups">';
+        $first = true;
         foreach ($groups as $ns => $abilities) {
-            $this->renderNamespace($ns, $abilities, $entries);
+            $this->renderNamespace($ns, $abilities, $entries, $first);
+            $first = false;
         }
-        echo '</div>';
+        echo '</div></section>';
     }
 
     private function notices(): void
     {
         // phpcs:disable WordPress.Security.NonceVerification.Recommended -- read-only flash flags.
-        if (isset($_GET['belayline_saved'])) {
-            echo '<div class="notice notice-success"><p>' . esc_html__('Review saved.', 'belayline-agent-governance') . '</p></div>';
+        if (isset($_GET['belayline_saved']) && $_GET['belayline_saved'] === 'abilities') {
+            echo Html::notice('success', __('Review saved.', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
         }
         if (isset($_GET['belayline_confirm'])) {
-            echo '<div class="notice notice-error"><p>' . esc_html__('Nothing was saved. Tick the box to confirm that reviewing one ability governs its whole namespace.', 'belayline-agent-governance') . '</p></div>';
+            echo Html::notice('error', __('Nothing was saved.', 'belayline-agent-governance'), __('Tick the box to confirm that reviewing one ability puts its whole group under review.', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
         }
         // phpcs:enable WordPress.Security.NonceVerification.Recommended
     }
@@ -183,79 +188,100 @@ final class AbilitiesPage
      * @param list<array{name: string, label: string, description: string, annotations: array<string, mixed>, schema: mixed}> $abilities
      * @param array<string, array{tier: ReviewTier, schema: string, reviewed_by: int, reviewed_at: string}> $entries
      */
-    private function renderNamespace(string $ns, array $abilities, array $entries): void
+    private function renderNamespace(string $ns, array $abilities, array $entries, bool $open): void
     {
         $governed = in_array($ns, $this->reviews->namespaces(), true);
-
-        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="card" style="max-width:none;margin-top:16px;">';
-        echo '<h2 style="margin-top:0;"><code>' . esc_html($ns) . '</code> ';
-        echo $governed ? '<small>' . esc_html__('(governed)', 'belayline-agent-governance') . '</small>' : '';
-        echo '</h2>';
-        echo '<input type="hidden" name="action" value="' . esc_attr(self::SAVE) . '" />';
-        echo '<input type="hidden" name="namespace" value="' . esc_attr($ns) . '" />';
-        wp_nonce_field(self::SAVE);
-
-        echo '<p><label>' . esc_html__('Set every ability in this namespace to:', 'belayline-agent-governance') . ' ';
-        echo '<select name="bulk"><option value="">' . esc_html__('(keep the choices below)', 'belayline-agent-governance') . '</option>';
-        foreach (ReviewTier::cases() as $case) {
-            echo '<option value="' . esc_attr($case->value) . '">' . esc_html($case->label()) . '</option>';
-        }
-        echo '<option value="' . esc_attr(self::CLEAR) . '">' . esc_html__('Not reviewed', 'belayline-agent-governance') . '</option>';
-        echo '</select></label></p>';
-
-        echo '<table class="widefat striped"><thead><tr>';
-        foreach ([__('Ability', 'belayline-agent-governance'), __('Description', 'belayline-agent-governance'), __('Annotations', 'belayline-agent-governance'), __('Review', 'belayline-agent-governance')] as $h) {
-            echo '<th>' . esc_html($h) . '</th>';
-        }
-        echo '</tr></thead><tbody>';
+        $id = 'belayline-ns-' . sanitize_key($ns);
+        $counts = [];
+        $rows = '';
         foreach ($abilities as $ability) {
-            $this->renderRow($ability, $entries[$ability['name']] ?? null);
+            $selected = $this->selectedTier($ability, $entries[$ability['name']] ?? null);
+            $key = $selected === null ? Tiers::NONE : self::tierKey($selected);
+            $counts[$key] = ($counts[$key] ?? 0) + 1;
+            $rows .= $this->renderRow($ability, $entries[$ability['name']] ?? null, $selected);
         }
-        echo '</tbody></table>';
 
-        echo '<p><strong>' . esc_html__('Warning:', 'belayline-agent-governance') . '</strong> ';
-        echo esc_html__('Reviewing one ability governs the whole namespace. Every ability in it that you leave unreviewed will then be refused (unknown_verb) instead of running ungoverned.', 'belayline-agent-governance') . '</p>';
-        if (!$governed) {
-            echo '<p><label><input type="checkbox" name="confirm" value="1" /> ';
-            echo esc_html__('I understand: this namespace becomes governed and its unreviewed abilities are refused.', 'belayline-agent-governance') . '</label></p>';
+        echo Html::postForm(self::SAVE, self::SAVE, '<input type="hidden" name="namespace" value="' . esc_attr($ns) . '">', 'class="belayline-groupform"'); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
+        echo '<div class="aui-group"><div class="aui-group-h"><button type="button" class="aui-group-toggle" aria-expanded="' . ($open ? 'true' : 'false') . '" aria-controls="' . esc_attr($id) . '">'
+            . '<span class="aui-group-name">' . esc_html($ns) . '</span>' . ($governed ? ' ' . Html::badge('ok', __('Under review', 'belayline-agent-governance')) : '') // phpcs:ignore WordPress.Security.EscapeOutput -- Html::badge() escapes.
+            . '<span class="aui-leader"></span>' . Tiers::metaSpan(count($abilities), $counts, true) // phpcs:ignore WordPress.Security.EscapeOutput -- metaSpan() escapes.
+            . Icons::svg('caret-down') . '</button></div>';
+        echo '<div class="aui-group-b" id="' . esc_attr($id) . '"' . ($open ? '' : ' hidden') . '>';
+
+        echo $rows; // phpcs:ignore WordPress.Security.EscapeOutput -- each row is built from esc_* helpers in renderRow().
+
+        echo '<div class="aui-card-b belayline-stack"><div class="aui-field"><label class="aui-label" for="' . esc_attr($id) . '-bulk">' . esc_html__('Or set every ability in this group to', 'belayline-agent-governance') . '</label>';
+        echo '<select class="aui-select belayline-narrow" id="' . esc_attr($id) . '-bulk" name="bulk"><option value="">' . esc_html__('Keep the choices above', 'belayline-agent-governance') . '</option>';
+        foreach (ReviewTier::cases() as $case) {
+            echo '<option value="' . esc_attr($case->value) . '">' . esc_html(Tiers::label(self::tierKey($case))) . '</option>';
         }
-        submit_button(__('Save review', 'belayline-agent-governance'), 'primary', 'submit', false);
-        echo '</form>';
+        echo '<option value="' . esc_attr(self::CLEAR) . '">' . esc_html(Tiers::label(Tiers::NONE)) . '</option></select></div>';
+
+        echo Html::notice('warning', __('Reviewing one ability puts the whole group under review.', 'belayline-agent-governance'), __('Anything in it you leave as Not reviewed will then be refused instead of running unchecked.', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
+        if (!$governed) {
+            echo '<label class="belayline-check"><input type="checkbox" name="confirm" value="1"> ' . esc_html__('I understand: this group goes under review and anything not reviewed is refused.', 'belayline-agent-governance') . '</label>';
+        }
+        echo '</div><div class="aui-card-f"><button type="submit" class="aui-btn aui-btn--primary">' . esc_html__('Save review', 'belayline-agent-governance') . '</button></div>';
+        echo '</div></div></form>';
+    }
+
+    /** Tier key (see {@see Tiers}) for a review tier. */
+    private static function tierKey(ReviewTier $tier): string
+    {
+        return match ($tier) {
+            ReviewTier::Read => Tiers::FREE,
+            ReviewTier::Write => Tiers::APPROVAL,
+            ReviewTier::Irreversible => Tiers::ALWAYS,
+            ReviewTier::Blocked => Tiers::BLOCKED,
+        };
+    }
+
+    /**
+     * The tier a review row shows as selected: a current review wins; otherwise
+     * the annotation SUGGESTS (and only pre-selects: it is stored when, and only
+     * when, the form is saved).
+     *
+     * @param array{name: string, label: string, description: string, annotations: array<string, mixed>, schema: mixed} $ability
+     * @param array{tier: ReviewTier, schema: string, reviewed_by: int, reviewed_at: string}|null $entry
+     */
+    private function selectedTier(array $ability, ?array $entry): ?ReviewTier
+    {
+        $drifted = $entry !== null && $entry['schema'] !== AbilityReviews::schemaHash($ability['schema']);
+
+        return $entry !== null && !$drifted ? $entry['tier'] : ($entry === null ? self::suggestion($ability['annotations']) : null);
     }
 
     /**
      * @param array{name: string, label: string, description: string, annotations: array<string, mixed>, schema: mixed} $ability
      * @param array{tier: ReviewTier, schema: string, reviewed_by: int, reviewed_at: string}|null $entry
      */
-    private function renderRow(array $ability, ?array $entry): void
+    private function renderRow(array $ability, ?array $entry, ?ReviewTier $selected): string
     {
         $drifted = $entry !== null && $entry['schema'] !== AbilityReviews::schemaHash($ability['schema']);
-        // A current review wins; otherwise the annotation SUGGESTS (and only
-        // pre-selects: it is stored when, and only when, the form is saved).
-        $selected = $entry !== null && !$drifted ? $entry['tier'] : ($entry === null ? self::suggestion($ability['annotations']) : null);
+        $current = $selected === null ? '' : $selected->value;
 
-        echo '<tr><td><strong>' . esc_html($ability['label'] !== '' ? $ability['label'] : $ability['name']) . '</strong><br /><code>' . esc_html($ability['name']) . '</code></td>';
-        echo '<td>' . esc_html($ability['description']) . '</td>';
-        $notes = [];
-        foreach ($ability['annotations'] as $key => $value) {
-            if (is_bool($value)) {
-                $notes[] = (string) $key . ': ' . ($value ? 'true' : 'false');
-            }
+        $out = '<div class="aui-item belayline-ability"><div class="aui-grow"><div class="aui-item-name">' . esc_html($ability['label'] !== '' ? $ability['label'] : $ability['name'])
+            . ' <code>' . esc_html($ability['name']) . '</code></div>';
+        if ($ability['description'] !== '') {
+            $out .= '<div class="aui-muted">' . esc_html($ability['description']) . '</div>';
         }
-        echo '<td>' . esc_html($notes === [] ? '-' : implode(', ', $notes)) . '</td>';
-
-        echo '<td><select name="tier[' . esc_attr($ability['name']) . ']">';
-        echo '<option value="">' . esc_html__('Not reviewed', 'belayline-agent-governance') . '</option>';
-        foreach (ReviewTier::cases() as $case) {
-            echo '<option value="' . esc_attr($case->value) . '"' . selected($selected === $case, true, false) . '>' . esc_html($case->label()) . '</option>';
-        }
-        echo '</select>';
         if ($drifted) {
-            echo '<br /><em>' . esc_html__('Its input schema changed since the last review. Calls are refused until you save again.', 'belayline-agent-governance') . '</em>';
+            $out .= '<div class="belayline-warn">' . esc_html__('Its inputs changed since you last reviewed it. Calls are refused until you save again.', 'belayline-agent-governance') . '</div>';
         } elseif ($entry === null && $selected !== null) {
-            echo '<br /><em>' . esc_html__('Suggested from its annotations, not applied yet.', 'belayline-agent-governance') . '</em>';
+            $out .= '<div class="aui-muted">' . esc_html__('Suggested because the plugin says it only reads. Not applied until you save.', 'belayline-agent-governance') . '</div>';
         }
-        echo '</td></tr>';
+        $out .= '</div><div class="aui-seg aui-seg--sm" role="group" data-name="' . esc_attr('tier[' . $ability['name'] . ']') . '" aria-label="'
+            . esc_attr(sprintf(/* translators: %s: ability name */ __('What happens when an agent calls %s', 'belayline-agent-governance'), $ability['name'])) . '">';
+        $choices = [['', Tiers::NONE]];
+        foreach (ReviewTier::cases() as $case) {
+            $choices[] = [$case->value, self::tierKey($case)];
+        }
+        foreach ($choices as [$value, $key]) {
+            $out .= '<button type="button" data-value="' . esc_attr($value) . '" aria-pressed="' . ($value === $current ? 'true' : 'false') . '">' . esc_html(Tiers::label($key)) . '</button>';
+        }
+        $out .= '</div></div>';
+
+        return $out;
     }
 
     private const CLEAR = 'none';
@@ -276,10 +302,7 @@ final class AbilitiesPage
 
         $saved = $this->applyNamespace((string) $ns, (array) $tiers, (string) $bulk, $confirmed, get_current_user_id());
 
-        wp_safe_redirect(add_query_arg(
-            ['page' => self::SLUG, $saved ? 'belayline_saved' : 'belayline_confirm' => '1'],
-            admin_url('tools.php')
-        ));
+        wp_safe_redirect(AdminUrls::tab(AdminUrls::PACKS, [$saved ? 'belayline_saved' : 'belayline_confirm' => $saved ? 'abilities' : '1'], 'abilities'));
         exit;
     }
 

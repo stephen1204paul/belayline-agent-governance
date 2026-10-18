@@ -6,6 +6,7 @@ namespace Belayline\Plugin\Support;
 
 use Belayline\Approval\ApprovalBinding;
 use Belayline\Packs\Pack;
+use Belayline\Plugin\Admin\AdminUrls;
 
 /**
  * Two anomaly tripwires the rate limits cannot express, because a denial
@@ -189,7 +190,7 @@ final class Tripwires
                 $identity,
                 $denials,
                 $lockoutSeconds,
-                admin_url('tools.php?page=belayline-audit'),
+                AdminUrls::activity(AdminUrls::CALLS),
             ),
         );
     }

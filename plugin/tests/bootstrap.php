@@ -68,6 +68,7 @@ require_once __DIR__ . '/Fakes/ChainingSink.php';
 require_once __DIR__ . '/Fakes/InMemoryAuditRowsWpdb.php';
 require_once __DIR__ . '/Fakes/CounterTableWpdb.php';
 require_once __DIR__ . '/Fakes/SqliteWpdb.php';
+require_once __DIR__ . '/Fakes/RedirectException.php';
 require_once __DIR__ . '/Fakes/NetworkFake.php';
 require_once __DIR__ . '/Fakes/FailingInstallWpdb.php';
 require_once __DIR__ . '/stubs/network-functions.php';
@@ -631,6 +632,89 @@ if (!function_exists('add_management_page')) {
         $GLOBALS['wpas_test_management_pages'][$slug] = $cap;
 
         return $slug;
+    }
+}
+
+if (!function_exists('add_menu_page')) {
+    /** @param mixed $callback */
+    function add_menu_page(string $title, string $menu, string $cap, string $slug, $callback = '', string $icon = '', $position = null): string
+    {
+        $GLOBALS['wpas_test_menu_pages'][$slug] = ['title' => $title, 'menu' => $menu, 'cap' => $cap, 'icon' => $icon, 'position' => $position, 'callback' => $callback];
+
+        return 'toplevel_page_' . $slug;
+    }
+}
+
+if (!function_exists('add_submenu_page')) {
+    /** @param mixed $callback */
+    function add_submenu_page(string $parent, string $title, string $menu, string $cap, string $slug, $callback = ''): string
+    {
+        $GLOBALS['wpas_test_submenu_pages'][$parent][$slug] = ['title' => $title, 'menu' => $menu, 'cap' => $cap, 'callback' => $callback];
+
+        // Core: the first submenu item shares the parent's slug and hook; the rest are "<parent title slug>_page_<slug>".
+        return $slug === $parent ? 'toplevel_page_' . $slug : $parent . '_page_' . $slug;
+    }
+}
+
+if (!function_exists('wp_safe_redirect')) {
+    function wp_safe_redirect(string $location, int $status = 302, string $xRedirectBy = 'WordPress'): bool
+    {
+        $GLOBALS['wpas_test_redirects'][] = ['location' => $location, 'status' => $status];
+
+        throw new \Belayline\Plugin\Tests\Fakes\RedirectException($location, $status);
+    }
+}
+
+if (!function_exists('wp_nonce_url')) {
+    function wp_nonce_url(string $url, string $action = '-1', string $name = '_wpnonce'): string
+    {
+        return $url . (str_contains($url, '?') ? '&' : '?') . $name . '=' . wp_create_nonce($action);
+    }
+}
+
+if (!function_exists('plugins_url')) {
+    function plugins_url(string $path = '', string $plugin = ''): string
+    {
+        return 'https://example.test/wp-content/plugins/belayline-agent-governance/' . ltrim($path, '/');
+    }
+}
+
+if (!function_exists('wp_enqueue_style')) {
+    /** @param list<string> $deps */
+    function wp_enqueue_style(string $handle, string $src = '', array $deps = [], $ver = false, string $media = 'all'): void
+    {
+        $GLOBALS['wpas_test_enqueued']['style'][$handle] = ['src' => $src, 'deps' => $deps, 'ver' => $ver];
+    }
+}
+
+if (!function_exists('wp_enqueue_script')) {
+    /** @param list<string> $deps */
+    function wp_enqueue_script(string $handle, string $src = '', array $deps = [], $ver = false, $args = false): void
+    {
+        $GLOBALS['wpas_test_enqueued']['script'][$handle] = ['src' => $src, 'deps' => $deps, 'ver' => $ver];
+    }
+}
+
+if (!function_exists('get_file_data')) {
+    /** @param array<string, string> $headers */
+    function get_file_data(string $file, array $headers, string $context = ''): array
+    {
+        $head = is_readable($file) ? (string) file_get_contents($file, false, null, 0, 8192) : '';
+        $out = [];
+        foreach ($headers as $key => $label) {
+            $out[$key] = preg_match('/^[ \t\/*#@]*' . preg_quote($label, '/') . ':(.*)$/mi', $head, $m) === 1 ? trim($m[1]) : '';
+        }
+
+        return $out;
+    }
+}
+
+if (!function_exists('get_userdata')) {
+    function get_userdata(int $id): object|false
+    {
+        $name = $GLOBALS['wpas_test_user_names'][$id] ?? null;
+
+        return $name === null ? false : (object) ['ID' => $id, 'display_name' => $name];
     }
 }
 

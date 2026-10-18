@@ -139,6 +139,11 @@ else
 	log "plugin/assets/ does not exist today — skipping (spec allows it once it does)"
 fi
 
+# The vendored UI kit must still match the manifest bin/sync wrote.
+if [ -d "$STAGE_DIR/assets/vendor/admin-ui-kit" ]; then
+	(cd "$STAGE_DIR/assets/vendor/admin-ui-kit" && shasum -a 256 -c MANIFEST.sha256 >/dev/null) || fail "vendored admin-ui-kit does not match MANIFEST.sha256 (rerun admin-ui-kit/bin/sync plugin)"
+fi
+
 [ -d "$PLUGIN_DIR/vendor" ] || fail "plugin/vendor missing — composer install did not run"
 cp -R "$PLUGIN_DIR/vendor" "$STAGE_DIR/vendor"
 

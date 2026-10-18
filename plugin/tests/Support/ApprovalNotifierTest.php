@@ -28,7 +28,7 @@ final class ApprovalNotifierTest extends TestCase
         $this->assertStringContainsString('woocommerce/orders-refund', $mail['subject']);
         $this->assertStringContainsString('orders-refund { amount=50 }', $mail['message']);
         $this->assertStringContainsString('apr_1', $mail['message']);
-        $this->assertStringContainsString('tools.php?page=belayline-pending', $mail['message']);
+        $this->assertStringContainsString('admin.php?page=belayline-pending', $mail['message']);
     }
 
     public function testConfiguredRecipientOptionBeatsTheAdminEmailDefault(): void
@@ -73,7 +73,7 @@ final class ApprovalNotifierTest extends TestCase
         $this->assertSame('approval.requested', $payload['event']);
         $this->assertSame('apr_9', $payload['approval_id']);
         $this->assertSame('woocommerce/orders-refund', $payload['verb']);
-        $this->assertStringContainsString('tools.php?page=belayline-pending', $payload['review_url']);
+        $this->assertStringContainsString('admin.php?page=belayline-pending', $payload['review_url']);
         // The summary carries raw argument values; it must never leave the site.
         $this->assertStringNotContainsString('pii@example.test', (string) $post['args']['body']);
     }

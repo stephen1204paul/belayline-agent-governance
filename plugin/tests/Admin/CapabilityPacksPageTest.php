@@ -75,6 +75,7 @@ final class CapabilityPacksPageTest extends TestCase
 
         ob_start();
         $page->render();
+        $page->renderBindingsCard();
         $out = (string) ob_get_clean();
 
         // The shadow form above has its own selected option; only the bindings section matters here.
@@ -83,14 +84,14 @@ final class CapabilityPacksPageTest extends TestCase
 
     private function bindingsSection(string $out): string
     {
-        return substr($out, (int) strpos($out, 'Credential bindings'));
+        return substr($out, (int) strpos($out, 'Who uses which pack'));
     }
 
     public function testAValidDeepLinkPreselectsThePackHighlightsTheRowAndNotifies(): void
     {
         $out = $this->renderWithGet(['belayline_bind_token' => 'role:administrator', 'belayline_bind_pack' => 'owner']);
 
-        $this->assertStringContainsString('Site Agent asked to bind Administrator to owner. Review and Save.', $out);
+        $this->assertStringContainsString('It would like Administrator to use the owner pack. Check the highlighted row and save.', $out);
         $this->assertStringContainsString('<tr id="belayline-bind-prefill"', $out);
         $this->assertStringContainsString('<option value="owner" selected=\'selected\'>owner</option>', $out);
         // Only that row is touched: the other row's dropdown selects nothing.
@@ -259,7 +260,7 @@ final class CapabilityPacksPageTest extends TestCase
         $this->page->render();
         $out = (string) ob_get_clean();
 
-        $this->assertStringContainsString('value="owner"> audit only', $out, 'not ticked');
+        $this->assertStringContainsString('value="owner"> <span><strong>Watch only', $out, 'not ticked');
         $this->assertStringContainsString(
             'shadowed by the ' . ShadowMode::FILTER . ' filter until ' . gmdate('Y-m-d H:i', self::NOW + 3600) . ' UTC',
             $out,

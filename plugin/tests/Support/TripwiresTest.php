@@ -146,7 +146,7 @@ final class TripwiresTest extends TestCase
         $this->assertStringStartsWith('[Belayline Agent Governance]', $mail['subject']);
         $this->assertStringContainsString('tok', $mail['subject']);
         $this->assertStringContainsString('600 seconds', $mail['message']);
-        $this->assertStringContainsString('tools.php?page=belayline-audit', $mail['message']);
+        $this->assertStringContainsString('admin.php?page=belayline-activity&section=calls', $mail['message']);
     }
 
     public function testTheConfiguredRecipientBeatsAdminEmailAndNoRecipientMeansNoMail(): void

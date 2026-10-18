@@ -34,6 +34,21 @@ final class SqliteWpdb extends wpdb
         $this->pdo->sqliteCreateFunction('UTC_TIMESTAMP', fn (): string => gmdate('Y-m-d H:i:s', time() + $this->clockOffset), 0);
         $this->pdo->sqliteCreateFunction('GET_LOCK', static fn (): int => 1);
         $this->pdo->sqliteCreateFunction('RELEASE_LOCK', static fn (): int => 1);
+        // MySQL's SUBSTRING_INDEX(str, delim, count): the Overview map query reads the token out of the stored record with it.
+        $this->pdo->sqliteCreateFunction('SUBSTRING_INDEX', static function (?string $str, string $delim, int $count): string {
+            $str ??= '';
+            if ($delim === '' || $count === 0) {
+                return '';
+            }
+            $parts = explode($delim, $str);
+            if (abs($count) >= count($parts)) {
+                return $str;
+            }
+
+            return $count > 0
+                ? implode($delim, array_slice($parts, 0, $count))
+                : implode($delim, array_slice($parts, $count));
+        }, 3);
 
         $this->pdo->exec('CREATE TABLE wp_belayline_approvals (
             id INTEGER PRIMARY KEY AUTOINCREMENT, approval_id TEXT, verb TEXT, args_hash TEXT, summary TEXT,
@@ -44,6 +59,7 @@ final class SqliteWpdb extends wpdb
             id INTEGER PRIMARY KEY AUTOINCREMENT, event_id TEXT, ts TEXT, correlation_id TEXT, pack TEXT,
             ability TEXT, tier INTEGER, decision TEXT, result TEXT, wp_user INTEGER, ip TEXT,
             record_json TEXT, prev_hash TEXT, entry_hash TEXT)');
+        $this->pdo->exec('CREATE INDEX wp_belayline_audit_log_ts ON wp_belayline_audit_log (ts)');
         $this->pdo->exec('CREATE TABLE wp_belayline_audit_checkpoint (
             id INTEGER PRIMARY KEY AUTOINCREMENT, created_ts TEXT, pruned_through_id INTEGER,
             pruned_through_entry_hash TEXT, pruned_count INTEGER)');

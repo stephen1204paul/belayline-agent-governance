@@ -4,50 +4,47 @@ declare(strict_types=1);
 
 namespace Belayline\Plugin\Admin;
 
+use Belayline\Plugin\Admin\Map\CallOutcome;
+use Belayline\Plugin\Admin\Map\WhoResolver;
+use Belayline\Plugin\Admin\Ui\Html;
+use Belayline\Plugin\Admin\Ui\Icons;
+use Belayline\Plugin\Admin\Ui\Time;
 use Belayline\Plugin\Audit\AuditExporter;
+use Belayline\Plugin\Audit\AuditFilter;
 use Belayline\Plugin\Audit\AuditReader;
+use Belayline\Plugin\Audit\ChainStatus;
 use Belayline\Plugin\Support\AuditRetention;
-use Belayline\Plugin\Support\ShadowMode;
 
 /**
- * Tools → "Agent Audit Log": a read-only wp-admin viewer for the append-only audit
- * trail. Shows a tamper-evidence banner (re-verifies the hash chain on
- * every load, from the latest retention checkpoint when the log has been pruned),
- * a paged table of recent events, a CSV export of the full log, a JSON Lines
- * export for a date range, and the audit retention setting.
+ * Activity > Calls: a read-only wp-admin viewer for the append-only audit trail.
+ * Shows whether the hash chain still verifies (checked from the latest retention
+ * checkpoint when the log has been pruned, and remembered for five minutes), a
+ * filterable, paged table of events, a CSV export of the full log and a JSON
+ * Lines export for a date range. The retention setting renders from here too
+ * ({@see renderRetentionCard()}) but lives on the Settings tab.
  */
 final class AuditLogPage
 {
-    private const SLUG = 'belayline-audit';
-    private const PER_PAGE = 100;
+    private const PER_PAGE = 50;
     private const CAP = 'manage_options';
     private const EXPORT_ACTION = 'belayline_export_audit';
     private const EXPORT_JSONL_ACTION = 'belayline_export_audit_jsonl';
     private const RETENTION_ACTION = 'belayline_save_audit_retention';
+    private const VERIFY = 'belayline_verify_chain';
 
     public function __construct(
         private readonly AuditReader $reader,
-        private readonly ShadowMode $shadow = new ShadowMode(),
+        private readonly ?ChainStatus $chain = null,
+        private readonly ?WhoResolver $who = null,
+        private readonly ?int $now = null,
     ) {
     }
 
     public function register(): void
     {
-        add_action('admin_menu', [$this, 'menu']);
         add_action('admin_post_' . self::EXPORT_ACTION, [$this, 'export']);
         add_action('admin_post_' . self::EXPORT_JSONL_ACTION, [$this, 'exportJsonl']);
         add_action('admin_post_' . self::RETENTION_ACTION, [$this, 'saveRetention']);
-    }
-
-    public function menu(): void
-    {
-        add_management_page(
-            __('Agent Audit Log', 'belayline-agent-governance'),
-            __('Agent Audit Log', 'belayline-agent-governance'),
-            self::CAP,
-            self::SLUG,
-            [$this, 'render']
-        );
     }
 
     public function render(): void
@@ -55,102 +52,244 @@ final class AuditLogPage
         if (!current_user_can(self::CAP)) {
             return;
         }
+        $this->renderMain();
+    }
 
-        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only pagination, no state change; the page's own links build this value.
+    public function renderMain(): void
+    {
+        $now = $this->now ?? time();
+        // phpcs:disable WordPress.Security.NonceVerification.Recommended -- read-only filters and pagination, no state change; the page's own links build these values.
+        $get = wp_unslash($_GET);
         $paged = isset($_GET['paged']) ? max(1, (int) $_GET['paged']) : 1;
-        $total = $this->reader->total();
-        $rows = $this->reader->latest(self::PER_PAGE, ($paged - 1) * self::PER_PAGE);
-        $intact = $this->reader->verifyChain();
-        $pages = (int) ceil($total / self::PER_PAGE);
+        // phpcs:enable WordPress.Security.NonceVerification.Recommended
+        $filter = AuditFilter::fromRequest($get);
 
-        echo '<div class="wrap">';
-        echo '<h1>' . esc_html__('Agent Audit Log', 'belayline-agent-governance') . '</h1>';
+        $total = $this->reader->countFiltered($filter, $now);
+        $rows = $this->reader->filtered($filter, self::PER_PAGE, ($paged - 1) * self::PER_PAGE, $now);
+        $pages = max(1, (int) ceil($total / self::PER_PAGE));
 
-        EnvironmentLabel::render($this->shadow);
+        echo '<p class="aui-page-intro">' . esc_html__('Everything agents did, tried or were refused, newest first. Each entry is chained to the one before it, so an edit or a deletion shows.', 'belayline-agent-governance') . '</p>';
+        $this->renderChain($now);
 
-        // Tamper-evidence banner.
-        if ($intact) {
-            printf(
-                '<div class="notice notice-success inline"><p><strong>%s</strong> %s</p></div>',
-                esc_html__('Chain intact.', 'belayline-agent-governance'),
-                esc_html(sprintf(/* translators: %d event count */ __('%d hash-chained events; no tampering detected.', 'belayline-agent-governance'), $total))
+        echo '<section class="aui-card" aria-labelledby="belayline-calls-t">';
+        echo '<div class="aui-card-h"><div><h2 class="aui-card-t" id="belayline-calls-t">' . esc_html__('Calls', 'belayline-agent-governance') . '</h2><p class="aui-card-d">'
+            . esc_html(sprintf(
+                /* translators: %d: number of matching log entries */
+                _n('%d entry', '%d entries', $total, 'belayline-agent-governance'),
+                $total
+            )) . '</p></div></div>';
+        $this->renderFilters($filter);
+
+        if (!$rows) {
+            echo '<div class="aui-empty"><span class="aui-tile">' . Icons::svg('file-text', 'aui-i--lg') . '</span><h3 class="aui-card-t">'
+                . esc_html($filter->isEmpty() ? __('No activity yet', 'belayline-agent-governance') : __('Nothing matches these filters', 'belayline-agent-governance')) . '</h3><p>'
+                . esc_html($filter->isEmpty()
+                    ? __('Every call an agent makes will be listed here.', 'belayline-agent-governance')
+                    : __('Try a wider period or clear the filters.', 'belayline-agent-governance'))
+                . '</p></div></section>';
+            $this->renderExport();
+
+            return;
+        }
+
+        echo '<div class="aui-table-wrap" tabindex="0" role="region" aria-label="' . esc_attr__('Agent calls', 'belayline-agent-governance') . '"><table class="aui-table"><caption class="aui-sr">' . esc_html__('Agent calls', 'belayline-agent-governance') . '</caption><thead><tr>';
+        foreach (self::columnHeaders() as $col) {
+            echo '<th scope="col">' . esc_html($col) . '</th>';
+        }
+        echo '</tr></thead><tbody>';
+        foreach ($rows as $r) {
+            $this->renderRow($r);
+        }
+        echo '</tbody></table></div>';
+        $this->renderPager($paged, $pages, $get);
+        echo '</section>';
+        $this->renderExport();
+    }
+
+    /** The chain card: cached verification, with a way to check right now. */
+    private function renderChain(int $now): void
+    {
+        $status = $this->chain !== null
+            ? $this->chain->get($now, $this->verifyRequested())
+            : ['ok' => $this->reader->verifyChain(), 'at' => $now, 'total' => $this->reader->total()];
+
+        if ($status['ok']) {
+            $when = $now - $status['at'] < 60 ? __('just now', 'belayline-agent-governance') : sprintf(
+                /* translators: %s: a duration such as "3 min" */
+                __('%s ago', 'belayline-agent-governance'),
+                Time::span($now - $status['at'])
             );
+            echo '<div class="aui-notice aui-notice--success" role="status">' . Icons::svg('check') . '<div><strong>' . esc_html__('Log intact.', 'belayline-agent-governance') . '</strong> '
+                . esc_html(sprintf(
+                    /* translators: 1: number of entries, 2: when it was last checked ("3 min ago") */
+                    _n('%1$d entry, no tampering found. Checked %2$s.', '%1$d entries, no tampering found. Checked %2$s.', $status['total'], 'belayline-agent-governance'),
+                    $status['total'],
+                    $when
+                ));
+            if ($this->chain !== null) {
+                echo ' <a href="' . esc_url(wp_nonce_url(AdminUrls::activity(AdminUrls::CALLS, ['belayline_verify' => '1']), self::VERIFY)) . '">'
+                    . esc_html__('Check now', 'belayline-agent-governance') . '</a>';
+            }
+            echo '</div></div>';
         } else {
-            printf(
-                '<div class="notice notice-error inline"><p><strong>%s</strong> %s</p></div>',
-                esc_html__('TAMPER DETECTED.', 'belayline-agent-governance'),
-                esc_html__('The audit chain failed verification — a record was altered or deleted.', 'belayline-agent-governance')
-            );
+            echo '<div class="aui-notice aui-notice--error" role="alert">' . Icons::svg('x') . '<div><strong>' . esc_html__('The log was altered.', 'belayline-agent-governance') . '</strong> '
+                . esc_html__('A record was changed or deleted, so the chain no longer checks out. Export it now and investigate.', 'belayline-agent-governance') . '</div></div>';
         }
 
         $checkpoint = $this->reader->checkpoint();
         if ($checkpoint !== null) {
-            printf(
-                '<p>%s</p>',
-                esc_html(sprintf(
-                    /* translators: 1: number of pruned events 2: UTC time of the latest prune */
-                    __('%1$d older events were pruned by the retention setting (latest prune %2$s UTC). The chain is verified from that checkpoint.', 'belayline-agent-governance'),
-                    $checkpoint['pruned_count'],
-                    $checkpoint['created_ts']
-                ))
-            );
+            echo '<p class="aui-muted">' . esc_html(sprintf(
+                /* translators: 1: number of pruned events 2: UTC time of the latest prune */
+                __('%1$d older entries were removed by your retention setting (latest on %2$s UTC). The chain is checked from that point.', 'belayline-agent-governance'),
+                $checkpoint['pruned_count'],
+                $checkpoint['created_ts']
+            )) . '</p>';
         }
+    }
 
-        // Export.
-        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="margin:12px 0;">';
-        echo '<input type="hidden" name="action" value="' . esc_attr(self::EXPORT_ACTION) . '">';
-        wp_nonce_field(self::EXPORT_ACTION);
-        submit_button(__('Export CSV', 'belayline-agent-governance'), 'secondary', 'submit', false);
-        echo '</form>';
-
-        $this->renderJsonlExport();
-        $this->renderRetentionSettings();
-
-        // Table.
-        echo '<table class="widefat striped"><thead><tr>';
-        foreach (self::columnHeaders() as $col) {
-            echo '<th>' . esc_html($col) . '</th>';
+    private function verifyRequested(): bool
+    {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- the nonce is checked right below, before anything is re-verified.
+        if (!isset($_GET['belayline_verify'])) {
+            return false;
         }
-        echo '</tr></thead><tbody>';
+        check_admin_referer(self::VERIFY);
 
-        if (!$rows) {
-            echo '<tr><td colspan="11">' . esc_html__('No events yet.', 'belayline-agent-governance') . '</td></tr>';
+        return true;
+    }
+
+    private function renderFilters(AuditFilter $f): void
+    {
+        $packs = $this->reader->packs();
+        echo '<form method="get" action="' . esc_url(admin_url('admin.php')) . '" class="aui-toolbar belayline-filters">';
+        echo '<input type="hidden" name="page" value="' . esc_attr(AdminUrls::SLUGS[AdminUrls::ACTIVITY]) . '"><input type="hidden" name="section" value="' . esc_attr(AdminUrls::CALLS) . '">';
+        if ($f->tokens !== []) {
+            echo '<input type="hidden" name="token" value="' . esc_attr(implode(',', $f->tokens)) . '">';
         }
-
-        foreach ($rows as $r) {
-            $decoded = json_decode((string) ($r['record_json'] ?? '{}'), true);
-            $token = is_array($decoded) && isset($decoded['actor']['token_id']) ? (string) $decoded['actor']['token_id'] : '';
-            $input = is_array($decoded) && isset($decoded['input']) ? (string) wp_json_encode($decoded['input']) : '';
-            $reason = is_array($decoded) && isset($decoded['reason']) ? (string) $decoded['reason'] : '';
-
-            echo '<tr>';
-            echo '<td>' . esc_html((string) $r['id']) . '</td>';
-            echo '<td>' . esc_html((string) $r['ts']) . '</td>';
-            echo '<td><code>' . esc_html((string) $r['correlation_id']) . '</code></td>';
-            echo '<td><code>' . esc_html((string) $r['ability']) . '</code></td>';
-            echo '<td>' . esc_html($r['tier'] === null ? '—' : (string) $r['tier']) . '</td>';
-            echo '<td>' . self::badge((string) $r['decision']) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- badge() escapes internally (esc_attr()/esc_html()); see its docblock.
-            echo '<td><code>' . esc_html($reason === '' ? '—' : ReasonLabels::label($reason)) . '</code></td>';
-            echo '<td>' . esc_html((string) ($r['result'] ?? '—')) . '</td>';
-            echo '<td>' . esc_html($token ?: '—') . '</td>';
-            echo '<td>' . esc_html((string) ($r['ip'] ?? '—')) . '</td>';
-            echo '<td><code style="font-size:11px;">' . esc_html(self::truncate($input, 120)) . '</code></td>';
-            echo '</tr>';
-        }
-        echo '</tbody></table>';
-
-        // Pagination.
-        if ($pages > 1) {
-            echo '<div class="tablenav"><div class="tablenav-pages">';
-            for ($p = 1; $p <= $pages; $p++) {
-                $url = esc_url(add_query_arg(['page' => self::SLUG, 'paged' => $p], admin_url('tools.php')));
-                $label = $p === $paged ? '<strong>' . $p . '</strong>' : '<a href="' . $url . '">' . $p . '</a>';
-                echo '<span style="margin:0 4px;">' . $label . '</span>'; // phpcs:ignore WordPress.Security.EscapeOutput
+        foreach (['token_prefix' => $f->tokenPrefix, 'through' => $f->through] as $name => $value) {
+            if ($value !== '') {
+                echo '<input type="hidden" name="' . esc_attr($name) . '" value="' . esc_attr($value) . '">';
             }
-            echo '</div></div>';
         }
 
-        echo '</div>';
+        echo '<div class="aui-field"><label class="aui-label" for="belayline-f-outcome">' . esc_html__('Outcome', 'belayline-agent-governance') . '</label><select class="aui-select" id="belayline-f-outcome" name="outcome">';
+        echo '<option value="">' . esc_html__('All outcomes', 'belayline-agent-governance') . '</option>';
+        foreach (CallOutcome::ALL as $o) {
+            echo '<option value="' . esc_attr($o) . '"' . selected($f->outcome, $o, false) . '>' . esc_html(CallOutcome::label($o)) . '</option>';
+        }
+        echo '</select></div>';
+
+        echo '<div class="aui-field"><label class="aui-label" for="belayline-f-pack">' . esc_html__('Pack', 'belayline-agent-governance') . '</label><select class="aui-select" id="belayline-f-pack" name="pack">';
+        echo '<option value="">' . esc_html__('All packs', 'belayline-agent-governance') . '</option>';
+        foreach ($packs as $pack) {
+            echo '<option value="' . esc_attr($pack) . '"' . selected($f->pack, $pack, false) . '>' . esc_html($pack) . '</option>';
+        }
+        echo '<option value="__none"' . selected($f->pack, '__none', false) . '>' . esc_html__('No pack', 'belayline-agent-governance') . '</option></select></div>';
+
+        echo '<div class="aui-field"><label class="aui-label" for="belayline-f-days">' . esc_html__('Period', 'belayline-agent-governance') . '</label><select class="aui-select" id="belayline-f-days" name="days">';
+        foreach ([0 => __('Any time', 'belayline-agent-governance'), 1 => __('Last 24 hours', 'belayline-agent-governance'), 7 => __('Last 7 days', 'belayline-agent-governance'), 30 => __('Last 30 days', 'belayline-agent-governance')] as $days => $label) {
+            echo '<option value="' . esc_attr((string) $days) . '"' . selected($f->days, $days, false) . '>' . esc_html($label) . '</option>';
+        }
+        echo '</select></div>';
+
+        echo '<button type="submit" class="aui-btn aui-btn--secondary">' . esc_html__('Filter', 'belayline-agent-governance') . '</button>';
+        if (!$f->isEmpty()) {
+            echo '<a class="aui-btn aui-btn--ghost" href="' . esc_url(AdminUrls::activity(AdminUrls::CALLS)) . '">' . esc_html__('Clear filters', 'belayline-agent-governance') . '</a>';
+        }
+        if ($f->tokens !== [] || $f->tokenPrefix !== '' || $f->through !== '') {
+            echo '<span class="aui-end belayline-chips">';
+            if ($f->tokens !== []) {
+                $names = array_map(fn (string $t): string => $this->who?->label($t) ?? $t, $f->tokens);
+                echo Html::badge('info', sprintf(/* translators: %s: who */ __('Who: %s', 'belayline-agent-governance'), implode(', ', array_unique($names)))); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::badge() escapes.
+            }
+            if ($f->tokenPrefix !== '') {
+                echo Html::badge('info', __('Who: logged-in people', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::badge() escapes.
+            }
+            if ($f->through !== '') {
+                echo Html::badge('info', sprintf(/* translators: %s: plugin namespace */ __('Through: %s', 'belayline-agent-governance'), $f->through)); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::badge() escapes.
+            }
+            echo '</span>';
+        }
+        echo '</form>';
+    }
+
+    /** @param array<string, mixed> $r */
+    private function renderRow(array $r): void
+    {
+        $decoded = json_decode((string) ($r['record_json'] ?? '{}'), true);
+        $token = is_array($decoded) && isset($decoded['actor']['token_id']) ? (string) $decoded['actor']['token_id'] : '';
+        $input = is_array($decoded) && isset($decoded['input']) ? (string) wp_json_encode($decoded['input']) : '';
+        $reason = is_array($decoded) && isset($decoded['reason']) ? (string) $decoded['reason'] : '';
+        $dryRun = is_array($decoded) && !empty($decoded['dry_run']);
+        $who = $this->who !== null ? $this->who->label($token) : ($token !== '' ? $token : '—');
+
+        echo '<tr>';
+        echo '<td class="aui-mono belayline-nowrap">' . esc_html(str_replace(['T', 'Z'], [' ', ''], (string) $r['ts'])) . '</td>';
+        echo '<td>' . esc_html($who) . '</td>';
+        echo '<td><span class="aui-mono belayline-nowrap">' . esc_html((string) $r['ability']) . '</span>'
+            . ($input !== '' && $input !== '[]' ? '<div class="aui-mono belayline-input" title="' . esc_attr(self::truncate($input, 400)) . '">' . esc_html(self::truncate($input, 70)) . '</div>' : '') . '</td>';
+        echo '<td>' . self::badge((string) $r['decision'], isset($r['result']) ? (string) $r['result'] : null) . ($dryRun ? ' ' . Html::badge('', __('Shadow', 'belayline-agent-governance')) : '') . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- badge() and Html::badge() escape.
+        echo '<td>';
+        if ($reason === '') {
+            echo '—';
+        } else {
+            $label = ReasonLabels::label($reason);
+            echo esc_html($label);
+            if ($label !== $reason) {
+                echo ' <code class="aui-code aui-muted">' . esc_html($reason) . '</code>';
+            }
+        }
+        echo '</td>';
+        echo '<td class="aui-mono">' . esc_html((string) ($r['ip'] ?? '—')) . '</td>';
+        echo '</tr>';
+    }
+
+    /** @param array<string, mixed> $get */
+    private function renderPager(int $paged, int $pages, array $get): void
+    {
+        if ($pages <= 1) {
+            return;
+        }
+        $keep = [];
+        foreach (['outcome', 'pack', 'through', 'token', 'token_prefix', 'days'] as $k) {
+            if (isset($get[$k]) && is_scalar($get[$k]) && (string) $get[$k] !== '') {
+                $keep[$k] = (string) $get[$k];
+            }
+        }
+        echo '<div class="aui-card-f belayline-pager"><span class="aui-muted">' . esc_html(sprintf(
+            /* translators: 1: current page, 2: number of pages */
+            __('Page %1$d of %2$d', 'belayline-agent-governance'),
+            $paged,
+            $pages
+        )) . '</span><span class="aui-end aui-row-flex">';
+        if ($paged > 1) {
+            echo '<a class="aui-btn aui-btn--secondary aui-btn--sm" href="' . esc_url(AdminUrls::activity(AdminUrls::CALLS, $keep + ['paged' => $paged - 1])) . '">' . esc_html__('Newer', 'belayline-agent-governance') . '</a>';
+        }
+        if ($paged < $pages) {
+            echo '<a class="aui-btn aui-btn--secondary aui-btn--sm" href="' . esc_url(AdminUrls::activity(AdminUrls::CALLS, $keep + ['paged' => $paged + 1])) . '">' . esc_html__('Older', 'belayline-agent-governance') . '</a>';
+        }
+        echo '</span></div>';
+    }
+
+    /** Both exports in one card: the whole log as CSV, or a date range as JSON Lines. */
+    private function renderExport(): void
+    {
+        echo '<section class="aui-card"><div class="aui-card-h"><div><h2 class="aui-card-t">' . esc_html__('Export', 'belayline-agent-governance') . '</h2><p class="aui-card-d">'
+            . esc_html__('Take a copy of the log, for your records or another system. Export before you shorten the retention period in Settings.', 'belayline-agent-governance') . '</p></div></div><div class="aui-card-b belayline-stack">';
+
+        echo Html::postForm(self::EXPORT_ACTION, self::EXPORT_ACTION, '', 'class="aui-row-flex"'); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
+        echo '<button type="submit" class="aui-btn aui-btn--secondary">' . Icons::svg('file-text') . esc_html__('Export everything as CSV', 'belayline-agent-governance') . '</button></form>';
+
+        echo Html::postForm(self::EXPORT_JSONL_ACTION, self::EXPORT_JSONL_ACTION, '', 'class="aui-toolbar belayline-range"'); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
+        printf(
+            '<div class="aui-field"><label class="aui-label" for="belayline_export_from">%s</label><input class="aui-input" type="date" id="belayline_export_from" name="from"></div>'
+            . '<div class="aui-field"><label class="aui-label" for="belayline_export_to">%s</label><input class="aui-input" type="date" id="belayline_export_to" name="to"></div>',
+            esc_html__('From (UTC)', 'belayline-agent-governance'),
+            esc_html__('To (UTC)', 'belayline-agent-governance'),
+        );
+        echo '<button type="submit" class="aui-btn aui-btn--secondary">' . Icons::svg('file-text') . esc_html__('Download JSON Lines', 'belayline-agent-governance') . '</button></form>';
+        echo '<p class="aui-help">' . esc_html__('One JSON entry per line, oldest first. Leave a date empty for no limit.', 'belayline-agent-governance') . '</p>';
+        echo '</div></section>';
     }
 
     /** Streams the full log as CSV and exits. */
@@ -180,38 +319,22 @@ final class AuditLogPage
         exit;
     }
 
-    /** Date-range JSON Lines export form. */
-    private function renderJsonlExport(): void
+    /** Settings card: how many days of activity to keep, 0 = forever. */
+    public function renderRetentionCard(): void
     {
-        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="margin:12px 0;">';
-        echo '<input type="hidden" name="action" value="' . esc_attr(self::EXPORT_JSONL_ACTION) . '">';
-        wp_nonce_field(self::EXPORT_JSONL_ACTION);
+        echo '<section class="aui-card"><div class="aui-card-h"><div><h2 class="aui-card-t">' . esc_html__('How long to keep activity', 'belayline-agent-governance') . '</h2><p class="aui-card-d">'
+            . esc_html__('A daily job deletes older entries, oldest first, and leaves a marker so the tamper check still works. Deleted entries cannot be recovered.', 'belayline-agent-governance') . '</p></div></div>';
+        echo Html::postForm(self::RETENTION_ACTION, self::RETENTION_ACTION, Html::backTo(AdminUrls::SETTINGS)); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
         printf(
-            '<label for="belayline_export_from">%s</label> <input type="date" id="belayline_export_from" name="from"> '
-            . '<label for="belayline_export_to">%s</label> <input type="date" id="belayline_export_to" name="to"> ',
-            esc_html__('From (UTC)', 'belayline-agent-governance'),
-            esc_html__('To (UTC)', 'belayline-agent-governance'),
-        );
-        submit_button(__('Download JSON Lines', 'belayline-agent-governance'), 'secondary', 'submit', false);
-        echo '<p class="description">' . esc_html__('One JSON object per line, oldest first, starting with the retention checkpoint when the log has been pruned. Leave a date empty for no limit. Export before shortening the retention window.', 'belayline-agent-governance') . '</p>';
-        echo '</form>';
-    }
-
-    /** Retention setting: days of audit history to keep, 0 = forever. */
-    private function renderRetentionSettings(): void
-    {
-        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="margin:12px 0;">';
-        echo '<input type="hidden" name="action" value="' . esc_attr(self::RETENTION_ACTION) . '">';
-        wp_nonce_field(self::RETENTION_ACTION);
-        printf(
-            '<label for="belayline_audit_retention_days">%s</label> <input type="number" min="0" max="%d" id="belayline_audit_retention_days" name="belayline_audit_retention_days" value="%d" class="small-text"> ',
-            esc_html__('Keep audit events for (days, 0 = forever)', 'belayline-agent-governance'),
+            '<div class="aui-card-b"><div class="aui-field"><label class="aui-label" for="belayline_audit_retention_days">%s</label><input class="aui-input belayline-narrow" type="number" min="0" max="%d" id="belayline_audit_retention_days" name="belayline_audit_retention_days" value="%d"><p class="aui-help">%s <a href="%s">%s</a></p></div></div>',
+            esc_html__('Keep activity for this many days (0 keeps everything)', 'belayline-agent-governance'),
             AuditRetention::MAX_DAYS,
             AuditRetention::days(),
+            esc_html__('Export first if you may need older entries.', 'belayline-agent-governance'),
+            esc_url(AdminUrls::activity(AdminUrls::CALLS)),
+            esc_html__('Go to Export', 'belayline-agent-governance'),
         );
-        submit_button(__('Save retention', 'belayline-agent-governance'), 'secondary', 'submit', false);
-        echo '<p class="description">' . esc_html__('A daily job deletes older events, oldest first, and records a checkpoint so the tamper check still works. Deleted events cannot be recovered.', 'belayline-agent-governance') . '</p>';
-        echo '</form>';
+        echo '<div class="aui-card-f"><button type="submit" class="aui-btn aui-btn--secondary">' . esc_html__('Save retention', 'belayline-agent-governance') . '</button></div></form></section>';
     }
 
     /**
@@ -262,7 +385,7 @@ final class AuditLogPage
     public function saveRetention(): void
     {
         $this->applyRetentionSubmission();
-        wp_safe_redirect(add_query_arg(['page' => self::SLUG], admin_url('tools.php')));
+        wp_safe_redirect(AdminUrls::tab(AdminUrls::SETTINGS, ['belayline_saved' => 'retention']));
         exit;
     }
 
@@ -270,41 +393,40 @@ final class AuditLogPage
     private static function columnHeaders(): array
     {
         return [
-            __('ID', 'belayline-agent-governance'),
             __('Time (UTC)', 'belayline-agent-governance'),
-            __('Correlation', 'belayline-agent-governance'),
-            __('Ability', 'belayline-agent-governance'),
-            __('Tier', 'belayline-agent-governance'),
+            __('Who', 'belayline-agent-governance'),
+            __('Ability and input', 'belayline-agent-governance'),
             __('Decision', 'belayline-agent-governance'),
             __('Reason', 'belayline-agent-governance'),
-            __('Result', 'belayline-agent-governance'),
-            __('Token', 'belayline-agent-governance'),
             __('IP', 'belayline-agent-governance'),
-            __('Input', 'belayline-agent-governance'),
         ];
     }
 
-    private static function badge(string $decision): string
+    /**
+     * The decision as a kit badge, in plain words. The raw value stays in the
+     * tooltip (and in the CSV export), so nothing is lost.
+     */
+    private static function badge(string $decision, ?string $result): string
     {
-        $colors = [
-            'allowed'  => '#46b450',
-            'denied'   => '#dc3232',
-            'pending'  => '#ffb900',
-            'approved' => '#46b450',
-            'rejected' => '#dc3232',
-            // A grant-lifecycle row (AS-12): issued/revoked/exhausted, told
-            // apart by the reason column beside it.
-            'grant'    => '#2271b1',
-            // A human changed the plugin's configuration: shadow toggles and
-            // binding changes, again told apart by the reason column.
-            'admin'    => '#50575e',
-            // A human undid recorded changes (0.5 undo engine).
-            'restored' => '#8c5cb0',
-        ];
-        $color = $colors[$decision] ?? '#888';
+        [$tone, $text] = match ($decision) {
+            'allowed' => ($result === null || $result === '' || $result === 'success')
+                ? ['ok', __('Ran', 'belayline-agent-governance')]
+                : ['', __('Failed', 'belayline-agent-governance')],
+            'denied' => ['bad', __('Refused', 'belayline-agent-governance')],
+            'rejected' => ['bad', __('Denied by a person', 'belayline-agent-governance')],
+            'pending' => ['warn', __('Waiting', 'belayline-agent-governance')],
+            'approved' => ['info', __('Approved', 'belayline-agent-governance')],
+            // A grant-lifecycle row (AS-12): issued/revoked/exhausted, told apart by the reason column.
+            'grant' => ['', __('Grant', 'belayline-agent-governance')],
+            // A person changed Belayline's own settings; the reason column says which.
+            'admin' => ['', __('Setting changed', 'belayline-agent-governance')],
+            // A person undid recorded changes (0.5 undo engine).
+            'restored' => ['info', __('Undone', 'belayline-agent-governance')],
+            'stale' => ['warn', __('Out of date', 'belayline-agent-governance')],
+            default => ['', $decision],
+        };
 
-        return '<span style="color:#fff;background:' . esc_attr($color) . ';padding:1px 6px;border-radius:3px;font-size:11px;">'
-            . esc_html($decision) . '</span>';
+        return '<span title="' . esc_attr($decision . ($result !== null && $result !== '' ? ': ' . $result : '')) . '">' . Html::badge($tone, $text) . '</span>';
     }
 
     private static function truncate(string $s, int $len): string

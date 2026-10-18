@@ -40,7 +40,7 @@ default pack rather than inheriting full access.
 **Human approval**
 
 When a pack requires approval for a tier (the starter packs do for irreversible calls), a call
-at that tier doesn't execute. It is queued under **Tools → Pending Agent Actions** for a human
+at that tier doesn't execute. It is queued under **Belayline → Pending** for a human
 to approve or reject. When an
 Approval is requested, Belayline Agent Governance captures a fingerprint of the target's current state; when
 the approval is claimed, it re-checks that fingerprint. A mismatch means the target changed
@@ -58,7 +58,7 @@ identity, the original arguments, or any token.
 **Hash-chained audit log**
 
 Every gate decision and executed action is appended to an append-only, hash-chained log under
-**Tools → Agent Audit Log**, with a tamper-evidence check that re-verifies the chain on load.
+**Belayline → Activity**, with a tamper-evidence check that re-verifies the chain on load.
 
 **Core coverage**
 
@@ -119,7 +119,7 @@ those namespaces that Belayline Agent Governance doesn't recognise is refused.
 **Change history and undo**
 
 Every governed write records the fields it changed, before and after, linked to its audit row.
-**Tools → Agent Changes** lists them. An administrator can restore one change, or everything a
+**Belayline → Activity → Changes** lists them. An administrator can restore one change, or everything a
 single agent session changed at once (a whole Site Agent run, for example), after a preview of
 what will be written back. Posts, pages, post meta, terms, options, WooCommerce products,
 prices and coupons, and FluentCart and SureCart catalogue objects can be restored.
@@ -131,15 +131,14 @@ proposed values side by side.
 
 **Abilities from other plugins**
 
-Plugins keep registering abilities Belayline Agent Governance has never heard of. Under **Tools → Agent
-Abilities**, an administrator gives each one a tier, with no code. An ability nobody has reviewed
+Plugins keep registering abilities Belayline Agent Governance has never heard of. Under **Belayline → Packs**, an administrator gives each one a tier, with no code. An ability nobody has reviewed
 stays refused, and one whose input schema changes after review is refused again until someone
 looks at it.
 
 **IP allowlist**
 
 Optionally limit application passwords and WooCommerce API keys to a list of addresses or CIDR
-ranges, under **Tools → Agent Capability Packs**. Logged-in browser sessions are never IP-checked,
+ranges, under **Belayline → Packs**. Logged-in browser sessions are never IP-checked,
 so a typo can't lock an administrator out. Behind a proxy or CDN, name it as a trusted proxy and
 Belayline Agent Governance reads the forwarded address; otherwise it uses the connecting address.
 
@@ -162,10 +161,10 @@ or per site.
 1. Upload the plugin to `/wp-content/plugins/belayline-agent-governance`, or install it through the Plugins
    screen.
 2. Activate **Belayline Agent Governance**.
-3. Visit **Tools → Agent Capability Packs** to bind identities (application passwords, users or
+3. Visit **Belayline → Packs** to bind identities (application passwords, users or
    roles, WooCommerce REST API keys) to a pack. Unbound credentials get a safe default pack.
-4. Review pending actions under **Tools → Pending Agent Actions** and the log under **Tools →
-   Agent Audit Log**.
+4. Review pending actions under **Belayline → Pending** and the log under **Belayline →
+   Activity**.
 
 WooCommerce support activates automatically when WooCommerce is active; there is nothing else to
 configure for it to be safe by default.
@@ -202,20 +201,17 @@ plugin.
 
 By whichever credential authenticated the request: a WordPress application password, a logged-in
 user or their role, or — when WooCommerce is active — the WooCommerce REST API key used to
-authenticate the request. Each is bound to a capability pack independently under **Tools → Agent
-Capability Packs**.
+authenticate the request. Each is bound to a capability pack independently under **Belayline → Packs**.
 
 == External services ==
 
 This plugin can send data outside your site in two ways.
 
 **Email.** When a new agent action needs approval, Belayline Agent Governance sends an email through
-`wp_mail()` to the site's admin email address, or to a recipient set on the Pending Agent
-Actions screen, linking to the login-protected review screen. It goes through your site's own
+`wp_mail()` to the site's admin email address, or to a recipient set on the Pending tab screen, linking to the login-protected review screen. It goes through your site's own
 mail delivery.
 
-**Webhook (opt-in).** An administrator can set a webhook URL on the Pending Agent Actions
-screen. When
+**Webhook (opt-in).** An administrator can set a webhook URL on the Pending tab. When
 set, every new pending approval sends an HTTP POST to that URL with a JSON body containing the
 event name, the approval id, the verb (ability) that was called, and a link to the review screen.
 No call arguments are sent. The webhook is off until an administrator enters a URL, and the
@@ -247,7 +243,7 @@ daily (the `belayline_changes_retention_days` option changes the period). A pers
 includes a user's change rows, and an erasure request deletes them; unlike audit rows they aren't
 part of the hash chain.
 
-Audit rows are kept forever by default. Set a retention period on Tools → Agent Audit Log
+Audit rows are kept forever by default. Set a retention period on Belayline → Settings
 (`belayline_audit_retention_days`, in days) and a daily job deletes older rows, leaving a checkpoint
 (the last deleted row's hash, a count and a time) so the tamper check still verifies what remains.
 The same screen exports any date range as JSON Lines.
@@ -286,12 +282,12 @@ runs.
 * Audit log: optional retention (off by default) with a checkpoint that keeps the tamper check
   working after old rows are deleted, and a JSON Lines download for a date range.
 * Change history: every governed write records the fields it changed, before and after, linked
-  to its audit row. Listed under Tools → Agent Changes and kept for 30 days by default.
+  to its audit row. Listed under Belayline → Activity → Changes and kept for 30 days by default.
 * Undo: restore one change, or everything one agent session changed, after a preview. Covers
   posts, pages, post meta, terms, options, WooCommerce products, prices and coupons, and
   FluentCart and SureCart catalogue objects. A change made since the agent's is never
   overwritten; the screen shows it instead.
-* Ability review under Tools → Agent Abilities: give abilities registered by other plugins a tier
+* Ability review under Belayline → Packs: give abilities registered by other plugins a tier
   without code. Unreviewed abilities stay refused, and a changed input schema needs a fresh
   review.
 * IP allowlist for application passwords and WooCommerce API keys, with trusted-proxy support.
@@ -301,7 +297,7 @@ runs.
 * WooCommerce: moving an order to pending or on-hold is now irreversible-tier, like cancelling
   it, so the starter packs hold it for approval.
 * Denials now carry a machine-readable `reason` in their error data.
-* The Pending Agent Actions screen summarises held calls from their arguments, with secrets
+* The Pending tab summarises held calls from their arguments, with secrets
   redacted and long values cut short. Approval emails and webhooks still carry no arguments.
 * Calls made through a plugin's own MCP server (Site Agent's, for example) are now written to the
   audit log, not only calls through mcp-adapter's default server.

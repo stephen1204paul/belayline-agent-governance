@@ -13,7 +13,7 @@ use Belayline\Plugin\Api\AbilityReviews;
  * A call is only allowed when the pack's allow-list names its verb, and the
  * built-in `default-agent` allows nothing, so a reviewed ability is callable
  * by a credential only after an administrator binds that credential to this
- * pack (Tools, Agent Capability Packs). The allow-list is the exact set of
+ * pack (Belayline, Packs tab). The allow-list is the exact set of
  * reviewed, non-blocked abilities, never a glob over a namespace, so an
  * ability that was not reviewed is not admitted even inside a reviewed
  * namespace. Tier 1 (Write) and Tier 2 (Irreversible) both need approval;

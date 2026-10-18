@@ -48,6 +48,93 @@ final class AuditReader
     }
 
     /**
+     * The shared WHERE of {@see filtered()} and {@see countFiltered()}: a fixed
+     * template (every optional filter is `(%d = 0 OR ...)`), so no SQL is ever
+     * assembled from request input. The outcome expression mirrors
+     * {@see \Belayline\Plugin\Admin\Map\CallOutcome}.
+     */
+    private const FILTER_WHERE = " WHERE ts >= %s AND (%d = 0 OR pack = %s) AND (%d = 0 OR ability LIKE %s)"
+        . " AND (%d = 0 OR record_json LIKE %s OR record_json LIKE %s OR record_json LIKE %s OR record_json LIKE %s OR record_json LIKE %s)"
+        . " AND (%d = 0 OR %s = CASE WHEN decision = 'allowed' THEN (CASE WHEN result IS NULL OR result = '' OR result = 'success' THEN 'ran' ELSE 'failed' END)"
+        . " WHEN decision IN ('denied', 'rejected') THEN 'refused' WHEN decision = 'pending' THEN 'waiting' WHEN decision = 'approved' THEN 'approved' ELSE '' END)";
+
+    /**
+     * Newest-first page of rows matching a filter.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function filtered(AuditFilter $f, int $limit, int $offset, int $now): array
+    {
+        $rows = $this->db->get_results(
+            $this->db->prepare(
+                'SELECT * FROM %i' . self::FILTER_WHERE . ' ORDER BY id DESC LIMIT %d OFFSET %d',
+                ...[...[$this->table()], ...$this->filterArgs($f, $now), ...[$limit, $offset]]
+            ),
+            ARRAY_A
+        );
+
+        return is_array($rows) ? $rows : [];
+    }
+
+    public function countFiltered(AuditFilter $f, int $now): int
+    {
+        return (int) $this->db->get_var(
+            $this->db->prepare(
+                'SELECT COUNT(*) FROM %i' . self::FILTER_WHERE,
+                ...[...[$this->table()], ...$this->filterArgs($f, $now)]
+            )
+        );
+    }
+
+    /**
+     * Distinct pack names present in the log, for the filter dropdown.
+     *
+     * @return list<string>
+     */
+    public function packs(): array
+    {
+        $rows = $this->db->get_results($this->db->prepare('SELECT DISTINCT pack FROM %i ORDER BY pack', $this->table()), ARRAY_A);
+
+        return array_values(array_filter(array_map(
+            static fn (array $r): string => (string) ($r['pack'] ?? ''),
+            is_array($rows) ? $rows : []
+        ), static fn (string $p): bool => $p !== ''));
+    }
+
+    /**
+     * Placeholder values for {@see FILTER_WHERE}, in template order.
+     *
+     * @return list<string|int>
+     */
+    private function filterArgs(AuditFilter $f, int $now): array
+    {
+        $esc = fn (string $v): string => $this->db->esc_like($v);
+        $packValue = $f->pack === '__none' ? '' : $f->pack;
+        // A token appears in the stored record as `"actor":{"token_id":"<token>"`.
+        $patterns = array_map(static fn (string $t): string => '%"actor":{"token_id":"' . $esc($t) . '"%', $f->tokens);
+        if ($f->tokenPrefix !== '') {
+            $patterns = ['%"actor":{"token_id":"' . $esc($f->tokenPrefix) . '%'];
+        }
+        $tokenOn = $patterns === [] ? 0 : 1;
+        $slots = [];
+        for ($i = 0; $i < AuditFilter::TOKEN_SLOTS; $i++) {
+            $slots[] = $patterns[$i] ?? ($patterns[0] ?? '');
+        }
+
+        return [
+            $f->days > 0 ? gmdate('Y-m-d\TH:i:s\Z', $now - $f->days * 86400) : '',
+            $f->pack === '' ? 0 : 1,
+            $packValue,
+            $f->through === '' ? 0 : 1,
+            $esc($f->through) . '/%',
+            $tokenOn,
+            ...$slots,
+            $f->outcome === '' ? 0 : 1,
+            $f->outcome,
+        ];
+    }
+
+    /**
      * Audit rows for the given event ids (the Changes screen labels each event
      * with its actor and ability), keyed by event id.
      *

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Belayline\Plugin\Support;
 
 use Belayline\Plugin\Admin\ChangesPage;
-use Belayline\Plugin\Api\AbilityReviews;
+use Belayline\Plugin\Admin\Map\MapData;
 use Belayline\Plugin\Admin\PendingActionsPage;
+use Belayline\Plugin\Api\AbilityReviews;
+use Belayline\Plugin\Audit\ChainStatus;
 
 /**
  * The single, explicit list of everything an opted-in uninstall
@@ -85,6 +87,8 @@ final class UninstallManifest
         PendingActionsPage::STALE_FLASH,
         ChangesPage::RESULT,
         Tripwires::LOCKOUT_PREFIX,
+        MapData::CACHE_KEY,
+        ChainStatus::CACHE_KEY,
     ];
 
     /**

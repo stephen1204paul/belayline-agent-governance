@@ -456,6 +456,22 @@ final class WpdbApprovalStore implements ApprovalStore, ApprovalMinter
         return is_array($rows) ? $rows : [];
     }
 
+    /**
+     * How many approvals are waiting and still inside their window. A cheap,
+     * read-only count for the menu bubble and the Overview: unlike
+     * {@see pending()} it never sweeps expired rows.
+     */
+    public function pendingCount(): int
+    {
+        return (int) $this->db->get_var(
+            $this->db->prepare(
+                "SELECT COUNT(*) FROM %i WHERE status = 'pending' AND pending_expires_ts > %s",
+                $this->table(),
+                gmdate('Y-m-d H:i:s')
+            )
+        );
+    }
+
     /** @return array<string, mixed>|null */
     public function get(string $approvalId): ?array
     {

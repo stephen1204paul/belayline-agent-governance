@@ -231,7 +231,7 @@ final class EnvironmentGuard
 
         echo '<div class="notice notice-error"><p>'
             . esc_html__(
-                "Belayline Agent Governance: this site's address changed since its shadow windows, grants and approved-but-unclaimed approvals were authorised. Those relaxations have been permanently voided. Rebind on the Agent Capability Packs page once this move is expected.",
+                "Belayline Agent Governance: this site's address changed since its shadow windows, grants and approved-but-unclaimed approvals were authorised. Those relaxations have been permanently voided. Confirm the new address under Belayline, Settings once this move is expected.",
                 'belayline-agent-governance'
             )
             . '</p></div>';

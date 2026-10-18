@@ -104,13 +104,13 @@ final class ChangesPageTest extends TestCase
 
         $out = $this->html();
 
-        $this->assertSame(1, substr_count($out, '<code>' . $corr . '</code>'), 'the run heading appears once');
+        $this->assertSame(1, substr_count($out, '<code class="aui-code">' . $corr . '</code>'), 'the run heading appears once');
         $this->assertStringContainsString('Undo this run', $out);
         $this->assertStringContainsString($e1, $out);
         $this->assertStringContainsString($e2, $out);
         $this->assertStringContainsString('post_title', $out);
-        $this->assertStringContainsString('<del><code>A</code></del>', $out);
-        $this->assertStringContainsString('<ins><code>B</code></ins>', $out);
+        $this->assertStringContainsString('<del><code class="aui-code">A</code></del>', $out);
+        $this->assertStringContainsString('<ins><code class="aui-code">B</code></ins>', $out);
         $this->assertStringContainsString('corr-other', $out);
     }
 
@@ -138,7 +138,7 @@ final class ChangesPageTest extends TestCase
         $this->assertStringContainsString('1 can be restored, 1 will be skipped, 0 would stop the undo.', $out);
         $this->assertStringContainsString('Skipped: Irreversible by nature', $out);
         $this->assertStringContainsString('Will be restored', $out);
-        $this->assertStringContainsString('<ins><code>A</code></ins>', $out, 'preview shows the value coming back');
+        $this->assertStringContainsString('<ins><code class="aui-code">A</code></ins>', $out, 'preview shows the value coming back');
         $this->assertStringContainsString('Confirm undo', $out);
     }
 
@@ -223,7 +223,7 @@ final class ChangesPageTest extends TestCase
         $this->assertStringContainsString('Changed since the agent ran', $out);
         $this->assertStringContainsString('Before the agent', $out);
         foreach (['A', 'B', 'C'] as $v) {
-            $this->assertStringContainsString('<td><code>' . $v . '</code></td>', $out);
+            $this->assertStringContainsString('<td><code class="aui-code">' . $v . '</code></td>', $out);
         }
         $this->assertSame('C', $GLOBALS['wpas_test_posts'][7]->post_title);
     }
@@ -237,11 +237,5 @@ final class ChangesPageTest extends TestCase
 
         $this->assertStringNotContainsString('<script>', $out);
         $this->assertStringContainsString('&lt;script&gt;', $out);
-    }
-
-    public function testMenuIsRegisteredForManageOptions(): void
-    {
-        $this->page->menu();
-        $this->assertSame('manage_options', $GLOBALS['wpas_test_management_pages'][ChangesPage::SLUG]);
     }
 }

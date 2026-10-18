@@ -90,15 +90,22 @@ final class AuditLogPageRetentionTest extends TestCase
         update_option(AuditRetention::OPTION, 90);
 
         ob_start();
+        $this->page->renderRetentionCard();
+        $card = (string) ob_get_clean();
+        ob_start();
         $this->page->render();
         $out = (string) ob_get_clean();
 
-        $this->assertStringContainsString('name="belayline_audit_retention_days"', $out);
-        $this->assertStringContainsString('value="90"', $out);
+        // The retention setting lives on the Settings tab (rendered as a card by this class)...
+        $this->assertStringContainsString('name="belayline_audit_retention_days"', $card);
+        $this->assertStringContainsString('value="90"', $card);
+        $this->assertStringContainsString('value="belayline_save_audit_retention"', $card);
+        $this->assertStringContainsString('value="settings"', $card, 'saving returns to the Settings tab');
+        // ...while the Calls view keeps the exports.
+        $this->assertStringNotContainsString('belayline_audit_retention_days', $out);
         $this->assertStringContainsString('Download JSON Lines', $out);
         $this->assertStringContainsString('name="from"', $out);
         $this->assertStringContainsString('value="belayline_export_audit_jsonl"', $out);
-        $this->assertStringContainsString('value="belayline_save_audit_retention"', $out);
     }
 
     public function testScreenReportsThePrunedCountWhenACheckpointExists(): void
@@ -110,6 +117,6 @@ final class AuditLogPageRetentionTest extends TestCase
         (new AuditLogPage(new AuditReader($db)))->render();
         $out = (string) ob_get_clean();
 
-        $this->assertStringContainsString('9 older events were pruned', $out);
+        $this->assertStringContainsString('9 older entries were removed by your retention setting', $out);
     }
 }

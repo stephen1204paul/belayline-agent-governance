@@ -53,7 +53,7 @@ deletes every option the plugin uses, and clears every cron event it scheduled.
 ## What the webhook sends, and when
 
 The plugin has one opt-in outbound webhook, disabled until an administrator enters a URL on
-the Pending Agent Actions screen. When set, a new pending approval (a fresh request only — an agent retrying
+the Pending tab. When set, a new pending approval (a fresh request only — an agent retrying
 a call that already has a pending row does not re-fire it) sends one HTTP POST to that URL with a
 JSON body:
 
@@ -62,7 +62,7 @@ JSON body:
   "event": "approval.requested",
   "approval_id": "apr_...",
   "verb": "woocommerce/products-delete",
-  "review_url": "https://example.com/wp-admin/tools.php?page=belayline-pending"
+  "review_url": "https://example.com/wp-admin/admin.php?page=belayline-pending"
 }
 ```
 

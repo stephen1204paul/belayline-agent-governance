@@ -145,7 +145,7 @@ final class CapabilityPacksPageIpAllowlistTest extends TestCase
         $this->page->applyIpAllowlist('198.51.100.0/24', '');
 
         ob_start();
-        $this->page->render();
+        $this->page->renderIpAllowlistCard();
         $html = (string) ob_get_clean();
 
         $this->assertStringContainsString('name="ip_allowlist"', $html);

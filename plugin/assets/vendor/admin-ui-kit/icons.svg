@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+<!-- Admin UI Kit icon sprite. Original simple 24x24 stroke paths (Phosphor-style subset, not Phosphor path data).
+     Render with: <svg class="aui-i" aria-hidden="true"><use href="icons.svg#aui-i-copy"/></svg> -->
+<symbol id="aui-i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"/></symbol>
+<symbol id="aui-i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+<symbol id="aui-i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="aui-i-warning" viewBox="0 0 24 24"><path d="M12 4.5l9 15.5H3z"/><path d="M12 10.5v4M12 17.3v.1"/></symbol>
+<symbol id="aui-i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.1"/></symbol>
+<symbol id="aui-i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="aui-i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5.5c0 4.5-3 8.2-7 9.5-4-1.3-7-5-7-9.5V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+<symbol id="aui-i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4"/></symbol>
+<symbol id="aui-i-robot" viewBox="0 0 24 24"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 8V5M9.5 13v1.5M14.5 13v1.5M3 13v3M21 13v3"/><circle cx="12" cy="4" r="1"/></symbol>
+<symbol id="aui-i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M10.3 3.5h3.4l.5 2.4 1.5.9 2.3-.8 1.7 3-1.8 1.6v1.8l1.8 1.6-1.7 3-2.3-.8-1.5.9-.5 2.4h-3.4l-.5-2.4-1.5-.9-2.3.8-1.7-3 1.8-1.6v-1.8L4.8 8.6l1.7-3 2.3.8 1.5-.9z"/></symbol>
+<symbol id="aui-i-magnifying-glass" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></symbol>
+<symbol id="aui-i-caret-down" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></symbol>
+<symbol id="aui-i-arrow-square-out" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8.5 8.5M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/></symbol>
+<symbol id="aui-i-book" viewBox="0 0 24 24"><path d="M12 6.5C10.5 5 8 4.5 4.5 4.5v13c3.5 0 6 .5 7.5 2 1.5-1.5 4-2 7.5-2v-13c-3.5 0-6 .5-7.5 2zM12 6.5v13"/></symbol>
+<symbol id="aui-i-lifebuoy" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M5.6 5.6l3.9 3.9M14.5 14.5l3.9 3.9M18.4 5.6l-3.9 3.9M9.5 14.5l-3.9 3.9"/></symbol>
+<symbol id="aui-i-table" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16"/></symbol>
+<symbol id="aui-i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></symbol>
+<symbol id="aui-i-flow" viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="5" rx="1.5"/><rect x="14" y="15" width="7" height="5" rx="1.5"/><path d="M6.5 9v2.5a3 3 0 0 0 3 3H14"/></symbol>
+<symbol id="aui-i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></symbol>
+<symbol id="aui-i-play" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></symbol>
+<symbol id="aui-i-undo" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 1 2.6 5.9M4 5v5h5"/></symbol>
+<symbol id="aui-i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20c.8-3.6 3.8-5.5 7.5-5.5s6.7 1.9 7.5 5.5"/></symbol>
+<symbol id="aui-i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12L20 3M17 6l3 3"/></symbol>
+<symbol id="aui-i-storefront" viewBox="0 0 24 24"><path d="M3.5 9.5L5 4.5h14l1.5 5a2.8 2.8 0 0 1-5.2 1.5 2.8 2.8 0 0 1-5.3 0 2.8 2.8 0 0 1-5.3 0A2.8 2.8 0 0 1 3.5 9.5zM5 12.5V20h14v-7.5M10 20v-4.5h4V20"/></symbol>
+<symbol id="aui-i-file-text" viewBox="0 0 24 24"><path d="M6 4a.5.5 0 0 1 .5-.5H14l5 5V20a.5.5 0 0 1-.5.5h-12A.5.5 0 0 1 6 20z"/><path d="M14 3.5v5h5M9 13h6M9 16.5h6"/></symbol>
+<symbol id="aui-i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="aui-i-bell" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15zM10 21h4"/></symbol>
+<symbol id="aui-i-chat" viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v10a1.5 1.5 0 0 1-1.5 1.5H10l-4.5 3.5V17h0A1.5 1.5 0 0 1 4 15.5z"/></symbol>
+<symbol id="aui-i-stop" viewBox="0 0 24 24"><path d="M8.5 3h7L21 8.5v7L15.5 21h-7L3 15.5v-7z"/><path d="M12 8v5M12 16v.1"/></symbol>
+<symbol id="aui-i-send" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+<symbol id="aui-i-chart" viewBox="0 0 24 24"><path d="M4 4v16h16M8 15l3.5-4 3 3L20 8"/></symbol>
+<symbol id="aui-i-pencil" viewBox="0 0 24 24"><path d="M5 19l1-4L16.5 4.5a2 2 0 0 1 3 3L9 18z"/></symbol>
+<symbol id="aui-i-gears" viewBox="0 0 24 24"><circle cx="9" cy="14" r="2.2"/><path d="M9 8.5v1.2M9 18.3v1.2M3.5 14h1.2M13.3 14h1.2M5.1 10.1l.9.9M12 17l.9.9M12.9 10.1l-.9.9M6 17l-.9.9"/><circle cx="17" cy="7" r="1.6"/><path d="M17 3.4v.9M17 9.7v.9M13.4 7h.9M19.7 7h.9M14.5 4.5l.6.6M18.9 8.9l.6.6M19.5 4.5l-.6.6M15.1 8.9l-.6.6"/></symbol>
+</svg>

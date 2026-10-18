@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Belayline\Plugin\Support;
 
+use Belayline\Plugin\Admin\AdminUrls;
+
 /**
  * Routes a NEW pending approval to the humans who must clear it (roadmap 0.2
  * "approval notifications"): an email, and optionally a webhook for Slack or
@@ -131,6 +133,6 @@ final class ApprovalNotifier
 
     private function reviewUrl(): string
     {
-        return admin_url('tools.php?page=belayline-pending');
+        return AdminUrls::tab(AdminUrls::PENDING);
     }
 }

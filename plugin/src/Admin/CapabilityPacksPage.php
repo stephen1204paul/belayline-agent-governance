@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Belayline\Plugin\Admin;
 
 use Belayline\Packs\Pack;
+use Belayline\Plugin\Admin\Ui\Html;
+use Belayline\Plugin\Admin\Ui\Icons;
+use Belayline\Plugin\Admin\Ui\Tiers;
 use Belayline\Plugin\Identity\IdentityChain;
 use Belayline\Plugin\Identity\IdentityProvider;
 use Belayline\Plugin\Support\AdminChangeRecorder;
@@ -15,8 +18,9 @@ use Belayline\Plugin\Support\IpAllowlist;
 use Belayline\Plugin\Support\ShadowMode;
 
 /**
- * Tools → "Agent Capability Packs": the human side of credential scoping,
- * and the emergency stop that overrides all of it.
+ * The Packs tab (and the environment and IP cards of the Settings tab): the
+ * human side of credential scoping, and the handlers behind the emergency stop
+ * that overrides all of it.
  *
  * Shows the pack catalog (read-only) and lets an admin bind each identity a
  * configured {@see IdentityProvider} exposes (an application password, a user,
@@ -36,24 +40,27 @@ use Belayline\Plugin\Support\ShadowMode;
  * changed: the log must be able to say who widened a credential or switched
  * enforcement off, not only what the agent did afterwards.
  *
- * The emergency stop ({@see PauseSwitch}) sits first on the page and, while
- * it holds, as a banner on every wp-admin screen: an operator who has just
- * noticed an agent misbehaving must not have to find this page to stop it.
+ * The emergency stop ({@see PauseSwitch}) sits at the top of every tab's right
+ * rail ({@see Ui\Shell}) and, while it holds, as a banner on every wp-admin
+ * screen: an operator who has just noticed an agent misbehaving must not have to
+ * find this page to stop it. This class owns its two admin-post handlers.
  */
 final class CapabilityPacksPage
 {
-    private const SLUG = 'belayline-packs';
     private const CAP = 'manage_options';
     private const SAVE = 'belayline_save_pack_bindings';
     private const SHADOW = 'belayline_save_shadow_packs';
-    private const PAUSE = 'belayline_pause';
-    private const RESUME = 'belayline_resume';
+    public const PAUSE = 'belayline_pause';
+    public const RESUME = 'belayline_resume';
     private const REBIND = 'belayline_rebind_environment';
     private const RENEW_SHADOW = 'belayline_renew_shadow_pack';
     private const IP = 'belayline_save_ip_allowlist';
 
     /** DOM id of the row a deep link asked to bind; the page scrolls to and highlights it. */
     private const PREFILL_ROW = 'belayline-bind-prefill';
+
+    /** Rows listed per pack before "n more". */
+    private const PACK_ROWS = 12;
 
     /** Observation windows offered on the shadow form, in days; the last is the default. */
     private const SHADOW_DAYS = [1, 3, 7];
@@ -66,12 +73,12 @@ final class CapabilityPacksPage
         private readonly PauseSwitch $pause = new PauseSwitch(),
         private readonly ?EnvironmentGuard $environment = null,
         private readonly IpAllowlist $ip = new IpAllowlist(),
+        private readonly ?PackOverview $overview = null,
     ) {
     }
 
     public function register(): void
     {
-        add_action('admin_menu', [$this, 'menu']);
         add_action('admin_post_' . self::SAVE, [$this, 'save']);
         add_action('admin_post_' . self::SHADOW, [$this, 'saveShadow']);
         add_action('admin_post_' . self::PAUSE, [$this, 'pauseAction']);
@@ -82,40 +89,67 @@ final class CapabilityPacksPage
         add_action('admin_notices', [$this, 'pausedNotice']);
     }
 
-    public function menu(): void
-    {
-        add_management_page(
-            __('Agent Capability Packs', 'belayline-agent-governance'),
-            __('Agent Capability Packs', 'belayline-agent-governance'),
-            self::CAP,
-            self::SLUG,
-            [$this, 'render']
-        );
-    }
-
     public function render(): void
     {
         if (!current_user_can(self::CAP)) {
             return;
         }
+        $this->renderMain();
+    }
 
+    /** The Packs tab, minus the abilities card (which {@see AbilitiesPage} renders): the catalog, then the bindings. */
+    public function renderMain(): void
+    {
         $registry = $this->packs->registry();
 
-        echo '<div class="wrap">';
-        echo '<h1>' . esc_html__('Agent Capability Packs', 'belayline-agent-governance') . '</h1>';
-        echo '<p>' . esc_html__('A pack is a credentialed, purpose-scoped view of the verb catalog. Enforced in the gate, not via WP roles. A pack that denies a tier class is injection-proof against that class by construction.', 'belayline-agent-governance') . '</p>';
+        echo '<p class="aui-page-intro">' . esc_html__('Packs decide what each agent may do. Anything not in a pack is refused. Choose how each ability behaves, and which roles, people and keys use which pack.', 'belayline-agent-governance') . '</p>';
 
-        if (isset($_GET['belayline_saved'])) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only flash.
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Capability pack bindings saved.', 'belayline-agent-governance') . '</p></div>';
+        if (isset($_GET['belayline_saved']) && $_GET['belayline_saved'] === '1') { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only flash.
+            echo Html::notice('success', __('Saved.', 'belayline-agent-governance'), __('The change applies on the next agent call.', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
         }
 
-        $this->renderEmergencyStop();
-        $this->renderEnvironment();
-        $this->renderIpAllowlist();
         $this->renderCatalog($registry->names());
-        $this->renderBindings($registry->names(), $registry->defaultPack(), $registry->bindings(), $this->bindPrefill($registry->names()));
+    }
 
-        echo '</div>';
+    /** The bindings card, rendered after the abilities card by the Packs tab. */
+    public function renderBindingsCard(): void
+    {
+        $registry = $this->packs->registry();
+        $this->renderBindings($registry->names(), $registry->defaultPack(), $registry->bindings(), $this->bindPrefill($registry->names()));
+    }
+
+    /** Rail widget: who is bound to which pack right now. */
+    public function renderRail(): void
+    {
+        $registry = $this->packs->registry();
+        $labels = [];
+        foreach ($this->identity->providers() as $provider) {
+            foreach ($provider->bindableTokens() as $token => $label) {
+                $labels[(string) $token] = $label;
+            }
+        }
+
+        echo '<section class="aui-card"><div class="aui-card-h"><h2 class="aui-card-t">' . esc_html__('Who uses these packs', 'belayline-agent-governance') . '</h2></div><div class="aui-card-b">';
+        $bindings = $registry->bindings();
+        if ($bindings === []) {
+            echo '<p class="aui-muted">' . esc_html(sprintf(
+                /* translators: %s: pack name */
+                __('Nobody is bound to a pack yet, so everyone uses the %s pack.', 'belayline-agent-governance'),
+                $registry->defaultPack()
+            )) . '</p></div></section>';
+
+            return;
+        }
+        echo '<ul class="aui-feed">';
+        foreach ($bindings as $token => $pack) {
+            $icon = str_starts_with((string) $token, 'user:') || str_starts_with((string) $token, 'role:') ? 'user' : 'key';
+            echo '<li>' . Icons::svg($icon) . '<div>' . esc_html($labels[(string) $token] ?? (string) $token) . '<time>' . esc_html($pack) . '</time></div></li>';
+        }
+        echo '</ul><p class="aui-help">' . esc_html(sprintf(
+            /* translators: %s: pack name */
+            __('Everyone else uses the %s pack.', 'belayline-agent-governance'),
+            $registry->defaultPack()
+        )) . '</p></div></section>';
     }
 
     /**
@@ -153,82 +187,23 @@ final class CapabilityPacksPage
     }
 
     /**
-     * The emergency stop, first on the page: one button that denies every
-     * governed call while the audit trail keeps recording, and the way back.
-     * A pause the `belayline_paused` filter forces is shown but offers no
-     * Resume — nothing on this screen can lift it.
-     */
-    private function renderEmergencyStop(): void
-    {
-        echo '<h2>' . esc_html__('Emergency stop', 'belayline-agent-governance') . '</h2>';
-
-        if (!$this->pause->isPaused()) {
-            echo '<p>' . esc_html__('Pausing denies every governed agent call, of every tier, until you resume. Nothing executes and no approval is claimed; each refusal is audited as site_paused, and a shadowed pack is paused like any other.', 'belayline-agent-governance') . '</p>';
-            echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
-            echo '<input type="hidden" name="action" value="' . esc_attr(self::PAUSE) . '">';
-            echo wp_nonce_field(self::PAUSE, '_wpnonce', true, false); // phpcs:ignore WordPress.Security.EscapeOutput -- core-built hidden fields.
-            echo '<p><label>' . esc_html__('Reason', 'belayline-agent-governance') . ' <input type="text" name="reason" class="regular-text" required></label></p>';
-            echo '<p><button type="submit" class="button button-primary">' . esc_html__('Pause all agent actions', 'belayline-agent-governance') . '</button></p>';
-            echo '</form>';
-
-            return;
-        }
-
-        $state = $this->pause->state();
-        echo '<div class="notice notice-error inline"><p><strong>' . esc_html__('All agent actions are paused.', 'belayline-agent-governance') . '</strong> ';
-        if ($state === null) {
-            echo esc_html(sprintf(
-                /* translators: %s filter hook name */
-                __('Forced by the %s filter; it cannot be lifted from this screen.', 'belayline-agent-governance'),
-                PauseSwitch::FILTER
-            ));
-        } else {
-            echo esc_html(sprintf(
-                /* translators: 1: date and time (UTC), 2: user id, 3: reason */
-                __('Since %1$s by user #%2$s. Reason: %3$s', 'belayline-agent-governance'),
-                $state['since'] === null ? '?' : gmdate('Y-m-d H:i', $state['since']) . ' UTC',
-                $state['by'] === null ? '?' : (string) $state['by'],
-                $state['reason'] === '' ? '—' : $state['reason']
-            ));
-        }
-        echo '</p></div>';
-
-        if ($state !== null) {
-            echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
-            echo '<input type="hidden" name="action" value="' . esc_attr(self::RESUME) . '">';
-            echo wp_nonce_field(self::RESUME, '_wpnonce', true, false); // phpcs:ignore WordPress.Security.EscapeOutput -- core-built hidden fields.
-            echo '<p><button type="submit" class="button button-primary">' . esc_html__('Resume agent actions', 'belayline-agent-governance') . '</button></p>';
-            echo '</form>';
-        }
-    }
-
-    /**
      * AS-7 §3.4 items 7, 12: the environment type label, always shown, and —
      * only while a site-binding mismatch is in effect — the Rebind button.
      * `manage_options` + nonce (checked in {@see rebindAction()}); no filter,
      * constant or ability can rebind (item 7). Restores nothing.
      */
-    private function renderEnvironment(): void
+    public function renderEnvironmentCard(): void
     {
-        if ($this->environment === null) {
-            return;
-        }
-
+        echo '<section class="aui-card"><div class="aui-card-h"><div><h2 class="aui-card-t">' . esc_html__('Environment', 'belayline-agent-governance') . '</h2><p class="aui-card-d">'
+            . esc_html__('Production sites are stricter: watch-only (shadow) mode is capped at 24 hours, and turning it on means typing the pack name.', 'belayline-agent-governance') . '</p></div></div><div class="aui-card-b belayline-stack">';
         EnvironmentLabel::render($this->shadow);
 
-        if (!$this->environment->isMismatched()) {
-            return;
+        if ($this->environment !== null && $this->environment->isMismatched()) {
+            echo Html::notice('error', __('This site\'s address changed.', 'belayline-agent-governance'), __("Watch-only windows, grants and approvals that were granted but not yet used have been voided for good. Confirm the new address to carry on.", 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
+            echo Html::postForm(self::REBIND, self::REBIND, Html::backTo(AdminUrls::SETTINGS)); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
+            echo '<button type="submit" class="aui-btn aui-btn--primary">' . esc_html__('Use this address', 'belayline-agent-governance') . '</button></form>';
         }
-
-        echo '<div class="notice notice-error inline"><p>' . esc_html__(
-            "This site's address changed since its shadow windows, grants and approved-but-unclaimed approvals were authorised. Those relaxations have been permanently voided.",
-            'belayline-agent-governance'
-        ) . '</p></div>';
-        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
-        echo '<input type="hidden" name="action" value="' . esc_attr(self::REBIND) . '">';
-        echo wp_nonce_field(self::REBIND, '_wpnonce', true, false); // phpcs:ignore WordPress.Security.EscapeOutput -- core-built hidden fields.
-        echo '<p><button type="submit" class="button button-primary">' . esc_html__('Rebind to this address', 'belayline-agent-governance') . '</button></p>';
-        echo '</form>';
+        echo '</div></section>';
     }
 
     public function rebindAction(): void
@@ -240,43 +215,42 @@ final class CapabilityPacksPage
 
         $this->environment?->rebind();
 
-        wp_safe_redirect(add_query_arg(['page' => self::SLUG], admin_url('tools.php')));
+        wp_safe_redirect(AdminUrls::tab(AdminUrls::SETTINGS));
         exit;
     }
 
     /**
-     * The IP allowlist for application-password and WooCommerce API-key calls.
-     * The saving administrator's own browser session is never IP-checked, so a
-     * list that excludes their address is warned about, not blocked.
+     * The IP allowlist for application-password and WooCommerce API-key calls
+     * (Settings tab). The saving administrator's own browser session is never
+     * IP-checked, so a list that excludes their address is warned about, not blocked.
      */
-    private function renderIpAllowlist(): void
+    public function renderIpAllowlistCard(): void
     {
         $flash = isset($_GET['belayline_ip']) && is_scalar($_GET['belayline_ip']) ? sanitize_key((string) wp_unslash($_GET['belayline_ip'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only flash.
         if ($flash === 'saved') {
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('IP allowlist saved.', 'belayline-agent-governance') . '</p></div>';
+            echo Html::notice('success', __('Saved.', 'belayline-agent-governance'), __('The address list is in effect.', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
         } elseif ($flash === 'warn') {
-            echo '<div class="notice notice-warning"><p>' . esc_html__('IP allowlist saved, but it does not include the address you are using right now. Your browser session is not IP-checked, so you are not locked out; agents calling from that address would be refused.', 'belayline-agent-governance') . '</p></div>';
+            echo Html::notice('warning', __('Saved, but the list does not include the address you are using now.', 'belayline-agent-governance'), __('Your browser session is never checked against it, so you are not locked out. AI apps calling from that address would be refused.', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
         } elseif ($flash === 'invalid') {
-            echo '<div class="notice notice-error"><p>' . esc_html__('Nothing was saved: every line must be an IPv4 or IPv6 address, or a CIDR range such as 203.0.113.0/24.', 'belayline-agent-governance') . '</p></div>';
+            echo Html::notice('error', __('Nothing was saved.', 'belayline-agent-governance'), __('Every line must be an IPv4 or IPv6 address, or a range such as 203.0.113.0/24.', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
         }
 
-        echo '<h2>' . esc_html__('IP allowlist', 'belayline-agent-governance') . '</h2>';
-        echo '<p>' . esc_html__('When set, application-password and WooCommerce API-key calls are refused (ip_not_allowed, audited) unless they come from a listed address. Logged-in browser sessions are never checked. Leave empty to allow every address.', 'belayline-agent-governance') . '</p>';
-        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
-        echo '<input type="hidden" name="action" value="' . esc_attr(self::IP) . '">';
-        echo wp_nonce_field(self::IP, '_wpnonce', true, false); // phpcs:ignore WordPress.Security.EscapeOutput -- core-built hidden fields.
-        echo '<p><label>' . esc_html__('Allowed addresses and ranges, one per line', 'belayline-agent-governance') . '<br>';
-        echo '<textarea name="ip_allowlist" rows="5" class="large-text code">' . esc_textarea(implode("\n", $this->ip->entries())) . '</textarea></label></p>';
-        echo '<p><label>' . esc_html__('Trusted proxies, one per line (only then is X-Forwarded-For read)', 'belayline-agent-governance') . '<br>';
-        echo '<textarea name="trusted_proxies" rows="3" class="large-text code">' . esc_textarea(implode("\n", $this->ip->trustedProxies())) . '</textarea></label></p>';
+        echo '<section class="aui-card"><div class="aui-card-h"><div><h2 class="aui-card-t">' . esc_html__('Allowed addresses', 'belayline-agent-governance') . '</h2><p class="aui-card-d">'
+            . esc_html__('When you list addresses, calls from application passwords and WooCommerce API keys are refused unless they come from one of them. Logged-in browser sessions are never checked. Leave it empty to allow every address.', 'belayline-agent-governance') . '</p></div></div>';
+        echo Html::postForm(self::IP, self::IP, Html::backTo(AdminUrls::SETTINGS)); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
+        echo '<div class="aui-card-b belayline-stack">';
+        echo '<div class="aui-field"><label class="aui-label" for="belayline_ip_allowlist">' . esc_html__('Allowed addresses and ranges, one per line', 'belayline-agent-governance') . '</label>';
+        echo '<textarea class="aui-textarea aui-mono" id="belayline_ip_allowlist" name="ip_allowlist" rows="5">' . esc_textarea(implode("\n", $this->ip->entries())) . '</textarea></div>';
+        echo '<div class="aui-field"><label class="aui-label" for="belayline_trusted_proxies">' . esc_html__('Trusted proxies, one per line', 'belayline-agent-governance') . '</label>';
+        echo '<textarea class="aui-textarea aui-mono" id="belayline_trusted_proxies" name="trusted_proxies" rows="3" aria-describedby="belayline_trusted_proxies_help">' . esc_textarea(implode("\n", $this->ip->trustedProxies())) . '</textarea>';
+        echo '<p class="aui-help" id="belayline_trusted_proxies_help">' . esc_html__('Only requests that arrive through one of these addresses have their forwarded client address (X-Forwarded-For) trusted. Leave empty if you are not behind a proxy or CDN.', 'belayline-agent-governance') . '</p></div>';
         $current = $this->ip->clientIp();
-        echo '<p><small>' . esc_html(sprintf(
+        echo '<p class="aui-help">' . esc_html(sprintf(
             /* translators: %s: the administrator's current IP address */
             __('Your current address: %s', 'belayline-agent-governance'),
             $current ?? __('unknown', 'belayline-agent-governance')
-        )) . '</small></p>';
-        echo '<p><button type="submit" class="button">' . esc_html__('Save IP allowlist', 'belayline-agent-governance') . '</button></p>';
-        echo '</form>';
+        )) . '</p></div>';
+        echo '<div class="aui-card-f"><button type="submit" class="aui-btn aui-btn--secondary">' . esc_html__('Save address list', 'belayline-agent-governance') . '</button></div></form></section>';
     }
 
     public function ipAllowlistAction(): void
@@ -292,7 +266,7 @@ final class CapabilityPacksPage
         );
 
         $flash = !$result['saved'] ? 'invalid' : ($result['excludesCurrentIp'] ? 'warn' : 'saved');
-        wp_safe_redirect(add_query_arg(['page' => self::SLUG, 'belayline_ip' => $flash], admin_url('tools.php')));
+        wp_safe_redirect(AdminUrls::tab(AdminUrls::SETTINGS, ['belayline_ip' => $flash]));
         exit;
     }
 
@@ -327,10 +301,7 @@ final class CapabilityPacksPage
 
         $this->applyRenewShadow($pack);
 
-        wp_safe_redirect(add_query_arg(
-            ['page' => self::SLUG, 'belayline_saved' => '1'],
-            admin_url('tools.php')
-        ));
+        wp_safe_redirect(AdminUrls::tab(AdminUrls::PACKS, ['belayline_saved' => '1']));
         exit;
     }
 
@@ -357,7 +328,7 @@ final class CapabilityPacksPage
 
         echo '<div class="notice notice-error"><p><strong>'
             . esc_html__('Belayline Agent Governance: all agent actions are paused.', 'belayline-agent-governance')
-            . '</strong> <a href="' . esc_url(admin_url('tools.php?page=' . self::SLUG)) . '">'
+            . '</strong> <a href="' . esc_url(AdminUrls::tab(AdminUrls::OVERVIEW)) . '">'
             . esc_html__('Review or resume', 'belayline-agent-governance')
             . '</a></p></div>';
     }
@@ -372,7 +343,7 @@ final class CapabilityPacksPage
         // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitizePauseReason() unslashes and sanitizes the raw value itself; see its docblock.
         $this->applyPause(self::sanitizePauseReason($_POST['reason'] ?? null));
 
-        wp_safe_redirect(add_query_arg(['page' => self::SLUG], admin_url('tools.php')));
+        wp_safe_redirect(self::backUrl());
         exit;
     }
 
@@ -404,8 +375,15 @@ final class CapabilityPacksPage
 
         $this->applyResume();
 
-        wp_safe_redirect(add_query_arg(['page' => self::SLUG], admin_url('tools.php')));
+        wp_safe_redirect(self::backUrl());
         exit;
+    }
+
+    /** Back to the tab the stop button was pressed on (a whitelisted tab name; the nonce was checked first). */
+    private static function backUrl(): string
+    {
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- only called after check_admin_referer(); the value is reduced to a known tab name.
+        return AdminUrls::tab(AdminUrls::safeTab(isset($_POST['belayline_tab']) ? wp_unslash($_POST['belayline_tab']) : null));
     }
 
     /**
@@ -436,67 +414,35 @@ final class CapabilityPacksPage
         $effective = $this->shadow->expiries();
         $isProduction = $this->shadow->isProduction();
 
-        echo '<h2>' . esc_html__('Pack catalog', 'belayline-agent-governance') . '</h2>';
-        if ($isProduction) {
-            echo '<p><em>' . esc_html__('This site is production: shadow windows are capped at 24 hours, and enabling one requires typing the pack name to confirm.', 'belayline-agent-governance') . '</em></p>';
+        $renew = [];
+        echo '<section class="aui-card" data-aui-filterbox aria-labelledby="belayline-packs-t"><div class="aui-card-h"><div><h2 class="aui-card-t" id="belayline-packs-t">'
+            . esc_html__('Packs', 'belayline-agent-governance') . '</h2><p class="aui-card-d">'
+            . esc_html__('Each pack lists what an agent bound to it can do on this site, and what it needs your approval for.', 'belayline-agent-governance') . '</p></div></div>';
+        echo '<div class="aui-toolbar"><div class="aui-search">' . Icons::svg('magnifying-glass') . '<input class="aui-input" type="search" placeholder="' . esc_attr__('Search abilities', 'belayline-agent-governance')
+            . '" aria-label="' . esc_attr__('Search abilities', 'belayline-agent-governance') . '" data-aui-search></div>';
+        echo '<div class="aui-seg" role="group" aria-label="' . esc_attr__('Show', 'belayline-agent-governance') . '" data-aui-filter>';
+        foreach ([['all', __('All', 'belayline-agent-governance')], [Tiers::FREE, Tiers::label(Tiers::FREE)], [Tiers::APPROVAL, Tiers::label(Tiers::APPROVAL)], [Tiers::ALWAYS, Tiers::label(Tiers::ALWAYS)]] as [$value, $label]) {
+            echo '<button type="button" aria-pressed="' . ($value === 'all' ? 'true' : 'false') . '" data-value="' . esc_attr($value) . '">' . esc_html($label) . '</button>';
         }
-        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
-        echo '<input type="hidden" name="action" value="' . esc_attr(self::SHADOW) . '">';
-        echo wp_nonce_field(self::SHADOW, '_wpnonce', true, false); // phpcs:ignore WordPress.Security.EscapeOutput -- core-built hidden fields.
-        echo '<table class="widefat striped"><thead><tr>';
-        $columns = [
-            __('Pack', 'belayline-agent-governance'),
-            __('Allows', 'belayline-agent-governance'),
-            __('Hard-denied (deny_class)', 'belayline-agent-governance'),
-            __('Approval-gated', 'belayline-agent-governance'),
-            __('PII', 'belayline-agent-governance'),
-            __('Shadow (log only)', 'belayline-agent-governance'),
-        ];
-        if ($isProduction) {
-            $columns[] = '';
-        }
-        foreach ($columns as $col) {
-            echo '<th>' . esc_html($col) . '</th>';
-        }
-        echo '</tr></thead><tbody>';
+        echo '</div></div>';
 
+        echo Html::postForm(self::SHADOW, self::SHADOW); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
+        echo '<div class="aui-groups">';
         foreach ($names as $name) {
             $pack = $registry->get($name);
             if (!$pack instanceof Pack) {
                 continue;
             }
-            echo '<tr>';
-            echo '<td><code>' . esc_html($pack->name) . '</code></td>';
-            echo '<td>' . $this->codeList($pack->allow) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- esc_html in helper.
-            echo '<td>' . ($pack->denyClass === [] ? '—' : $this->codeList($pack->denyClass)) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- esc_html in helper.
-            echo '<td>' . $this->codeList(array_keys(array_filter($pack->approvalByClass))) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- esc_html in helper.
-            echo '<td>' . esc_html($pack->pii) . '</td>';
             $expiresAt = $stored[$pack->name] ?? null;
-            printf(
-                '<td><label><input type="checkbox" name="shadow[]" value="%s"%s> %s</label>%s',
-                esc_attr($pack->name),
-                checked($expiresAt !== null, true, false),
-                esc_html__('audit only, enforce nothing', 'belayline-agent-governance'),
-                $this->expiryNote($expiresAt, $effective[$pack->name] ?? null), // phpcs:ignore WordPress.Security.EscapeOutput -- esc_html in helper.
-            );
-            if ($isProduction && $expiresAt === null) {
-                printf(
-                    '<br><small>%s <input type="text" name="shadow_confirm[%s]" placeholder="%s"></small>',
-                    esc_html__('type the pack name to enable in production:', 'belayline-agent-governance'),
-                    esc_attr($pack->name),
-                    esc_attr($pack->name),
-                );
+            $this->renderPackGroup($pack, false, $expiresAt, $effective[$pack->name] ?? null, $isProduction);
+            if ($isProduction && $expiresAt !== null) {
+                $renew[] = $pack->name;
             }
-            echo '</td>';
-            if ($isProduction) {
-                echo '<td>' . ($expiresAt !== null ? $this->renewShadowButton($pack->name) : '') . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- esc_* in helper.
-            }
-            echo '</tr>';
         }
+        echo '</div>';
 
-        echo '</tbody></table>';
-        echo '<p>' . esc_html__('A shadowed pack still audits every verdict (marked dry_run) but blocks nothing. Observation ends on its own when the chosen window lapses (7 days at most) and enforcement resumes; every toggle is written to the audit log. Pending approvals are not created for shadowed calls.', 'belayline-agent-governance') . '</p>';
-        echo '<p><label>' . esc_html__('Shadow newly ticked packs for', 'belayline-agent-governance') . ' <select name="shadow_days">';
+        echo '<div class="aui-card-f belayline-footer">';
+        echo '<div class="aui-field"><label class="aui-label" for="belayline_shadow_days">' . esc_html__('Watch newly ticked packs for', 'belayline-agent-governance') . '</label><select class="aui-select" id="belayline_shadow_days" name="shadow_days">';
         foreach (self::SHADOW_DAYS as $days) {
             printf(
                 '<option value="%d"%s>%s</option>',
@@ -509,9 +455,122 @@ final class CapabilityPacksPage
                 )),
             );
         }
-        echo '</select></label></p>';
-        echo '<p><button type="submit" class="button">' . esc_html__('Save shadow mode', 'belayline-agent-governance') . '</button></p>';
-        echo '</form>';
+        echo '</select></div><button type="submit" class="aui-btn aui-btn--secondary">' . esc_html__('Save watch-only settings', 'belayline-agent-governance') . '</button>';
+        echo '</div></form>';
+        // The "Renew" buttons submit these (HTML forms cannot nest inside the shadow form).
+        foreach ($renew as $name) {
+            echo Html::postForm(self::RENEW_SHADOW, self::RENEW_SHADOW, '<input type="hidden" name="pack" value="' . esc_attr($name) . '">', 'id="belayline-renew-' . esc_attr(sanitize_key($name)) . '"') . '</form>'; // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
+        }
+        echo '</section>';
+    }
+
+    /**
+     * One pack as a collapsible group: its summary line, what its abilities do,
+     * its standing rules in plain words, and the watch-only (shadow) switch.
+     */
+    private function renderPackGroup(Pack $pack, bool $open, ?int $storedExpiry, ?int $effectiveExpiry, bool $isProduction): void
+    {
+        $view = $this->overview?->forPack($pack);
+        $id = 'belayline-pack-' . sanitize_key($pack->name);
+        $counts = $view['counts'] ?? [];
+        $total = $view === null ? 0 : count($view['rows']);
+
+        echo '<div class="aui-group"><div class="aui-group-h"><button type="button" class="aui-group-toggle" aria-expanded="' . ($open ? 'true' : 'false') . '" aria-controls="' . esc_attr($id) . '">'
+            . '<span class="aui-group-name">' . esc_html($pack->name) . '</span>';
+        if ($storedExpiry !== null || $effectiveExpiry !== null) {
+            echo ' ' . Html::badge('warn', __('Watch only', 'belayline-agent-governance'), 'clock'); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::badge() escapes.
+        }
+        echo '<span class="aui-leader"></span>';
+        if ($view !== null) {
+            echo Tiers::metaSpan($total, $counts, false); // phpcs:ignore WordPress.Security.EscapeOutput -- metaSpan() escapes.
+        }
+        echo Icons::svg('caret-down') . '</button></div><div class="aui-group-b" id="' . esc_attr($id) . '"' . ($open ? '' : ' hidden') . '>';
+
+        if ($view !== null) {
+            $shown = array_slice($view['rows'], 0, self::PACK_ROWS);
+            foreach ($shown as $row) {
+                echo '<div class="aui-item" data-kind="' . esc_attr($row['tier']) . '"><div class="aui-grow"><div class="aui-item-name">' . esc_html($row['label']);
+                if ($row['label'] !== $row['name']) {
+                    echo ' <code>' . esc_html($row['name']) . '</code>';
+                }
+                echo '</div></div>' . Tiers::badge($row['tier']) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput -- Tiers::badge() escapes.
+            }
+            $extra = count($view['rows']) - count($shown);
+            if ($extra > 0 || $view['refused'] > 0 || $shown === []) {
+                $notes = [];
+                if ($extra > 0) {
+                    /* translators: %d: number of abilities not listed */
+                    $notes[] = sprintf(_n('%d more ability not shown', '%d more abilities not shown', $extra, 'belayline-agent-governance'), $extra);
+                }
+                if ($view['refused'] > 0) {
+                    /* translators: %d: number of abilities this pack refuses */
+                    $notes[] = sprintf(_n('%d registered ability is refused by this pack', '%d registered abilities are refused by this pack', $view['refused'], 'belayline-agent-governance'), $view['refused']);
+                }
+                if ($shown === []) {
+                    $notes[] = __('This pack lets no registered ability run.', 'belayline-agent-governance');
+                }
+                echo '<div class="aui-item"><span class="aui-muted">' . esc_html(implode('. ', $notes)) . '.</span></div>';
+            }
+        }
+
+        echo '<div class="aui-card-b belayline-stack">' . $this->packRules($pack); // phpcs:ignore WordPress.Security.EscapeOutput -- packRules() escapes.
+        printf(
+            '<label class="belayline-check"><input type="checkbox" name="shadow[]" value="%s"%s> <span><strong>%s</strong> %s%s</span></label>',
+            esc_attr($pack->name),
+            checked($storedExpiry !== null, true, false),
+            esc_html__('Watch only (shadow mode).', 'belayline-agent-governance'),
+            esc_html__('Record what would happen and block nothing.', 'belayline-agent-governance'),
+            $this->expiryNote($storedExpiry, $effectiveExpiry), // phpcs:ignore WordPress.Security.EscapeOutput -- esc_html in helper.
+        );
+        if ($isProduction && $storedExpiry === null) {
+            printf(
+                '<div class="aui-field"><label class="aui-label" for="belayline-confirm-%1$s">%2$s</label><input class="aui-input belayline-narrow" type="text" id="belayline-confirm-%1$s" name="shadow_confirm[%3$s]" placeholder="%3$s" autocomplete="off"></div>',
+                esc_attr(sanitize_key($pack->name)),
+                esc_html__('To turn it on in production, type the pack name', 'belayline-agent-governance'),
+                esc_attr($pack->name),
+            );
+        }
+        if ($isProduction && $storedExpiry !== null) {
+            echo $this->renewShadowButton($pack->name); // phpcs:ignore WordPress.Security.EscapeOutput -- esc_* in helper.
+        }
+        echo '</div></div></div>';
+    }
+
+    /** A pack's standing rules in plain words. */
+    private function packRules(Pack $pack): string
+    {
+        $blocked = [];
+        foreach ($pack->denyClass as $class) {
+            $blocked[] = match ($class) {
+                'tier1' => __('changes to your site', 'belayline-agent-governance'),
+                'tier2' => __('actions that cannot be undone', 'belayline-agent-governance'),
+                default => $class,
+            };
+        }
+        $out = '<dl class="aui-kv">';
+        $out .= '<dt>' . esc_html__('Never allowed', 'belayline-agent-governance') . '</dt><dd>' . esc_html($blocked === [] ? '—' : implode(', ', $blocked)) . '</dd>';
+        $out .= '<dt>' . esc_html__('Customer details', 'belayline-agent-governance') . '</dt><dd>' . esc_html($pack->redactsPii() ? __('Hidden from the agent and the log', 'belayline-agent-governance') : __('Shown in full', 'belayline-agent-governance')) . '</dd>';
+        if ($pack->hasRateLimits()) {
+            $parts = [];
+            if (($pack->limits['calls_per_minute'] ?? null) !== null) {
+                /* translators: %d: calls per minute */
+                $parts[] = sprintf(__('%d per minute', 'belayline-agent-governance'), (int) $pack->limits['calls_per_minute']);
+            }
+            if (($pack->limits['calls_per_hour'] ?? null) !== null) {
+                /* translators: %d: calls per hour */
+                $parts[] = sprintf(__('%d per hour', 'belayline-agent-governance'), (int) $pack->limits['calls_per_hour']);
+            }
+            $out .= '<dt>' . esc_html__('Call limit', 'belayline-agent-governance') . '</dt><dd>' . esc_html(implode(', ', $parts)) . '</dd>';
+        }
+        if ($pack->hasArgumentCaps()) {
+            $out .= '<dt>' . esc_html__('Spending and size caps', 'belayline-agent-governance') . '</dt><dd>' . esc_html(sprintf(
+                /* translators: %d: number of caps */
+                _n('%d cap', '%d caps', count($pack->argumentCaps), 'belayline-agent-governance'),
+                count($pack->argumentCaps)
+            )) . '</dd>';
+        }
+
+        return $out . '</dl>';
     }
 
     public function saveShadow(): void
@@ -533,10 +592,7 @@ final class CapabilityPacksPage
 
         $this->applyShadow($posted, $days, $confirmations);
 
-        wp_safe_redirect(add_query_arg(
-            ['page' => self::SLUG, 'belayline_saved' => '1'],
-            admin_url('tools.php')
-        ));
+        wp_safe_redirect(AdminUrls::tab(AdminUrls::PACKS, ['belayline_saved' => '1']));
         exit;
     }
 
@@ -623,26 +679,23 @@ final class CapabilityPacksPage
             return '';
         }
 
-        return '<br><small>' . esc_html($note) . '</small>';
+        return '<br><span class="aui-muted">' . esc_html($note) . '</span>';
     }
 
     /** AS-7 §3.4 item 9: the production "Renew for 24h" re-confirmation button for an already-shadowed pack. */
     private function renewShadowButton(string $pack): string
     {
-        $out = '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
-        $out .= '<input type="hidden" name="action" value="' . esc_attr(self::RENEW_SHADOW) . '">';
-        $out .= '<input type="hidden" name="pack" value="' . esc_attr($pack) . '">';
-        $out .= wp_nonce_field(self::RENEW_SHADOW, '_wpnonce', true, false);
-        $out .= '<button type="submit" class="button button-small">' . esc_html__('Renew for 24h', 'belayline-agent-governance') . '</button>';
-        $out .= '</form>';
-
-        return $out;
+        // A separate form cannot nest inside the shadow form, so the button
+        // posts to the same handler through the `form` attribute.
+        return '<button type="submit" class="aui-btn aui-btn--ghost aui-btn--sm" form="belayline-renew-' . esc_attr(sanitize_key($pack)) . '">'
+            . esc_html__('Renew for 24 hours', 'belayline-agent-governance') . '</button>';
     }
 
     /**
-     * One section per configured {@see IdentityProvider}. Renders a helpful
-     * empty-state line instead of an empty form when NO provider has any
-     * bindable token (e.g. WooCommerce inactive and no users beyond the admin).
+     * The bindings card: one table per configured {@see IdentityProvider}.
+     * Renders a helpful empty-state line instead of an empty form when NO
+     * provider has any bindable token (e.g. WooCommerce inactive and no users
+     * beyond the admin).
      *
      * @param list<string>          $names
      * @param array<string, string> $bindings
@@ -650,8 +703,12 @@ final class CapabilityPacksPage
      */
     private function renderBindings(array $names, string $default, array $bindings, ?array $prefill = null): void
     {
-        echo '<h2 style="margin-top:2em;">' . esc_html__('Credential bindings', 'belayline-agent-governance') . '</h2>';
-        echo '<p>' . esc_html__('Bind a credential or role to a pack. Unbound tokens use the default pack.', 'belayline-agent-governance') . '</p>';
+        echo '<section class="aui-card" aria-labelledby="belayline-bindings-t"><div class="aui-card-h"><div><h2 class="aui-card-t" id="belayline-bindings-t">' . esc_html__('Who uses which pack', 'belayline-agent-governance') . '</h2><p class="aui-card-d">'
+            . esc_html(sprintf(
+                /* translators: %s: default pack name */
+                __('Choose a pack for each role, person, application password or API key. Anything left on the default uses the %s pack.', 'belayline-agent-governance'),
+                $default
+            )) . '</p></div></div>';
 
         $providers = array_values(array_filter(
             $this->identity->providers(),
@@ -659,30 +716,33 @@ final class CapabilityPacksPage
         ));
 
         if ($providers === []) {
-            echo '<p><em>' . esc_html__('No bindable credentials or roles were found yet. Bindings will appear here once an identity provider (a user, a role, or an active integration) has something to bind.', 'belayline-agent-governance') . '</em></p>';
+            echo '<div class="aui-empty"><span class="aui-tile">' . Icons::svg('key', 'aui-i--lg') . '</span><h3 class="aui-card-t">' . esc_html__('Nothing to bind yet', 'belayline-agent-governance') . '</h3><p>'
+                . esc_html__('Roles, people, application passwords and API keys show up here as soon as there are any.', 'belayline-agent-governance') . '</p></div></section>';
 
             return;
         }
 
-        if ($prefill !== null) {
-            echo '<div class="notice notice-info"><p>' . esc_html(sprintf(
-                /* translators: 1: role or user display name, 2: capability pack name */
-                __('Site Agent asked to bind %1$s to %2$s. Review and Save.', 'belayline-agent-governance'),
-                $prefill['label'],
-                $prefill['pack']
-            )) . '</p></div>';
-        }
-
-        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" data-aui-form>';
         echo '<input type="hidden" name="action" value="' . esc_attr(self::SAVE) . '">';
         echo wp_nonce_field(self::SAVE, '_wpnonce', true, false); // phpcs:ignore WordPress.Security.EscapeOutput -- wp_nonce_field returns safe markup.
+
+        if ($prefill !== null) {
+            echo '<div class="aui-card-b">' . Html::notice('info', __('Site Agent asked to use a pack.', 'belayline-agent-governance'), sprintf(
+                /* translators: 1: role or user display name, 2: capability pack name */
+                __('It would like %1$s to use the %2$s pack. Check the highlighted row and save.', 'belayline-agent-governance'),
+                $prefill['label'],
+                $prefill['pack']
+            )) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
+        }
 
         foreach ($providers as $provider) {
             $this->renderProviderSection($provider, $names, $default, $bindings, $prefill);
         }
 
-        echo '<p><button type="submit" class="button button-primary">' . esc_html__('Save bindings', 'belayline-agent-governance') . '</button></p>';
-        echo '</form>';
+        echo '<div class="aui-savebar"><span class="aui-note">' . esc_html__('Changes apply on the agent\'s next call.', 'belayline-agent-governance') . '</span>'
+            . '<button type="button" class="aui-btn aui-btn--secondary" data-aui-discard>' . esc_html__('Discard', 'belayline-agent-governance') . '</button>'
+            . '<button type="submit" class="aui-btn aui-btn--primary">' . esc_html__('Save changes', 'belayline-agent-governance') . '</button></div>';
+        echo '</form></section>';
 
         if ($prefill !== null) {
             echo '<script>document.getElementById("' . self::PREFILL_ROW . '")?.scrollIntoView({block:"center"});</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- static constant.
@@ -697,39 +757,41 @@ final class CapabilityPacksPage
     private function renderProviderSection(IdentityProvider $provider, array $names, string $default, array $bindings, ?array $prefill = null): void
     {
         $tokens = $provider->bindableTokens();
+        $heading = 'belayline-prov-' . substr(md5($provider->label()), 0, 8);
 
-        echo '<h3>' . esc_html($provider->label()) . '</h3>';
-        echo '<table class="widefat striped"><thead><tr>';
-        foreach ([__('Token', 'belayline-agent-governance'), __('Description', 'belayline-agent-governance'), __('Pack', 'belayline-agent-governance')] as $col) {
-            echo '<th>' . esc_html($col) . '</th>';
+        echo '<div class="aui-card-b belayline-provider"><h3 class="aui-label-caps" id="' . esc_attr($heading) . '">' . esc_html($provider->label()) . '</h3></div>';
+        echo '<div class="aui-table-wrap" tabindex="0" role="region" aria-labelledby="' . esc_attr($heading) . '"><table class="aui-table" aria-labelledby="' . esc_attr($heading) . '"><thead><tr>';
+        foreach ([__('Credential', 'belayline-agent-governance'), __('Pack', 'belayline-agent-governance')] as $col) {
+            echo '<th scope="col">' . esc_html($col) . '</th>';
         }
         echo '</tr></thead><tbody>';
 
         foreach ($tokens as $token => $description) {
+            $token = (string) $token;
             $current = $bindings[$token] ?? '';
-            $asked = $prefill !== null && $prefill['token'] === (string) $token;
+            $asked = $prefill !== null && $prefill['token'] === $token;
             if ($asked) {
                 $current = $prefill['pack'];
             }
             echo $asked
-                ? '<tr id="' . esc_attr(self::PREFILL_ROW) . '" style="outline:2px solid #2271b1;background:#f0f6fc;">'
+                ? '<tr id="' . esc_attr(self::PREFILL_ROW) . '" class="is-highlight">'
                 : '<tr>'; // phpcs:ignore WordPress.Security.EscapeOutput -- static markup plus esc_attr'd constant.
-            echo '<td><code>' . esc_html($token) . '</code></td>';
-            echo '<td>' . esc_html($description) . '</td>';
-            echo '<td>' . $this->packSelect($token, $names, $default, $current) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- esc_* in helper.
+            $selectId = 'belayline-bind-' . substr(md5($token), 0, 10);
+            echo '<td><label for="' . esc_attr($selectId) . '">' . esc_html($description !== '' ? $description : $token) . '</label> <code class="aui-code aui-muted">' . esc_html($token) . '</code></td>';
+            echo '<td>' . $this->packSelect($selectId, $token, $names, $default, $current) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- esc_* in helper.
             echo '</tr>';
         }
 
-        echo '</tbody></table>';
+        echo '</tbody></table></div>';
     }
 
     /**
      * @param list<string> $names
      */
-    private function packSelect(string $subject, array $names, string $default, string $current): string
+    private function packSelect(string $id, string $subject, array $names, string $default, string $current): string
     {
-        $out = '<select name="bindings[' . esc_attr($subject) . ']">';
-        $out .= '<option value="">' . esc_html(sprintf(/* translators: %s default pack name */ __('(default — %s)', 'belayline-agent-governance'), $default)) . '</option>';
+        $out = '<select class="aui-select" id="' . esc_attr($id) . '" name="bindings[' . esc_attr($subject) . ']">';
+        $out .= '<option value="">' . esc_html(sprintf(/* translators: %s default pack name */ __('Default (%s)', 'belayline-agent-governance'), $default)) . '</option>';
         foreach ($names as $name) {
             $out .= '<option value="' . esc_attr($name) . '"' . selected($current, $name, false) . '>' . esc_html($name) . '</option>';
         }
@@ -750,10 +812,7 @@ final class CapabilityPacksPage
 
         $this->applyBindings($posted);
 
-        wp_safe_redirect(add_query_arg(
-            ['page' => self::SLUG, 'belayline_saved' => '1'],
-            admin_url('tools.php')
-        ));
+        wp_safe_redirect(AdminUrls::tab(AdminUrls::PACKS, ['belayline_saved' => '1']));
         exit;
     }
 
@@ -791,18 +850,5 @@ final class CapabilityPacksPage
                 $this->changes->bindingChanged((string) $subject, $from, $to);
             }
         }
-    }
-
-    /** @param list<string> $items */
-    private function codeList(array $items): string
-    {
-        if ($items === []) {
-            return '—';
-        }
-
-        return implode(' ', array_map(
-            static fn (string $i): string => '<code style="font-size:11px;">' . esc_html($i) . '</code>',
-            $items
-        ));
     }
 }

@@ -146,8 +146,9 @@ final class AbilityReviewsTest extends TestCase
         ob_start();
         $page->render();
         $html = (string) ob_get_clean();
-        $this->assertMatchesRegularExpression('#name="tier\[acme/list\]">.*?value="read" selected#s', $html);
-        $this->assertDoesNotMatchRegularExpression('#name="tier\[acme/wipe\]">(?:(?!</select>).)*selected#s', $html);
+        $this->assertMatchesRegularExpression('#data-name="tier\[acme/list\]"(?:(?!</div>).)*data-value="read" aria-pressed="true"#s', $html);
+        $this->assertMatchesRegularExpression('#data-name="tier\[acme/list\]"(?:(?!</div>).)*data-value="" aria-pressed="false"#s', $html);
+        $this->assertMatchesRegularExpression('#data-name="tier\[acme/wipe\]"(?:(?!</div>).)*data-value="" aria-pressed="true"#s', $html, 'no suggestion: Not reviewed stays selected');
 
         // ...but nothing is stored, governed or callable before a save.
         $this->assertSame('unreviewed', $reviews->status('acme/list'));

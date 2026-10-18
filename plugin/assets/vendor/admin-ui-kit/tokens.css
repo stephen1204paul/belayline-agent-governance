@@ -1,0 +1,63 @@
+/* Admin UI Kit tokens. Scoped to .aui so nothing leaks into wp-admin. */
+.aui {
+  /* Type */
+  --aui-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  --aui-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Surfaces */
+  --aui-bg: #F6F7F9;
+  --aui-surface: #FFFFFF;
+  --aui-inset: #F3F4F6;
+  --aui-inset-strong: #E9ECF0;
+  --aui-border: rgba(15, 23, 42, 0.08);
+  --aui-border-strong: rgba(15, 23, 42, 0.16);
+  --aui-control: rgba(15, 23, 42, 0.28);
+
+  /* Four text levels */
+  --aui-text: #111827;
+  --aui-text-2: #374151;
+  --aui-text-3: #5B6574;
+  --aui-text-4: #9AA3B0; /* faint: decoration and disabled only, never body text */
+
+  /* Status (meaning only), each with a tinted background and border */
+  --aui-ok: #15803D;      --aui-ok-bg: #ECFDF3;   --aui-ok-line: #BBE5CB;
+  --aui-warn: #B45309;    --aui-warn-bg: #FFF7E6; --aui-warn-line: #F2D49B;
+  --aui-bad: #B91C1C;     --aui-bad-bg: #FEF2F2;  --aui-bad-line: #F3C0C0;
+  --aui-info: #1D4ED8;    --aui-info-bg: #EFF4FF; --aui-info-line: #BFD0F7;
+
+  /* Accent: primary actions, active tab, focus. Default = specflux blue */
+  --aui-brand: #4A86C5;   /* mark, non-text highlights (map, sparklines) */
+  --aui-accent: #2B67A8;  /* AA text/controls: buttons, links, active tab, focus */
+  --aui-accent-hover: #235A94;
+  --aui-accent-contrast: #FFFFFF;
+  --aui-accent-soft: rgba(43, 103, 168, 0.08);
+  --aui-accent-tint: #E6EFF9;
+
+  /* Shape and space (4 px grid) */
+  --aui-r-sm: 6px;
+  --aui-r-lg: 8px;
+  --aui-s1: 4px; --aui-s2: 8px; --aui-s3: 12px; --aui-s4: 16px;
+  --aui-s5: 20px; --aui-s6: 24px; --aui-s8: 32px;
+  --aui-pop: 0 8px 24px rgba(15, 23, 42, 0.12);
+
+  /* Motion */
+  --aui-ease: cubic-bezier(0.25, 1, 0.5, 1);
+  --aui-fast: 150ms;
+  --aui-med: 200ms;
+}
+.aui[data-brand="specflux"] {
+  --aui-brand: #4A86C5;
+  --aui-accent: #2B67A8;
+  --aui-accent-hover: #235A94;
+  --aui-accent-contrast: #FFFFFF;
+  --aui-accent-soft: rgba(43, 103, 168, 0.08);
+  --aui-accent-tint: #E6EFF9;
+}
+.aui[data-brand="belayline"] {
+  --aui-brand: #0F766E;
+  --aui-accent: #0F766E;
+  --aui-accent-hover: #115E59;
+  --aui-accent-contrast: #FFFFFF;
+  --aui-accent-soft: rgba(15, 118, 110, 0.08);
+  --aui-accent-tint: #DDF1EE;
+}

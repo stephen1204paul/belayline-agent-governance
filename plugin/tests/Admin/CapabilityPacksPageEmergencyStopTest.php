@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Belayline\Plugin\Tests\Admin;
 
+use Belayline\Plugin\Tests\Fakes\RedirectException;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Belayline\Plugin\Admin\CapabilityPacksPage;
@@ -16,11 +17,11 @@ use Belayline\Plugin\Support\ShadowMode;
 use Belayline\Plugin\Tests\Fakes\InMemoryAuditSink;
 
 /**
- * The emergency stop on the Packs screen: pauseAction()/resumeAction() are
- * exercised only on their refusal paths (both end in wp_safe_redirect() +
- * exit, unreachable under the test shims), success is proven through
- * applyPause()/applyResume(), and the render side (renderEmergencyStop(),
- * pausedNotice()) is proven by output. What a pause does to a governed call
+ * The emergency stop's handlers: pauseAction()/resumeAction() are exercised on
+ * their refusal paths and, through the wp_safe_redirect() shim that throws, on
+ * their redirect target; success is proven through applyPause()/applyResume(),
+ * and the banner (pausedNotice()) by output. The stop control itself lives in the
+ * shell, see ShellTest. What a pause does to a governed call
  * is proven in {@see \Belayline\Plugin\Tests\Verdict\VerdictPipelineStopsTest};
  * the switch itself in {@see \Belayline\Plugin\Tests\Support\PauseSwitchTest}.
  */
@@ -214,7 +215,7 @@ final class CapabilityPacksPageEmergencyStopTest extends TestCase
         $this->assertSame(9, $this->sink->records[0]->toArray()['actor']['wp_user']);
     }
 
-    // --- renderEmergencyStop() / pausedNotice(): output -------------------------
+    // --- pausedNotice(): output (the stop control itself is tested in ShellTest) -------------------------
 
     public function testPausedNoticeIsSilentForAUserWithoutTheCapability(): void
     {
@@ -249,53 +250,34 @@ final class CapabilityPacksPageEmergencyStopTest extends TestCase
         $this->assertStringContainsString('Review or resume', $out);
     }
 
-    public function testRenderShowsNoPauseBannerWhenNotPaused(): void
-    {
-        ob_start();
-        $this->page->render();
-        $out = (string) ob_get_clean();
+    // --- redirect target ------------------------------------------------------
 
-        $this->assertStringContainsString('Emergency stop', $out);
-        $this->assertStringNotContainsString('All agent actions are paused.', $out);
-        $this->assertStringContainsString('Pause all agent actions', $out);
+    public function testPauseActionReturnsToTheTabItWasPressedOn(): void
+    {
+        $_POST = ['_wpnonce' => 'test-nonce', 'reason' => 'runaway bot', 'belayline_tab' => 'pending'];
+
+        try {
+            $this->page->pauseAction();
+            $this->fail('expected the redirect shim to throw');
+        } catch (RedirectException $redirect) {
+            $this->assertSame('https://example.test/wp-admin/admin.php?page=belayline-pending', $redirect->location);
+        }
+
+        $this->assertTrue($this->pause->isPaused());
     }
 
-    public function testRenderShowsTheBannerAndResumeFormForAStoredPause(): void
+    public function testResumeActionFallsBackToTheOverviewForAnUnknownTab(): void
     {
-        $this->pause->pause(7, 'runaway bot');
+        $this->pause->pause(7, 'x');
+        $_POST = ['_wpnonce' => 'test-nonce', 'belayline_tab' => 'https://evil.example/'];
 
-        ob_start();
-        $this->page->render();
-        $out = (string) ob_get_clean();
+        try {
+            $this->page->resumeAction();
+            $this->fail('expected the redirect shim to throw');
+        } catch (RedirectException $redirect) {
+            $this->assertSame('https://example.test/wp-admin/admin.php?page=belayline', $redirect->location);
+        }
 
-        $this->assertStringContainsString('All agent actions are paused.', $out);
-        $this->assertStringContainsString('Since ' . gmdate('Y-m-d H:i', self::NOW) . ' UTC by user #7. Reason: runaway bot', $out);
-        $this->assertStringContainsString('value="belayline_resume"', $out);
-    }
-
-    public function testRenderShowsTheBannerButNoResumeFormForAFilterForcedPause(): void
-    {
-        add_filter(PauseSwitch::FILTER, static fn (): bool => true);
-
-        ob_start();
-        $this->page->render();
-        $out = (string) ob_get_clean();
-
-        $this->assertStringContainsString('All agent actions are paused.', $out);
-        $this->assertStringContainsString('Forced by the ' . PauseSwitch::FILTER . ' filter', $out);
-        $this->assertStringNotContainsString('value="belayline_resume"', $out);
-        $this->assertStringNotContainsString('Resume agent actions', $out);
-    }
-
-    public function testRenderEscapesAnInjectedReasonRatherThanEmittingItRaw(): void
-    {
-        $this->pause->pause(7, '<script>alert(1)</script>');
-
-        ob_start();
-        $this->page->render();
-        $out = (string) ob_get_clean();
-
-        $this->assertStringNotContainsString('<script>alert(1)</script>', $out);
-        $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $out);
+        $this->assertFalse($this->pause->isPaused());
     }
 }

@@ -4,17 +4,21 @@ declare(strict_types=1);
 
 namespace Belayline\Plugin\Admin;
 
+use Belayline\Plugin\Admin\Map\WhoResolver;
+use Belayline\Plugin\Admin\Ui\Html;
+use Belayline\Plugin\Admin\Ui\Icons;
+use Belayline\Plugin\Admin\Ui\Time;
 use Belayline\Plugin\Api\Approvals;
+use Belayline\Plugin\Audit\AuditReader;
 use Belayline\Plugin\Audit\WpdbApprovalStore;
 use Belayline\Plugin\Support\ApprovalNotifier;
-use Belayline\Plugin\Support\ShadowMode;
 use Belayline\Plugin\Support\SummaryMarkup;
 
 /**
- * Tools → "Pending Agent Actions": the human side of the approval flow.
- * Lists irreversible verbs an agent tried to run that were blocked pending review.
- * Approving mints a single-use, verb+args-bound token (shown ONCE) and appends an
- * `approved` event to the audit chain; rejecting appends a `rejected` event.
+ * The Pending tab: the human side of the approval flow. Lists the agent actions
+ * a pack held for review, as cards. Approving mints a single-use, verb+args-bound
+ * token (shown ONCE) and appends an `approved` event to the audit chain; denying
+ * appends a `rejected` event.
  *
  * Reconciliation is append-only: the audit log is hash-chained and immutable, so a
  * verdict change is a NEW linked row referencing the same approval id — never a
@@ -26,7 +30,6 @@ use Belayline\Plugin\Support\SummaryMarkup;
  */
 final class PendingActionsPage
 {
-    private const SLUG = 'belayline-pending';
     private const CAP = 'manage_options';
     private const APPROVE = 'belayline_approve_action';
     private const REJECT = 'belayline_reject_action';
@@ -40,27 +43,17 @@ final class PendingActionsPage
     public function __construct(
         private readonly WpdbApprovalStore $store,
         private readonly Approvals $approvals,
-        private readonly ShadowMode $shadow = new ShadowMode(),
+        private readonly ?WhoResolver $who = null,
+        private readonly ?AuditReader $audit = null,
+        private readonly ?int $now = null,
     ) {
     }
 
     public function register(): void
     {
-        add_action('admin_menu', [$this, 'menu']);
         add_action('admin_post_' . self::APPROVE, [$this, 'approve']);
         add_action('admin_post_' . self::REJECT, [$this, 'reject']);
         add_action('admin_post_' . self::NOTIFY, [$this, 'saveNotifications']);
-    }
-
-    public function menu(): void
-    {
-        add_management_page(
-            __('Pending Agent Actions', 'belayline-agent-governance'),
-            __('Pending Agent Actions', 'belayline-agent-governance'),
-            self::CAP,
-            self::SLUG,
-            [$this, 'render']
-        );
     }
 
     public function render(): void
@@ -68,82 +61,123 @@ final class PendingActionsPage
         if (!current_user_can(self::CAP)) {
             return;
         }
+        $this->renderMain();
+    }
 
+    public function renderMain(): void
+    {
+        $now = $this->now ?? time();
         $rows = $this->store->pending();
 
-        echo '<div class="wrap">';
-        echo '<h1>' . esc_html__('Pending Agent Actions', 'belayline-agent-governance') . '</h1>';
-        echo '<p>' . esc_html__('Irreversible agent actions blocked pending human approval. Approving mints a single-use token bound to the exact verb + arguments.', 'belayline-agent-governance') . '</p>';
-
-        EnvironmentLabel::render($this->shadow);
+        echo '<p class="aui-page-intro">' . esc_html__('Agents asked to do these things. Nothing happens until you say yes. Anything you ignore expires and is refused.', 'belayline-agent-governance') . '</p>';
 
         $this->maybeShowMintedToken();
         $this->maybeShowStaleNotice();
 
-        echo '<table class="widefat striped"><thead><tr>';
-        foreach (self::columnHeaders() as $col) {
-            echo '<th>' . esc_html($col) . '</th>';
-        }
-        echo '</tr></thead><tbody>';
-
         if (!$rows) {
-            echo '<tr><td colspan="8">' . esc_html__('No pending actions. The agent has nothing awaiting review.', 'belayline-agent-governance') . '</td></tr>';
+            echo '<section class="aui-card"><div class="aui-empty"><span class="aui-tile aui-tile--ok">' . Icons::svg('check', 'aui-i--lg') . '</span><h2 class="aui-card-t">'
+                . esc_html__('Nothing is waiting', 'belayline-agent-governance') . '</h2><p>'
+                . esc_html__('When an agent asks to do something that needs your approval, it shows up here and we email you.', 'belayline-agent-governance')
+                . '</p><a class="aui-btn aui-btn--secondary" href="' . esc_url(AdminUrls::tab(AdminUrls::PACKS)) . '">'
+                . esc_html__('Choose what needs approval', 'belayline-agent-governance') . '</a></div></section>';
+
+            return;
         }
+
+        $events = $this->audit !== null
+            ? $this->audit->forEvents(array_values(array_filter(array_map(static fn (array $r): string => (string) ($r['audit_event_id'] ?? ''), $rows))))
+            : [];
 
         foreach ($rows as $r) {
-            $approvalId = (string) ($r['approval_id'] ?? '');
-            // AS-6 §3.3 item 4: a row with no probe declared for its verb has
-            // no state check at all, so the queue says so rather than
-            // implying every row is equally protected.
-            $kind = $r['fingerprint_kind'] ?? null;
-            $stateLabel = ($kind === null || $kind === 'none' || $kind === '') ? __('state not checked', 'belayline-agent-governance') : '';
-            echo '<tr>';
-            echo '<td>' . esc_html((string) ($r['created_ts'] ?? '')) . '</td>';
-            echo '<td>' . esc_html((string) ($r['pending_expires_ts'] ?? '')) . '</td>';
-            echo '<td><code>' . esc_html((string) ($r['correlation_id'] ?? '')) . '</code></td>';
-            echo '<td><code>' . esc_html((string) ($r['verb'] ?? '')) . '</code></td>';
-            // phpcs:ignore WordPress.Security.EscapeOutput -- summaryHtml() escapes or wp_kses-es by provenance.
-            echo '<td>' . self::summaryHtml((string) ($r['summary'] ?? '')) . '</td>';
-            echo '<td>' . esc_html($stateLabel) . '</td>';
-            echo '<td><code style="font-size:11px;">' . esc_html($approvalId) . '</code></td>';
-            echo '<td>' . $this->actionButtons($approvalId) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers below.
-            echo '</tr>';
+            $this->renderCard($r, $events[(string) ($r['audit_event_id'] ?? '')] ?? null, $now);
         }
-
-        echo '</tbody></table>';
-        $this->renderNotificationSettings();
-        echo '</div>';
     }
 
     /**
-     * Where new pending actions get routed: an email recipient (empty = the
-     * site's admin_email) and an optional webhook URL. Lives on this screen
-     * because the settings only matter to whoever clears this queue.
+     * @param array<string, mixed>      $r     The pending approval row.
+     * @param array<string, mixed>|null $event The audit row that filed it, when known.
      */
-    private function renderNotificationSettings(): void
+    private function renderCard(array $r, ?array $event, int $now): void
     {
-        echo '<h2>' . esc_html__('Notifications', 'belayline-agent-governance') . '</h2>';
-        echo '<p>' . esc_html__('Each NEW pending action sends an email (with a link to this screen) and, if a webhook URL is set, an identifiers-only JSON POST — no call arguments leave the site.', 'belayline-agent-governance') . '</p>';
-        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
-        echo '<input type="hidden" name="action" value="' . esc_attr(self::NOTIFY) . '">';
-        echo wp_nonce_field(self::NOTIFY, '_wpnonce', true, false); // phpcs:ignore WordPress.Security.EscapeOutput -- core-built hidden fields.
-        echo '<table class="form-table"><tbody>';
+        $approvalId = (string) ($r['approval_id'] ?? '');
+        $who = $this->who?->describe((string) ($r['key_id'] ?? '')) ?? ['label' => (string) ($r['key_id'] ?? ''), 'sub' => ''];
+        // AS-6 §3.3 item 4: a row with no probe declared for its verb has no
+        // state check at all, so the queue says so rather than implying every
+        // row is equally protected.
+        $kind = $r['fingerprint_kind'] ?? null;
+        $unchecked = $kind === null || $kind === 'none' || $kind === '';
+        $titleId = 'approval-' . $approvalId;
+
+        echo '<article class="aui-card aui-approval" id="' . esc_attr($titleId) . '" data-aui-item aria-labelledby="' . esc_attr($titleId . '-s') . '">';
+        echo '<div class="aui-approval-h"><span class="aui-tile aui-tile--sm">' . Icons::svg('robot') . '</span><div class="aui-grow"><div class="aui-item-name">'
+            . esc_html($who['label']) . ($who['sub'] !== '' ? ' <span class="aui-muted">&middot; ' . esc_html($who['sub']) . '</span>' : '') . '</div></div>'
+            . Html::badge('warn', __('Waiting', 'belayline-agent-governance'), 'clock') . '</div>';
+        // phpcs:ignore WordPress.Security.EscapeOutput -- summaryHtml() escapes or wp_kses-es by provenance.
+        echo '<h2 class="aui-approval-sum" id="' . esc_attr($titleId . '-s') . '">' . self::summaryHtml((string) ($r['summary'] ?? '')) . '</h2>';
+        echo $this->why($event);
+
+        echo '<dl class="aui-kv"><dt>' . esc_html__('Ability', 'belayline-agent-governance') . '</dt><dd class="aui-mono">' . esc_html((string) ($r['verb'] ?? '')) . '</dd>';
+        echo '<dt>' . esc_html__('Asked at', 'belayline-agent-governance') . '</dt><dd class="aui-mono">' . esc_html((string) ($r['created_ts'] ?? '')) . ' UTC</dd>';
+        echo '<dt>' . esc_html__('Expires', 'belayline-agent-governance') . '</dt><dd class="aui-mono">' . esc_html(Time::until((string) ($r['pending_expires_ts'] ?? ''), $now)) . '</dd>';
+        if ($unchecked) {
+            echo '<dt>' . esc_html__('Safety check', 'belayline-agent-governance') . '</dt><dd>' . esc_html__('Not available for this action: nothing compares the current state before it runs.', 'belayline-agent-governance') . '</dd>';
+        }
+        echo '<dt>' . esc_html__('Request id', 'belayline-agent-governance') . '</dt><dd class="aui-mono">' . esc_html($approvalId) . '</dd></dl>';
+
+        echo '<div class="aui-approval-f">' . $this->actionButton($approvalId, self::APPROVE, 'primary', __('Approve', 'belayline-agent-governance')) // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers below.
+            . $this->actionButton($approvalId, self::REJECT, 'secondary', __('Deny', 'belayline-agent-governance')) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers below.
+        echo '</article>';
+    }
+
+    /**
+     * Why an action was held, in a sentence, from the tier and pack of the audit row that filed it.
+     *
+     * @param array<string, mixed>|null $event
+     */
+    public static function heldReason(?array $event): string
+    {
+        $tier = isset($event['tier']) ? (int) $event['tier'] : null;
+        $pack = isset($event['pack']) ? (string) $event['pack'] : '';
+        if ($tier === 2) {
+            return $pack !== ''
+                /* translators: %s: pack name */
+                ? sprintf(__('This kind of action always asks first, in the %s pack, even if you approved something similar before.', 'belayline-agent-governance'), $pack)
+                : __('This kind of action always asks first, even if you approved something similar before.', 'belayline-agent-governance');
+        }
+
+        return $pack !== ''
+            /* translators: %s: pack name */
+            ? sprintf(__('This needs approval in the %s pack.', 'belayline-agent-governance'), $pack)
+            : __('This needs approval.', 'belayline-agent-governance');
+    }
+
+    /** @param array<string, mixed>|null $event */
+    private function why(?array $event): string
+    {
+        $icon = isset($event['tier']) && (int) $event['tier'] === 2 ? 'lock' : 'info';
+
+        return '<div class="aui-why">' . Icons::svg($icon) . '<span>' . esc_html(self::heldReason($event)) . '</span></div>';
+    }
+
+    /** Rail: where new waiting actions get routed. */
+    public function renderRail(): void
+    {
+        echo '<section class="aui-card"><div class="aui-card-h"><div><h2 class="aui-card-t">' . esc_html__('Notifications', 'belayline-agent-governance') . '</h2><p class="aui-card-d">'
+            . esc_html__('Each new waiting action sends an email with a link to this tab. If you add a webhook address, we also send a short message with identifiers only. No call details leave your site.', 'belayline-agent-governance') . '</p></div></div>';
+        echo Html::postForm(self::NOTIFY, self::NOTIFY, Html::backTo(AdminUrls::PENDING)); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
+        echo '<div class="aui-card-b belayline-stack">';
         printf(
-            '<tr><th scope="row"><label for="belayline_notify_email">%s</label></th>'
-            . '<td><input type="email" id="belayline_notify_email" name="belayline_notify_email" class="regular-text" value="%s" placeholder="%s"></td></tr>',
-            esc_html__('Notification email', 'belayline-agent-governance'),
+            '<div class="aui-field"><label class="aui-label" for="belayline_notify_email">%s</label><input class="aui-input" type="email" id="belayline_notify_email" name="belayline_notify_email" value="%s" placeholder="%s"></div>',
+            esc_html__('Send emails to', 'belayline-agent-governance'),
             esc_attr((string) get_option(ApprovalNotifier::EMAIL_OPTION, '')),
-            esc_attr__('Site admin email (default)', 'belayline-agent-governance'),
+            esc_attr__('Your site admin email', 'belayline-agent-governance'),
         );
         printf(
-            '<tr><th scope="row"><label for="belayline_webhook_url">%s</label></th>'
-            . '<td><input type="url" id="belayline_webhook_url" name="belayline_webhook_url" class="regular-text" value="%s" placeholder="https://"></td></tr>',
-            esc_html__('Webhook URL', 'belayline-agent-governance'),
+            '<div class="aui-field"><label class="aui-label" for="belayline_webhook_url">%s</label><input class="aui-input" type="url" id="belayline_webhook_url" name="belayline_webhook_url" value="%s" placeholder="https://"></div>',
+            esc_html__('Webhook address (optional)', 'belayline-agent-governance'),
             esc_attr((string) get_option(ApprovalNotifier::WEBHOOK_OPTION, '')),
         );
-        echo '</tbody></table>';
-        echo '<p><button type="submit" class="button button-primary">' . esc_html__('Save notification settings', 'belayline-agent-governance') . '</button></p>';
-        echo '</form>';
+        echo '</div><div class="aui-card-f"><button type="submit" class="aui-btn aui-btn--secondary">' . esc_html__('Save notification settings', 'belayline-agent-governance') . '</button></div></form></section>';
     }
 
     public function saveNotifications(): void
@@ -207,10 +241,7 @@ final class PendingActionsPage
         }
         delete_transient(self::STALE_FLASH . $user);
 
-        printf(
-            '<div class="notice notice-warning"><p>%s</p></div>',
-            esc_html__('The target of this request changed since it was filed. It cannot be approved as-is; if it is still needed, ask the agent to retry the call.', 'belayline-agent-governance')
-        );
+        echo Html::notice('warning', __('This request is out of date.', 'belayline-agent-governance'), __('What it targets changed after it was filed, so it cannot be approved as it is. If it is still needed, ask the agent to try again.', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
     }
 
     private function maybeShowMintedToken(): void
@@ -222,28 +253,11 @@ final class PendingActionsPage
         }
         delete_transient(self::FLASH . $user);
 
-        printf(
-            '<div class="notice notice-success"><p><strong>%s</strong></p><p>%s</p><p><code style="font-size:13px;user-select:all;">%s</code></p><p>%s</p></div>',
-            esc_html__('Approved.', 'belayline-agent-governance'),
-            esc_html(sprintf(/* translators: %s approval id */ __('Approval %s is now granted. The same agent (same API key) can simply re-issue the exact same call and it will run — no token needed. To delegate the action to a different actor, hand them the single-use token below as the _approval argument instead.', 'belayline-agent-governance'), (string) $flash['approval_id'])),
-            esc_html((string) $flash['token']),
-            esc_html__('Valid once, for 15 minutes, bound to that exact verb + arguments. Shown only now and never stored in the clear.', 'belayline-agent-governance')
-        );
-    }
-
-    /** @return list<string> Translated column headers, in display order. */
-    private static function columnHeaders(): array
-    {
-        return [
-            __('Requested (UTC)', 'belayline-agent-governance'),
-            __('Expires (UTC)', 'belayline-agent-governance'),
-            __('Correlation', 'belayline-agent-governance'),
-            __('Verb', 'belayline-agent-governance'),
-            __('Summary', 'belayline-agent-governance'),
-            __('State', 'belayline-agent-governance'),
-            __('Approval ID', 'belayline-agent-governance'),
-            __('Action', 'belayline-agent-governance'),
-        ];
+        echo '<div class="aui-notice aui-notice--success" role="status">' . Icons::svg('check') . '<div><strong>' . esc_html__('Approved.', 'belayline-agent-governance') . '</strong> '
+            . esc_html(sprintf(/* translators: %s approval id */ __('Request %s is now approved. The same AI app can simply try the exact same call again and it will run, no code needed.', 'belayline-agent-governance'), (string) $flash['approval_id']))
+            . '<p>' . esc_html__('To let someone else run it, give them this one-time code as the _approval argument:', 'belayline-agent-governance')
+            . '</p><p><code class="aui-code belayline-select">' . esc_html((string) $flash['token']) . '</code></p><p>'
+            . esc_html__('It works once, for 15 minutes, for that exact action only. It is shown now and never stored.', 'belayline-agent-governance') . '</p></div></div>';
     }
 
     /**
@@ -272,27 +286,18 @@ final class PendingActionsPage
         return wp_kses(SummaryMarkup::unwrap($summary), ['a' => ['href' => true]]);
     }
 
-    private function actionButtons(string $approvalId): string
-    {
-        $out = '';
-        $out .= $this->actionButton($approvalId, self::APPROVE, 'primary', __('Approve', 'belayline-agent-governance'));
-        $out .= $this->actionButton($approvalId, self::REJECT, 'secondary', __('Reject', 'belayline-agent-governance'));
-
-        return $out;
-    }
-
     /**
-     * One Approve/Reject form. Plugin Check flags a translation function
+     * One Approve/Deny form. Plugin Check flags a translation function
      * called with a variable label, so each caller passes its own LITERAL
      * `__()` call rather than this method building one from a lookup table.
      */
     private function actionButton(string $approvalId, string $action, string $style, string $label): string
     {
-        $out = '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="display:inline-block;margin-right:6px;">';
+        $out = '<form method="post" class="belayline-inline" action="' . esc_url(admin_url('admin-post.php')) . '">';
         $out .= '<input type="hidden" name="action" value="' . esc_attr($action) . '">';
         $out .= '<input type="hidden" name="approval_id" value="' . esc_attr($approvalId) . '">';
         $out .= wp_nonce_field($action . $approvalId, '_wpnonce', true, false);
-        $out .= '<button type="submit" class="button button-' . esc_attr($style) . '">' . esc_html($label) . '</button>';
+        $out .= '<button type="submit" class="aui-btn aui-btn--' . esc_attr($style) . '">' . esc_html($label) . '</button>';
         $out .= '</form>';
 
         return $out;
@@ -312,7 +317,7 @@ final class PendingActionsPage
 
     private function redirectBack(): void
     {
-        wp_safe_redirect(add_query_arg(['page' => self::SLUG], admin_url('tools.php')));
+        wp_safe_redirect(AdminUrls::tab(AdminUrls::PENDING));
         exit;
     }
 }

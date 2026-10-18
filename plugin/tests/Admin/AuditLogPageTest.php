@@ -24,23 +24,6 @@ final class AuditLogPageTest extends TestCase
     protected function tearDown(): void
     {
         $GLOBALS['wpas_test_user_caps'] = [];
-        unset($GLOBALS['wpas_test_environment_type']);
-    }
-
-    /** AS-7 §3.4 item 12: the environment type label, shared with the other AS admin screens. */
-    public function testRenderShowsTheEnvironmentTypeLabel(): void
-    {
-        $GLOBALS['wpas_test_environment_type'] = 'staging';
-        $db = new wpdb();
-        $db->varReturn = 0;
-        $db->resultsReturn = [];
-
-        ob_start();
-        (new AuditLogPage(new AuditReader($db)))->render();
-        $out = (string) ob_get_clean();
-
-        $this->assertStringContainsString('Environment type:', $out);
-        $this->assertStringContainsString('non-production', $out);
     }
 
     public function testRendersAnAdminConfigurationRowWithItsOwnBadge(): void
@@ -68,8 +51,8 @@ final class AuditLogPageTest extends TestCase
         (new AuditLogPage(new AuditReader($db)))->render();
         $out = (string) ob_get_clean();
 
-        $this->assertStringContainsString('background:#50575e', $out, 'admin rows get their own colour, not the unknown-value grey');
-        $this->assertStringContainsString('>admin</span>', $out);
+        $this->assertStringContainsString('>Setting changed</span>', $out, 'admin rows get their own plain-language badge, not the raw value');
+        $this->assertStringContainsString('title="admin"', $out, 'the raw decision stays in the tooltip');
         $this->assertStringContainsString('shadow.enabled', $out);
         $this->assertStringContainsString('belayline_shadow_packs', $out);
     }

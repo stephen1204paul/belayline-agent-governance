@@ -1,0 +1,33 @@
+/* Belayline admin: the few rules the shared UI kit does not cover. Scoped to .belayline-aui. */
+.belayline-aui .belayline-stack { display: flex; flex-direction: column; gap: 16px; }
+.belayline-aui .belayline-inline { display: inline-flex; }
+.belayline-aui .belayline-narrow { max-width: 260px; }
+.belayline-aui .belayline-flush { padding-left: 20px; }
+.belayline-aui .belayline-check { display: flex; align-items: flex-start; gap: 8px; }
+.belayline-aui .belayline-check input { margin-top: 3px; }
+.belayline-aui .belayline-select { user-select: all; overflow-wrap: anywhere; }
+.belayline-aui .belayline-filters { align-items: flex-end; }
+.belayline-aui .belayline-filters .aui-field { min-width: 140px; }
+.belayline-aui .belayline-chips { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+.belayline-aui .belayline-pager { display: flex; align-items: center; gap: 12px; }
+.belayline-aui .belayline-footer { display: flex; align-items: flex-end; gap: 16px; }
+.belayline-aui .belayline-range { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; padding: 0; border: 0; }
+.belayline-aui .belayline-subnav { align-self: flex-start; }
+.belayline-aui .belayline-input { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--aui-text-3); }
+.belayline-aui .belayline-diff { margin: 0; padding: 0; list-style: none; font-size: 12px; line-height: 20px; }
+.belayline-aui .belayline-diff b { font-weight: 600; }
+.belayline-aui .belayline-diff del { color: var(--aui-bad); }
+.belayline-aui .belayline-diff ins { color: var(--aui-ok); text-decoration: none; }
+.belayline-aui .belayline-groupform + .belayline-groupform .aui-group { border-top: 1px solid var(--aui-border); }
+.belayline-aui .belayline-ability { flex-wrap: wrap; }
+.belayline-aui .belayline-ability .aui-seg { flex-wrap: wrap; }
+.belayline-aui .belayline-warn { color: var(--aui-warn); }
+.belayline-aui .belayline-list { margin: 8px 0 0 20px; list-style: disc; }
+.belayline-aui .belayline-more { margin-top: 12px; }
+.belayline-aui .belayline-provider { padding-bottom: 0; }
+.belayline-aui .belayline-provider + .aui-table-wrap { margin-top: 8px; }
+.belayline-aui tr.is-highlight td { background: var(--aui-accent-soft); }
+.belayline-aui .aui-table label { font-weight: 500; }
+.belayline-aui .aui-stack > .aui-notice + .aui-card, .belayline-aui .aui-stack > .aui-seg + .aui-notice { margin-top: 0; }
+.belayline-aui .belayline-nowrap { white-space: nowrap; }
+.belayline-aui .belayline-input { max-width: 420px; font-size: 11px; }

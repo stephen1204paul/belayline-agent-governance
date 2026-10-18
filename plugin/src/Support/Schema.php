@@ -53,8 +53,11 @@ final class Schema
      * 7: new `belayline_audit_checkpoint` table ({@see checkpointTable()}) recording
      *    the last pruned audit entry, and the daily audit-retention cron
      *    ({@see AuditRetention}).
+     * 8: the audit log gained `KEY ts (ts)`, so the Overview's 7-day aggregate
+     *    ({@see \Belayline\Plugin\Admin\Map\MapData}) is a range scan, not a
+     *    full scan. Index only: no column or row changes, the hash chain is untouched.
      */
-    public const VERSION = '7';
+    public const VERSION = '8';
 
     public const VERSION_OPTION = 'belayline_schema_version';
 
@@ -177,7 +180,8 @@ final class Schema
                 entry_hash CHAR(64) NOT NULL,
                 PRIMARY KEY  (id),
                 KEY correlation_id (correlation_id),
-                KEY ability (ability)";
+                KEY ability (ability),
+                KEY ts (ts)";
     }
 
     /**

@@ -36,11 +36,18 @@ use Belayline\Gate\Gate;
 use Belayline\Policy\Tier;
 use Belayline\Policy\TierClassifier;
 use Belayline\Policy\VerbCatalog;
+use Belayline\Plugin\Admin\AdminApp;
 use Belayline\Plugin\Admin\AuditLogPage;
 use Belayline\Plugin\Admin\AbilitiesPage;
 use Belayline\Plugin\Admin\ChangesPage;
 use Belayline\Plugin\Admin\CapabilityPacksPage;
+use Belayline\Plugin\Admin\Map\MapData;
+use Belayline\Plugin\Admin\Map\WhoResolverFactory;
+use Belayline\Plugin\Admin\OverviewPage;
+use Belayline\Plugin\Admin\PackOverview;
 use Belayline\Plugin\Admin\PendingActionsPage;
+use Belayline\Plugin\Admin\SettingsPage;
+use Belayline\Plugin\Audit\ChainStatus;
 use Belayline\Plugin\Api\Approvals;
 use Belayline\Plugin\Api\Grants;
 use Belayline\Plugin\Approval\WpdbGrantStore;
@@ -284,8 +291,8 @@ add_action('plugins_loaded', static function (): void {
         $belayline_state_probes = [...$belayline_state_probes, ...$belayline_surecart['stateProbes']];
     }
 
-    // Ability review (0.5): abilities an administrator reviewed on Tools, Agent
-    // Abilities. Their namespaces join the governed list (so the unreviewed
+    // Ability review (0.5): abilities an administrator reviewed on the Packs
+    // tab. Their namespaces join the governed list (so the unreviewed
     // siblings fail closed), their verbs are mapped into the catalog at
     // registration while the input schema still matches, and one generic pack
     // admits them. The pre-review list is kept for the screen, which must not
@@ -478,12 +485,18 @@ add_action('plugins_loaded', static function (): void {
     if ($belayline_sink !== null) {
         (new AbilityAuditLog($belayline_sink, $belayline_classifier, $belayline_packs, $belayline_governed_namespaces, $belayline_capture))->register();
 
-        // wp-admin viewer + CSV export (Tools → Agent Audit Log).
-        (new AuditLogPage(new AuditReader($wpdb), $belayline_shadow))->register();
+        // Activity > Calls: the audit viewer + CSV / JSON Lines export. The chain
+        // check is cached for five minutes (Audit\ChainStatus).
+        $belayline_audit_reader = new AuditReader($wpdb);
+        $belayline_chain = new ChainStatus($belayline_audit_reader);
+        $belayline_who = WhoResolverFactory::create($belayline_identity, $wpdb);
+        $belayline_audit_page = new AuditLogPage($belayline_audit_reader, $belayline_chain, $belayline_who);
+        $belayline_audit_page->register();
 
-        // wp-admin change history + human-only undo (Tools → Agent Changes).
+        // Activity > Changes: change history + human-only undo.
         if ($belayline_undo !== null && $belayline_change_store !== null) {
-            (new ChangesPage($belayline_change_store, $belayline_undo, new AuditReader($wpdb), $belayline_shadow))->register();
+            $belayline_changes_page = new ChangesPage($belayline_change_store, $belayline_undo, $belayline_audit_reader, $belayline_who);
+            $belayline_changes_page->register();
         }
 
         // Privacy tools (§3.6 item 2): personal-data export/erase for Tools →
@@ -511,8 +524,8 @@ add_action('plugins_loaded', static function (): void {
         }
     }
 
-    // Human approval queue (Tools → Pending Agent Actions): approve/reject blocked
-    // irreversible actions, minting single-use tokens.
+    // Human approval queue (Pending tab): approve/deny held actions, minting
+    // single-use tokens.
     if ($belayline_approvals !== null) {
         // ONE approvals service for every caller (AS-10): the wp-admin page,
         // the programmatic API below, and any consumer (e.g. Site Agent inline
@@ -520,7 +533,8 @@ add_action('plugins_loaded', static function (): void {
         // audit reconciliation and lifecycle actions can never diverge.
         $belayline_api_approvals = new Approvals($belayline_approvals, $belayline_sink, $belayline_packs, $belayline_state_probes);
 
-        (new PendingActionsPage($belayline_approvals, $belayline_api_approvals, $belayline_shadow))->register();
+        $belayline_pending_page = new PendingActionsPage($belayline_approvals, $belayline_api_approvals, $belayline_who ?? null, $belayline_audit_reader ?? null);
+        $belayline_pending_page->register();
 
         // Backlog control for the table above: hourly sweep of expired/orphaned
         // approval rows (see WpdbApprovalStore::deleteExpired()). The schedule
@@ -542,7 +556,7 @@ add_action('plugins_loaded', static function (): void {
         });
 
         // Daily audit-log retention (see AuditRetention). Off (0 days) unless
-        // the operator sets the retention option on the Agent Audit Log screen.
+        // the operator sets the retention option on the Settings tab.
         if ($belayline_sink !== null) {
             add_action(AuditRetention::HOOK, static function () use ($wpdb, $belayline_sink): void {
                 AuditRetention::run(new AuditPruner($wpdb, $belayline_sink));
@@ -571,11 +585,33 @@ add_action('plugins_loaded', static function (): void {
         $belayline_reviews,
     );
 
-    // Ability review screen (Tools → Agent Abilities, slug belayline-abilities).
-    (new AbilitiesPage($belayline_reviews, $belayline_integration_namespaces, $belayline_changes))->register();
+    // Packs tab, "Abilities from other plugins" (old slug belayline-abilities).
+    $belayline_abilities_page = new AbilitiesPage($belayline_reviews, $belayline_integration_namespaces, $belayline_changes);
+    $belayline_abilities_page->register();
 
-    // Capability-pack admin (Tools → Agent Capability Packs): the emergency
-    // stop, then bind each identity the configured providers expose to a pack
-    // from the catalog.
-    (new CapabilityPacksPage($belayline_packs, $belayline_identity, $belayline_shadow, $belayline_changes, $belayline_pause, $belayline_environment))->register();
+    // Packs tab: the pack catalog (with what each pack does to the abilities
+    // registered here) and the credential bindings; handlers for the emergency
+    // stop live here too.
+    $belayline_packs_page = new CapabilityPacksPage($belayline_packs, $belayline_identity, $belayline_shadow, $belayline_changes, $belayline_pause, $belayline_environment, overview: new PackOverview($belayline_classifier));
+    $belayline_packs_page->register();
+
+    // One top-level menu with five tabs (Overview, Pending, Activity, Packs,
+    // Settings), the kit assets on those screens only, and the redirects from
+    // the old Tools pages.
+    $belayline_overview_page = isset($belayline_audit_reader, $belayline_chain, $belayline_who) && isset($wpdb)
+        ? new OverviewPage(new MapData($wpdb, $belayline_who), $belayline_chain, $belayline_audit_reader, $belayline_approvals, $belayline_who)
+        : null;
+    (new AdminApp(
+        __FILE__,
+        $belayline_pause,
+        $belayline_shadow,
+        $belayline_approvals,
+        $belayline_packs_page,
+        new SettingsPage($belayline_packs_page, $belayline_audit_page ?? null),
+        $belayline_overview_page,
+        $belayline_pending_page ?? null,
+        $belayline_audit_page ?? null,
+        $belayline_changes_page ?? null,
+        $belayline_abilities_page,
+    ))->register();
 }, 0);
