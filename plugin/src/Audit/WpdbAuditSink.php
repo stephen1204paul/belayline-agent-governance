@@ -29,8 +29,8 @@ use wpdb;
  */
 final class WpdbAuditSink implements AuditSink
 {
-    /** Advisory-lock name serializing all appends to this log. */
-    private const LOCK = 'belayline_audit_append';
+    /** Advisory-lock name prefix; see {@see lockName()} for the per-site suffix. */
+    private const LOCK_PREFIX = 'belayline_audit_append_';
 
     private bool $ensured = false;
 
@@ -87,7 +87,7 @@ final class WpdbAuditSink implements AuditSink
      */
     public function tryAppendLock(): bool
     {
-        return (int) $this->db->get_var($this->db->prepare('SELECT GET_LOCK(%s, %d)', self::LOCK, 5)) === 1;
+        return (int) $this->db->get_var($this->db->prepare('SELECT GET_LOCK(%s, %d)', $this->lockName(), 5)) === 1;
     }
 
     public function releaseAppendLock(): void
@@ -95,15 +95,26 @@ final class WpdbAuditSink implements AuditSink
         $this->unlock();
     }
 
+    /**
+     * GET_LOCK names are server-global, so on multisite the name must be
+     * per-site or two sites' appends would serialize each other. The audit
+     * table name carries the site's prefix (wp_2_...), so hash that: a fixed
+     * 55 chars, well inside MySQL's 64-char limit however long the prefix is.
+     */
+    private function lockName(): string
+    {
+        return self::LOCK_PREFIX . md5($this->table());
+    }
+
     /** Serialize appends so concurrent writers can't read the same prev hash. */
     private function lock(): void
     {
-        $this->db->get_var($this->db->prepare('SELECT GET_LOCK(%s, %d)', self::LOCK, 5));
+        $this->db->get_var($this->db->prepare('SELECT GET_LOCK(%s, %d)', $this->lockName(), 5));
     }
 
     private function unlock(): void
     {
-        $this->db->get_var($this->db->prepare('SELECT RELEASE_LOCK(%s)', self::LOCK));
+        $this->db->get_var($this->db->prepare('SELECT RELEASE_LOCK(%s)', $this->lockName()));
     }
 
     /** The most recent entry's hash, or GENESIS if the log is empty. */
