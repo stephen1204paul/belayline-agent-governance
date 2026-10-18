@@ -84,6 +84,7 @@ use Belayline\Plugin\Support\ElevationRules;
 use Belayline\Plugin\Support\EnvironmentGuard;
 use Belayline\Plugin\Support\GrantRecorder;
 use Belayline\Plugin\Support\MultisiteGuard;
+use Belayline\Plugin\Support\NetworkLifecycle;
 use Belayline\Plugin\Support\PackResolver;
 use Belayline\Plugin\Support\PauseSwitch;
 use Belayline\Plugin\Support\RateLimitGate;
@@ -118,12 +119,11 @@ register_activation_hook(__FILE__, __NAMESPACE__ . '\\belayline_activate');
 register_deactivation_hook(__FILE__, __NAMESPACE__ . '\\belayline_deactivate');
 
 /**
- * Create/upgrade both tables and schedule the approval sweep — after refusing
- * multisite (S2), per-site or network-wide: this plugin's identity/gate/audit
- * wiring and approvals schema have never been designed or tested for a
- * network install, and letting activation through would previously have left
- * the ApprovalSweep cron scheduled on only the activating site
- * (stephen1204paul/belayline-agent-governance#4) — refusing outright makes that moot.
+ * Create/upgrade the tables and schedule the crons for the current site,
+ * unless the `belayline_allow_multisite` filter vetoed a multisite install
+ * (S2, the pre-multisite refusal, kept as an opt-out). Network activation
+ * installs only the site it runs on; every other site installs lazily on its
+ * first admin or cron request (see NetworkLifecycle).
  */
 function belayline_activate(): void
 {
@@ -138,7 +138,7 @@ function belayline_activate(): void
         return;
     }
 
-    if (function_exists('is_multisite') && is_multisite()) {
+    if (!class_exists(MultisiteGuard::class) && function_exists('is_multisite') && is_multisite() && !apply_filters('belayline_allow_multisite', true)) {
         // Defensive fallback if the autoloader failed to bring in the guard
         // class above: still refuse rather than activate half-wired.
         wp_die(esc_html__('Belayline Agent Governance does not support WordPress multisite. It was not activated.', 'belayline-agent-governance'));
@@ -158,18 +158,23 @@ function belayline_activate(): void
     AuditRetention::activate();
 }
 
-/** Stop the approval sweep. Table data is intentionally kept — see uninstall.php. */
-function belayline_deactivate(): void
+/**
+ * Stop the crons. Table data is intentionally kept — see uninstall.php. A
+ * network-wide deactivation unschedules them on every site.
+ */
+function belayline_deactivate(bool $network_wide = false): void
 {
-    if (class_exists(ApprovalSweep::class)) {
-        ApprovalSweep::deactivate();
+    if (!class_exists(NetworkLifecycle::class)) {
+        return;
     }
-    if (class_exists(ChangePurge::class)) {
-        ChangePurge::deactivate();
+
+    if ($network_wide && function_exists('is_multisite') && is_multisite()) {
+        NetworkLifecycle::deactivateNetwork();
+
+        return;
     }
-    if (class_exists(AuditRetention::class)) {
-        AuditRetention::deactivate();
-    }
+
+    NetworkLifecycle::unscheduleCrons();
 }
 
 // Wired on plugins_loaded (priority 0), NOT at include time: WordPress keeps
@@ -180,7 +185,8 @@ function belayline_deactivate(): void
 // are still wired long before any ability exists: the Abilities API registry
 // fires wp_abilities_api_init lazily, no earlier than init.
 add_action('plugins_loaded', static function (): void {
-    // Runtime refusal (S2): covers a copy somehow active on a multisite
+    // Runtime refusal (S2, only when belayline_allow_multisite is false):
+    // covers a copy somehow active on a multisite
     // install (e.g. a site converted to multisite after activation), since
     // register_activation_hook only ever fires on activation, not update.
     // Wires nothing else below when refused.
@@ -195,6 +201,12 @@ add_action('plugins_loaded', static function (): void {
     }
 
     global $wpdb;
+
+    // Multisite runtime (no-op on a single site): per-site lazy install,
+    // site create/delete handling, per-site principal cache reset.
+    if (isset($wpdb)) {
+        NetworkLifecycle::register($wpdb, __FILE__);
+    }
 
     // Cheap version check on every wp-admin load: an admin visiting after a
     // plugin UPDATE (not a fresh activation) still gets the table upgraded,

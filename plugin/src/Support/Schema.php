@@ -328,6 +328,11 @@ final class Schema
         // safe.
         (new ShadowMode())->migrateLegacy();
 
+        // The hourly approval sweep. Scheduled here too (idempotent) so a
+        // multisite site that was network-activated, and so never saw an
+        // activation hook, still gets it on its first lazy install.
+        ApprovalSweep::activate();
+
         // v6: the retention purge cron. Scheduled here (idempotent) rather
         // than only on activation, because an upgrade from 0.4.x never
         // re-activates the plugin.

@@ -68,6 +68,8 @@ require_once __DIR__ . '/Fakes/ChainingSink.php';
 require_once __DIR__ . '/Fakes/InMemoryAuditRowsWpdb.php';
 require_once __DIR__ . '/Fakes/CounterTableWpdb.php';
 require_once __DIR__ . '/Fakes/SqliteWpdb.php';
+require_once __DIR__ . '/Fakes/NetworkFake.php';
+require_once __DIR__ . '/stubs/network-functions.php';
 require_once __DIR__ . '/Fakes/FakeFluentCartDb.php';
 require_once __DIR__ . '/Fixtures/VerdictErrorFixture.php';
 

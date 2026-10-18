@@ -62,6 +62,18 @@ final class RequestContext
         self::$principalResolved = false;
     }
 
+    /**
+     * Drop the memoized tokens and principal. Wired to `switch_blog` on
+     * multisite: roles and application passwords are per-site, so a token set
+     * resolved on one site must not be reused after switching to another.
+     */
+    public static function forgetPrincipal(): void
+    {
+        self::$tokens = null;
+        self::$principal = null;
+        self::$principalResolved = false;
+    }
+
     /** Forget all memoized state (tests only). */
     public static function reset(): void
     {

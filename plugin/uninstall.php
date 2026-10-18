@@ -46,44 +46,23 @@ if (is_readable($belaylineUninstallAutoload)) {
     $belaylineManifestLoaded = class_exists(\Belayline\Plugin\Support\UninstallManifest::class);
 }
 
-// Tables: six current, plus the pre-v4 grants table name a crashed v4
-// upgrade can leave behind (Schema::renameLegacyGrantsTable() never deletes
-// it, only renames-or-leaves it -- see Schema.php). %i is the WP 6.2+
-// identifier placeholder; each table name here is this plugin's own trusted,
-// hard-coded constant, never request input.
-$belaylineTableBasenames = $belaylineManifestLoaded
-    ? \Belayline\Plugin\Support\UninstallManifest::TABLE_BASENAMES
-    : ['belayline_audit_log', 'belayline_approvals', 'belayline_grants', 'belayline_counters', 'belayline_changes', 'belayline_audit_checkpoint', 'belayline_grants'];
+// Everything below runs once per site: on multisite, uninstall walks every
+// site (batches of 100, capped at 10,000) and runs the same cleanup on each.
+// The opt-in is the BELAYLINE_REMOVE_DATA constant, which is network-wide by
+// nature (wp-config.php), so there is no per-site opt-in to honour. The plugin
+// writes no site (network) options, so nothing is removed network-wide.
+if ($belaylineManifestLoaded && class_exists(\Belayline\Plugin\Support\NetworkLifecycle::class)) {
+    \Belayline\Plugin\Support\NetworkLifecycle::forEachSite(static function () use ($wpdb): void {
+        \Belayline\Plugin\Support\SiteCleanup::run($wpdb);
+    });
 
-foreach ($belaylineTableBasenames as $belaylineTableBasename) {
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.DirectDatabaseQuery.NoCaching -- opt-in uninstall dropping a table this plugin owns exclusively; %i is the WP 6.2+ identifier placeholder, the name is a hard-coded constant, never request input; nothing to cache for a table being dropped.
-    $wpdb->query($wpdb->prepare('DROP TABLE IF EXISTS %i', $wpdb->prefix . $belaylineTableBasename));
-}
-
-if (!$belaylineManifestLoaded) {
     return;
 }
 
-foreach (\Belayline\Plugin\Support\UninstallManifest::OPTIONS as $belaylineOption) {
-    delete_option($belaylineOption);
-}
-
-foreach (\Belayline\Plugin\Support\UninstallManifest::CRON_HOOKS as $belaylineCronHook) {
-    wp_clear_scheduled_hook($belaylineCronHook);
-}
-
-// Transients are bucketed per pack/identity/window/subject/approver, so no
-// fixed list of full names exists -- delete by a LIKE match against the
-// prefix, covering both a transient's value row and its timeout row (this
-// plugin never sets a site transient).
-foreach (\Belayline\Plugin\Support\UninstallManifest::TRANSIENT_PREFIXES as $belaylineTransientPrefix) {
-    $belaylineValueLike = $wpdb->esc_like('_transient_' . $belaylineTransientPrefix) . '%';
-    $belaylineTimeoutLike = $wpdb->esc_like('_transient_timeout_' . $belaylineTransientPrefix) . '%';
-
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- opt-in uninstall sweep of this plugin's own transient rows by name prefix; no cache to invalidate on a table being dropped from under it.
-    $wpdb->query($wpdb->prepare(
-        "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-        $belaylineValueLike,
-        $belaylineTimeoutLike,
-    ));
+// No autoloader (a hand-copied checkout): nothing safe to remove beyond the
+// tables named directly here, on the current site only. %i is the WP 6.2+
+// identifier placeholder; each name is a hard-coded constant.
+foreach (['belayline_audit_log', 'belayline_approvals', 'belayline_grants', 'belayline_counters', 'belayline_changes', 'belayline_audit_checkpoint'] as $belaylineTableBasename) {
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.DirectDatabaseQuery.NoCaching -- opt-in uninstall dropping a table this plugin owns exclusively; %i is the WP 6.2+ identifier placeholder, the name is a hard-coded constant, never request input.
+    $wpdb->query($wpdb->prepare('DROP TABLE IF EXISTS %i', $wpdb->prefix . $belaylineTableBasename));
 }

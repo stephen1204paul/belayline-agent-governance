@@ -10,6 +10,7 @@ use Belayline\Plugin\Support\ApprovalSweep;
 use Belayline\Plugin\Support\PauseSwitch;
 use Belayline\Plugin\Support\Schema;
 use Belayline\Plugin\Support\UninstallManifest;
+use Belayline\Plugin\Tests\Fakes\NetworkFake;
 
 /**
  * §3.6 item 3: `plugin/uninstall.php` is standalone (no bootstrap
@@ -78,6 +79,34 @@ final class UninstallTest extends TestCase
             );
             $this->assertNotEmpty($matching, "Expected a transient DELETE covering prefix {$prefix}");
         }
+    }
+
+    #[RunInSeparateProcess]
+    public function testOptedInUninstallOnMultisiteCleansEverySiteInBatches(): void
+    {
+        define('WP_UNINSTALL_PLUGIN', 'belayline-agent-governance/belayline-agent-governance.php');
+        define('BELAYLINE_REMOVE_DATA', true);
+
+        $ids = range(1, 230);
+        $wpdb = NetworkFake::boot($ids);
+        foreach ([1, 2, 150, 230] as $id) {
+            NetworkFake::seed($id, [Schema::VERSION_OPTION => '7', 'admin_email' => 'owner@example.com'], [ApprovalSweep::HOOK => 1]);
+        }
+
+        require __DIR__ . '/../uninstall.php';
+
+        foreach ([1, 2, 150, 230] as $id) {
+            $prefix = NetworkFake::prefixFor($id);
+            foreach (UninstallManifest::TABLE_BASENAMES as $base) {
+                $this->assertContains("DROP TABLE IF EXISTS `{$prefix}{$base}`", $wpdb->queries, "site {$id}: {$base}");
+            }
+            $state = NetworkFake::state($id);
+            $this->assertArrayNotHasKey(Schema::VERSION_OPTION, $state['options'], "site {$id}");
+            $this->assertSame('owner@example.com', $state['options']['admin_email'], 'core options stay');
+            $this->assertSame([], $state['cron']);
+        }
+        $this->assertSame([100, 100, 100], array_column($GLOBALS['wpas_test_net']['get_sites_calls'], 'number'));
+        $this->assertSame(1, get_current_blog_id());
     }
 
     #[RunInSeparateProcess]

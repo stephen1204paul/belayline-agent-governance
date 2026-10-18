@@ -93,6 +93,10 @@ final class UninstallManifestCoverageTest extends TestCase
             if (str_contains($file, '/Changes/Adapters/')) {
                 continue;
             }
+            // SiteCleanup is the manifest's own consumer: it deletes every name the manifest lists, in a loop.
+            if (str_ends_with($file, '/Support/SiteCleanup.php')) {
+                continue;
+            }
 
             $content = $fileContents[$file];
             $currentClass = $fileClass[$file] ?? null;

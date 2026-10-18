@@ -12,6 +12,7 @@ final class MultisiteGuardTest extends TestCase
 {
     protected function tearDown(): void
     {
+        remove_all_filters('belayline_allow_multisite');
         unset(
             $GLOBALS['wpas_test_multisite'],
             $GLOBALS['wpas_test_deactivated_plugins'],
@@ -32,9 +33,24 @@ final class MultisiteGuardTest extends TestCase
         $this->assertSame([], $GLOBALS['wpas_test_deactivated_plugins'] ?? []);
     }
 
+    public function testMultisiteIsAllowedByDefault(): void
+    {
+        $GLOBALS['wpas_test_multisite'] = true;
+
+        $this->assertTrue(MultisiteGuard::allowed());
+        $this->assertFalse(MultisiteGuard::refused());
+
+        MultisiteGuard::refuseActivation('/plugins/belayline-agent-governance/belayline-agent-governance.php');
+        MultisiteGuard::refuseRuntime('/plugins/belayline-agent-governance/belayline-agent-governance.php');
+
+        $this->assertSame([], $GLOBALS['wpas_test_deactivated_plugins'] ?? []);
+        $this->assertEmpty($GLOBALS['wpas_test_added_actions']['admin_notices'] ?? []);
+    }
+
     public function testMultisiteActivationDeactivatesAndDiesWithTheRefusal(): void
     {
         $GLOBALS['wpas_test_multisite'] = true;
+        add_filter('belayline_allow_multisite', static fn (): bool => false);
 
         $this->assertTrue(MultisiteGuard::refused());
         $this->expectException(RuntimeException::class);
@@ -56,6 +72,7 @@ final class MultisiteGuardTest extends TestCase
         // is already true the moment a network exists, per-site or network-wide,
         // so one code path covers both.
         $GLOBALS['wpas_test_multisite'] = true;
+        add_filter('belayline_allow_multisite', static fn (): bool => false);
 
         $this->expectException(RuntimeException::class);
 
@@ -65,6 +82,7 @@ final class MultisiteGuardTest extends TestCase
     public function testMultisiteRuntimeGuardDeactivatesAndShowsAnAdminNotice(): void
     {
         $GLOBALS['wpas_test_multisite'] = true;
+        add_filter('belayline_allow_multisite', static fn (): bool => false);
 
         MultisiteGuard::refuseRuntime('/plugins/belayline-agent-governance/belayline-agent-governance.php');
 

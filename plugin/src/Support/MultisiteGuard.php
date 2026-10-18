@@ -5,19 +5,26 @@ declare(strict_types=1);
 namespace Belayline\Plugin\Support;
 
 /**
- * Multisite refusal (S2). Belayline does not support WordPress multisite:
- * a network install spreads the identity/gate/audit wiring and the approvals
- * schema across sites in ways this plugin has never been designed or tested
- * for, so it refuses outright rather than risk a half-governed network.
- * Mirrors Site Agent's own `MultisiteGuard` for consistency between the two
- * plugins.
+ * Multisite refusal (S2), now an opt-out. Multisite is supported (every site
+ * is independent: own tables, options, crons, approvals and audit chain, see
+ * {@see NetworkLifecycle}); this guard only fires when the
+ * `belayline_allow_multisite` filter returns false, in which case a network
+ * install is refused exactly as it was before multisite support landed.
  */
 final class MultisiteGuard
 {
-    /** Whether this install must be refused. */
+    /** Whether multisite is allowed at all (filter `belayline_allow_multisite`, default true). */
+    public static function allowed(): bool
+    {
+        return function_exists('apply_filters')
+            ? (bool) apply_filters('belayline_allow_multisite', true)
+            : true;
+    }
+
+    /** Whether this install must be refused: multisite, and the filter said no. */
     public static function refused(): bool
     {
-        return function_exists('is_multisite') && is_multisite();
+        return function_exists('is_multisite') && is_multisite() && !self::allowed();
     }
 
     /** The one sentence shown to the person who tried. */
