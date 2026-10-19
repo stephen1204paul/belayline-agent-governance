@@ -57,7 +57,7 @@ final class UndoService
         if ($userId <= 0 || get_current_user_id() !== $userId) {
             return new UndoResult(UndoResult::FORBIDDEN, [], null, UndoResult::REASON_USER_MISMATCH);
         }
-        if (RequestContext::tokenId() !== null) {
+        if (RequestContext::isAgentContext()) {
             return new UndoResult(UndoResult::FORBIDDEN, [], null, UndoResult::REASON_AGENT_CONTEXT);
         }
 

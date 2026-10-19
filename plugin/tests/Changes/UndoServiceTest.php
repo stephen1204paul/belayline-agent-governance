@@ -17,9 +17,11 @@ use Belayline\Changes\UndoScope;
 use Belayline\Plugin\Changes\ChangeAdapters;
 use Belayline\Plugin\Changes\ChangeCapture;
 use Belayline\Plugin\Changes\UndoService;
+use Belayline\Plugin\Identity\IdentityChain;
 use Belayline\Plugin\Support\PackResolver;
 use Belayline\Plugin\Support\RequestContext;
 use Belayline\Plugin\Tests\Fakes\ChainingSink;
+use Belayline\Plugin\Tests\Fakes\FakeIdentityProvider;
 use Belayline\Plugin\Tests\Fakes\InMemoryChangeLedger;
 use Belayline\Plugin\Tests\Fakes\WidgetAdapter;
 use Belayline\Policy\Tier;
@@ -323,7 +325,7 @@ final class UndoServiceTest extends TestCase
 
         $this->assertSame(UndoResult::REASON_USER_MISMATCH, $this->undo->undo(UndoScope::event($event), 2)->reason);
 
-        RequestContext::configurePrincipalResolver(static fn (): string => 'app_pw_1');
+        RequestContext::configure(new IdentityChain([new FakeIdentityProvider(currentTokens: ['app:uuid-1'])]));
         $this->assertSame(UndoResult::REASON_AGENT_CONTEXT, $this->undo->undo(UndoScope::event($event), 1)->reason);
         RequestContext::reset();
 

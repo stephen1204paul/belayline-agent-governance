@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Belayline\Plugin\Support;
 
 use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Identity\UserRoleIdentity;
 
 /**
  * The host-derived, non-deterministic bits an audit record needs:
@@ -247,6 +248,24 @@ final class RequestContext
         }
 
         return self::$principal;
+    }
+
+    /**
+     * Whether any current credential is not a person's own session — an
+     * application password, WooCommerce key, integration token, or anything
+     * unrecognised. Fails closed: only tokens {@see UserRoleIdentity::isPersonToken()}
+     * accepts count as a person. Deliberately NOT `tokenId() !== null`, which
+     * is also set for every ordinary logged-in human (`user:{id}`).
+     */
+    public static function isAgentContext(): bool
+    {
+        foreach (self::currentTokens() as $token) {
+            if (!UserRoleIdentity::isPersonToken($token)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function uuid(): string

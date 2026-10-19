@@ -12,6 +12,17 @@ namespace Belayline\Plugin\Identity;
  */
 final class UserRoleIdentity implements IdentityProvider
 {
+    /**
+     * Whether a token id is one this provider emits, i.e. a person's own
+     * logged-in session ("user:{id}" / "role:{name}"). The single definition of
+     * "person session"; every other prefix (app:, wc:, integration or unknown
+     * tokens) is a credential an agent can hold.
+     */
+    public static function isPersonToken(string $token): bool
+    {
+        return str_starts_with($token, 'user:') || str_starts_with($token, 'role:');
+    }
+
     /** @return list<string> */
     public function currentTokens(): array
     {

@@ -11,8 +11,10 @@ use Belayline\Plugin\Api\Changes;
 use Belayline\Plugin\Changes\ChangeCapture;
 use Belayline\Plugin\Changes\UndoService;
 use Belayline\Plugin\Container;
+use Belayline\Plugin\Identity\IdentityChain;
 use Belayline\Plugin\Support\PackResolver;
 use Belayline\Plugin\Support\RequestContext;
+use Belayline\Plugin\Tests\Fakes\FakeIdentityProvider;
 use Belayline\Plugin\Tests\Fakes\InMemoryChangeLedger;
 use Belayline\Policy\Tier;
 use Belayline\Policy\TierClassifier;
@@ -130,7 +132,7 @@ final class ChangesApiTest extends TestCase
     {
         $corr = $this->agentRun('B');
         $changes = belayline()?->changes();
-        RequestContext::configurePrincipalResolver(static fn (): string => 'app_pw_1');
+        RequestContext::configure(new IdentityChain([new FakeIdentityProvider(currentTokens: ['app:uuid-1'])]));
 
         $result = $changes?->undo($changes->forCorrelation($corr)->scope(), 1);
 

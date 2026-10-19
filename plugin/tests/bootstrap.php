@@ -88,6 +88,20 @@ if (!function_exists('get_current_user_id')) {
     }
 }
 
+if (!function_exists('wp_get_current_user')) {
+    /**
+     * The logged-in user as UserRoleIdentity reads it: ID from
+     * wpas_test_current_user_id, roles from wpas_test_current_user_roles.
+     */
+    function wp_get_current_user(): object
+    {
+        return (object) [
+            'ID' => get_current_user_id(),
+            'roles' => $GLOBALS['wpas_test_current_user_roles'] ?? [],
+        ];
+    }
+}
+
 if (!function_exists('current_user_can')) {
     $GLOBALS['wpas_test_user_caps'] = [];
 
