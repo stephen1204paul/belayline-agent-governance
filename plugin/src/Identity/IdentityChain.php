@@ -14,10 +14,10 @@ namespace Belayline\Plugin\Identity;
  */
 final class IdentityChain
 {
-    /** @var list<IdentityProvider> */
+    /** @var list<IdentityProvider|ExternalIdentitySlot> */
     private array $providers;
 
-    /** @param list<IdentityProvider> $providers */
+    /** @param list<IdentityProvider|ExternalIdentitySlot> $providers */
     public function __construct(array $providers = [])
     {
         $this->providers = $providers;
@@ -32,7 +32,7 @@ final class IdentityChain
     public function currentTokens(): array
     {
         $tokens = [];
-        foreach ($this->providers as $provider) {
+        foreach ($this->providers() as $provider) {
             foreach ($provider->currentTokens() as $token) {
                 $tokens[] = $token;
             }
@@ -44,6 +44,15 @@ final class IdentityChain
     /** @return list<IdentityProvider> */
     public function providers(): array
     {
-        return $this->providers;
+        $flat = [];
+        foreach ($this->providers as $provider) {
+            if ($provider instanceof ExternalIdentitySlot) {
+                array_push($flat, ...$provider->providers());
+            } else {
+                $flat[] = $provider;
+            }
+        }
+
+        return $flat;
     }
 }

@@ -70,6 +70,7 @@ use Belayline\Plugin\Verdict\VerdictPipeline;
 use Belayline\Plugin\Hooks\ToolCallResultRedactor;
 use Belayline\Plugin\Identity\ApplicationPasswordIdentity;
 use Belayline\Plugin\Privacy\PrivacyIntegration;
+use Belayline\Plugin\Identity\ExternalIdentitySlot;
 use Belayline\Plugin\Identity\IdentityChain;
 use Belayline\Plugin\Identity\UserRoleIdentity;
 use Belayline\Plugin\Integrations\Core\CoreIntegration;
@@ -230,6 +231,9 @@ add_action('plugins_loaded', static function (): void {
     // on ANY WordPress site; an integration appends its own provider below.
     $belayline_identity = new IdentityChain([
         new ApplicationPasswordIdentity(),
+        // Other plugins' delegated credentials (belayline_identity_providers):
+        // more specific than the person's session, so they come first.
+        new ExternalIdentitySlot(),
         new UserRoleIdentity(),
     ]);
 

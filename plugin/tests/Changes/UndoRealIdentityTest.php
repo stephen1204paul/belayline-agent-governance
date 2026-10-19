@@ -10,6 +10,7 @@ use Belayline\Changes\UndoScope;
 use Belayline\Plugin\Changes\ChangeCapture;
 use Belayline\Plugin\Changes\UndoService;
 use Belayline\Plugin\Identity\ApplicationPasswordIdentity;
+use Belayline\Plugin\Identity\ExternalIdentitySlot;
 use Belayline\Plugin\Identity\IdentityChain;
 use Belayline\Plugin\Identity\UserRoleIdentity;
 use Belayline\Plugin\Support\PackResolver;
@@ -120,6 +121,18 @@ final class UndoRealIdentityTest extends TestCase
         $this->wire(new IdentityChain([new ApplicationPasswordIdentity(), new UserRoleIdentity()]));
 
         $this->assertSame(UndoResult::REASON_AGENT_CONTEXT, $this->undoNow()->reason);
+    }
+
+    public function testASignedInPersonOnAnOauthBearerIsAnAgentAndCannotUndo(): void
+    {
+        add_filter(ExternalIdentitySlot::FILTER, static fn (array $l): array => [...$l, new FakeIdentityProvider(['oauth:g1'])]);
+        $this->wire(new IdentityChain([new ApplicationPasswordIdentity(), new ExternalIdentitySlot(), new UserRoleIdentity()]));
+
+        $this->assertSame(['oauth:g1', 'user:1', 'role:administrator'], RequestContext::currentTokens());
+        $result = $this->undoNow();
+        $this->assertSame(UndoResult::FORBIDDEN, $result->status);
+        $this->assertSame(UndoResult::REASON_AGENT_CONTEXT, $result->reason);
+        $this->assertSame('B', $GLOBALS['wpas_test_posts'][7]->post_title);
     }
 
     /** @return array<string, array{list<string>}> */

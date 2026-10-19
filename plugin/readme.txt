@@ -226,6 +226,17 @@ plugin.
 By whichever credential authenticated the request: a WordPress application password, a logged-in
 user or their role, or — when WooCommerce is active — the WooCommerce REST API key used to
 authenticate the request. Each is bound to a capability pack independently under **Belayline → Packs**.
+Another plugin can add its own kind of credential through the `belayline_identity_providers` filter
+(for example, AI apps signed in through Specflux Site Agent's connector show up as their own
+"AI app" credential, not as the person who signed in).
+
+= What happens if an AI app is not bound to a pack? =
+
+Belayline walks the credentials on the call in order and uses the first one that has a pack bound.
+If the AI app's own credential is not bound, the pack of the signed-in person or their role applies
+instead. Packs only narrow what an agent may do, and WordPress capabilities still apply on top.
+A call from an AI app is never treated as the person's own session: it counts as an agent, so for
+example Undo is refused to it.
 
 == External services ==
 
@@ -300,6 +311,8 @@ runs.
 == Changelog ==
 
 = 0.5.0 =
+* New `belayline_identity_providers` filter: plugins can contribute an identity provider so their
+  credentials are recorded, bound to a pack and shown on the map as their own, not as the person.
 * A new top-level Belayline menu (it was under Tools) with Overview, Pending, Activity, Packs and
   Settings tabs, and a map of where agent calls go on the Overview. Old Tools links redirect.
   Plugins can name their own callers on the map with the `belayline_map_who` filter.
