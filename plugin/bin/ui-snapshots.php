@@ -5,7 +5,7 @@
  * this directory is not on it).
  *
  * Boots the plugin test shims, seeds realistic fixture data (packs, abilities,
- * ~150 audit rows over 7 days, two waiting approvals, a run with changes), renders
+ * ~180 audit rows over 7 days, two waiting approvals, a run with changes), renders
  * each Belayline tab's REAL PHP output through AdminApp and wraps it in a
  * wp-admin-like chrome that loads the vendored UI kit. Output: plugin/build/ui-snapshots/*.html
  * (gitignored). Then screenshot and axe-check them:
@@ -203,6 +203,20 @@ function snapshotSeed(SqliteWpdb $db, WpdbAuditSink $sink, int $now, bool $withP
         } elseif ($roll === 100) {
             // Shadow mode: the call ran anyway; the row only records what would have happened.
             $spec = ['decision' => 'denied', 'result' => null, 'reason' => 'not_in_pack', 'dry' => true] + $spec;
+        }
+        $specs[] = $spec;
+    }
+    // Today (UTC) always has a realistic day of traffic, so "Calls today" and its delta read like a real site.
+    $dayStart = $now - ($now % $day);
+    $span = max(120, $now - $dayStart - 60);
+    for ($i = 0; $i < 26; $i++) {
+        [$token, $pack, $abilities] = $personas[$i % count($personas)];
+        $name = $abilities[$i % count($abilities)];
+        $spec = ['ts' => $dayStart + (int) ($span * ($i + 1) / 27), 'ability' => $name, 'token' => $token, 'pack' => $pack, 'tier' => str_contains($name, 'update') ? 1 : 0, 'decision' => 'allowed', 'result' => 'success', 'reason' => null, 'approval' => null, 'dry' => false];
+        if ($i === 9 || $i === 20) {
+            $spec = ['decision' => 'denied', 'result' => null, 'reason' => 'not_in_pack'] + $spec;
+        } elseif ($i === 14) {
+            $spec['result'] = 'failure';
         }
         $specs[] = $spec;
     }

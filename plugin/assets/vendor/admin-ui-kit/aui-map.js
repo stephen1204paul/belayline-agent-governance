@@ -34,14 +34,32 @@
       var A = laneIds(i), B = laneIds(i + 1);
       return { A: A, B: B, y0: Math.max.apply(null, A.map(function (k) { return P[k].b; })), y1: Math.min.apply(null, B.map(function (k) { return P[k].t; })) };
     }
+    /* One stem per node. Nodes in the row nearest the gap run straight to the bus; a node in a wrapped, farther row
+       steps sideways through the gap between row-mates so the stem never crosses another box. Returns the bus x. */
+    function stem(P, list, k, down, ym, host, r) {
+      var p = P[k], e = down ? p.b : p.t, x = p.l + p.w / 2;
+      var edge = down ? Math.max.apply(null, list.map(function (o) { return P[o].b; })) : Math.min.apply(null, list.map(function (o) { return P[o].t; }));
+      if (Math.abs(edge - e) >= 2) {
+        var row = list.filter(function (o) { return Math.abs((down ? P[o].b : P[o].t) - edge) < 2; }).sort(function (a, b) { return P[a].l - P[b].l; });
+        var c = [P[row[0]].l - 7], q;
+        for (q = 0; q < row.length - 1; q++) c.push((P[row[q]].l + P[row[q]].w + P[row[q + 1]].l) / 2);
+        c.push(P[row[row.length - 1]].l + P[row[row.length - 1]].w + 7);
+        var gx = c.reduce(function (a, b) { return Math.abs(b - x) < Math.abs(a - x) ? b : a; });
+        var yj = down ? (p.b + Math.min.apply(null, row.map(function (o) { return P[o].t; }))) / 2 : (p.t + Math.max.apply(null, row.map(function (o) { return P[o].b; }))) / 2;
+        mk('polyline', { points: x + ',' + e + ' ' + x + ',' + yj + ' ' + gx + ',' + yj + ' ' + gx + ',' + ym }, host);
+        x = gx;
+      } else mk('line', { x1: x, y1: e, x2: x, y2: ym }, host);
+      mk('circle', { cx: x, cy: ym, r: r }, host);
+      return x;
+    }
     function draw() {
       var g = geo(), P = g.P, i;
       svg.setAttribute('viewBox', '0 0 ' + g.r.width + ' ' + g.r.height); svg.textContent = '';
       var bus = mk('g', { 'class': 'aui-bus' }, svg);
       for (i = 0; i < lanes.length - 1; i++) {
         var G = gap(P, i), ym = (G.y0 + G.y1) / 2, xs = [];
-        G.A.forEach(function (k) { var x = P[k].l + P[k].w / 2; xs.push(x); mk('line', { x1: x, y1: P[k].b, x2: x, y2: ym }, bus); mk('circle', { cx: x, cy: ym, r: 2 }, bus); });
-        G.B.forEach(function (k) { var x = P[k].l + P[k].w / 2; xs.push(x); mk('line', { x1: x, y1: P[k].t, x2: x, y2: ym }, bus); mk('circle', { cx: x, cy: ym, r: 2 }, bus); });
+        G.A.forEach(function (k) { xs.push(stem(P, G.A, k, true, ym, bus, 2)); });
+        G.B.forEach(function (k) { xs.push(stem(P, G.B, k, false, ym, bus, 2)); });
         mk('line', { x1: Math.min.apply(null, xs), y1: ym, x2: Math.max.apply(null, xs), y2: ym }, bus);
       }
       if (cur) lit(cur, P);
@@ -52,8 +70,8 @@
       var g = mk('g', { 'class': 'aui-lit' }, svg);
       for (i = 0; i < lanes.length - 1; i++) {
         var G = gap(P, i), ym = (G.y0 + G.y1) / 2, xs = [];
-        G.A.filter(function (k) { return c[k]; }).forEach(function (k) { var x = P[k].l + P[k].w / 2; xs.push(x); mk('line', { x1: x, y1: P[k].b, x2: x, y2: ym }, g); mk('circle', { cx: x, cy: ym, r: 3 }, g); });
-        G.B.filter(function (k) { return c[k]; }).forEach(function (k) { var x = P[k].l + P[k].w / 2; xs.push(x); mk('line', { x1: x, y1: P[k].t, x2: x, y2: ym }, g); mk('circle', { cx: x, cy: ym, r: 3 }, g); });
+        G.A.filter(function (k) { return c[k]; }).forEach(function (k) { xs.push(stem(P, G.A, k, true, ym, g, 3)); });
+        G.B.filter(function (k) { return c[k]; }).forEach(function (k) { xs.push(stem(P, G.B, k, false, ym, g, 3)); });
         if (xs.length) mk('line', { x1: Math.min.apply(null, xs), y1: ym, x2: Math.max.apply(null, xs), y2: ym }, g);
       }
     }

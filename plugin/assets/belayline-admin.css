@@ -31,4 +31,5 @@
 .belayline-aui .aui-stack > .aui-notice + .aui-card, .belayline-aui .aui-stack > .aui-seg + .aui-notice { margin-top: 0; }
 .belayline-aui .belayline-nowrap { white-space: nowrap; }
 .belayline-aui .belayline-input { max-width: 420px; font-size: 11px; }
-.belayline-aui .belayline-flush { flex-wrap: wrap; }
+.belayline-aui .belayline-flush { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 12px; }
+.belayline-aui .belayline-wait-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }

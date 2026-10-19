@@ -384,6 +384,28 @@ final class MapDataTest extends TestCase
         $this->assertSame(0, $days[0]['calls']);
     }
 
+    public function testStatCardDaysCountCallsByTheSameRulesAsTheMap(): void
+    {
+        $ts = gmdate('Y-m-d\TH:i:s\Z', self::NOW - 60);
+        $actor = ['token_id' => 'user:1', 'wp_user' => 1];
+        // One approved call: request row + decision row + the execution that names its approval = ONE call.
+        $this->row('pending', null, 'woocommerce/order-refund', 'user:1', 'commerce', 0, [], 'consumed');
+        $this->row('approved', null, 'woocommerce/order-refund', 'user:1', 'commerce');
+        $this->sink->append(AuditRecord::execution('evt_exec_a', $ts, 'corr_exec_a', 'commerce', $actor, 'woocommerce/order-refund', 2, [], 'success', approvalId: 'apr_' . 1));
+        // Two plain calls, one refusal, one shadow-mode observation (not a call; its run is the call).
+        $this->row('allowed', 'success', 'core/get-site-info', 'user:1');
+        $this->row('allowed', 'success', 'core/get-site-info', 'user:1');
+        $this->row('denied', null, 'core/get-site-info', 'user:1');
+        $this->row('denied', null, 'core/get-site-info', 'user:1', 'content', 0, [], null, true);
+
+        $map = $this->map();
+        $today = $map['days'][6];
+
+        $this->assertSame(4, $map['total'], 'approved(1) + ran(2) + refused(1); decision rows and the shadow observation are not calls');
+        $this->assertSame(4, $today['calls'], 'the Calls today card equals the map total, not the 7 raw rows');
+        $this->assertSame(1, $today['refused'], 'the Refused today card counts refused calls only, not shadow observations');
+    }
+
     public function testTheResultIsCachedForFiveMinutesAndRebuiltWhenAnAuditRowAppears(): void
     {
         $this->row('allowed', 'success', 'core/get-site-info', 'app:uuid-claude');

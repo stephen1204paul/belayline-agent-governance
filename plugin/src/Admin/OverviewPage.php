@@ -284,13 +284,13 @@ final class OverviewPage
             $who = $this->who->describe((string) ($r['key_id'] ?? ''));
             echo '<li class="aui-item belayline-flush"><span class="aui-tile aui-tile--sm">' . Icons::svg('robot') . '</span><div class="aui-grow"><div class="aui-item-name">'
                 . esc_html($who['label']) . ': ' . PendingActionsPage::summaryHtml((string) ($r['summary'] ?? '')) . '</div><div class="aui-muted">' // phpcs:ignore WordPress.Security.EscapeOutput -- summaryHtml() escapes by provenance.
-                . esc_html(PendingActionsPage::heldReason($events[(string) ($r['audit_event_id'] ?? '')] ?? null)) . '</div></div><span class="aui-mono aui-muted belayline-nowrap">'
+                . esc_html(PendingActionsPage::heldReason($events[(string) ($r['audit_event_id'] ?? '')] ?? null)) . '</div></div><div class="belayline-wait-meta"><span class="aui-mono aui-muted belayline-nowrap">'
                 . esc_html(sprintf(
                     /* translators: %s: "in 6 d 23 h" */
                     __('expires %s', 'belayline-agent-governance'),
                     Time::until((string) ($r['pending_expires_ts'] ?? ''), $now)
                 )) . '</span><a class="aui-btn aui-btn--secondary aui-btn--sm" href="'
-                . esc_url(AdminUrls::tab(AdminUrls::PENDING, [], 'approval-' . (string) ($r['approval_id'] ?? ''))) . '">' . esc_html__('Review', 'belayline-agent-governance') . '</a></li>';
+                . esc_url(AdminUrls::tab(AdminUrls::PENDING, [], 'approval-' . (string) ($r['approval_id'] ?? ''))) . '">' . esc_html__('Review', 'belayline-agent-governance') . '</a></div></li>';
         }
         echo '</ul></section>';
     }
