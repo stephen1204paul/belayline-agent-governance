@@ -106,21 +106,33 @@ final class AuditReader
             $conds[] = 'l.ability LIKE %s';
             $args[] = $esc($f->through) . '/%';
         }
-        // A token appears in the stored record as `"actor":{"token_id":"<token>"`, or as the
-        // agent credential `,"via":"<token>"}` (always the last actor key). Agent input can
-        // never forge either: it sits JSON-escaped inside `input`, where quotes are `\"`.
+        // Who made a call: the principal (`actor.token_id`) or the agent credential
+        // (`actor.via`). Matched with a REGEXP ANCHORED at the start of record_json and
+        // walking the server-controlled fields in canonical order, with quote-bounded
+        // classes that cannot cross a string. A LIKE anywhere in the row would also hit
+        // KEYS an agent sends inside `input` (e.g. {"actor":{"token_id":"x"}}), because
+        // only string VALUES are escaped there, not object keys.
         $patterns = [];
-        foreach ($f->tokens as $t) {
-            $patterns[] = '%"actor":{"token_id":"' . $esc($t) . '"%';
-            $patterns[] = '%,"via":"' . $esc($t) . '"}%';
-        }
         if ($f->tokenPrefix !== '') {
-            $patterns = ['%"actor":{"token_id":"' . $esc($f->tokenPrefix) . '%', '%,"via":"' . $esc($f->tokenPrefix) . '%'];
+            $rx = self::tokenRegex($f->tokenPrefix);
+            $patterns = $rx === null ? [] : [self::actorRegex($rx, false, true), self::actorRegex($rx, true, true)];
+        } else {
+            foreach ($f->tokens as $t) {
+                $rx = self::tokenRegex($t);
+                if ($rx !== null) {
+                    $patterns[] = self::actorRegex($rx, false, false);
+                    $patterns[] = self::actorRegex($rx, true, false);
+                }
+            }
         }
-        if ($patterns !== []) {
-            $patterns = array_slice($patterns, 0, AuditFilter::TOKEN_SLOTS * 2);
-            $conds[] = '(' . implode(' OR ', array_fill(0, count($patterns), 'l.record_json LIKE %s')) . ')';
-            array_push($args, ...$patterns);
+        if ($f->tokens !== [] || $f->tokenPrefix !== '') {
+            if ($patterns === []) {
+                $conds[] = '1 = 0'; // a token outside the safe charset matches nothing (fail closed)
+            } else {
+                $patterns = array_slice($patterns, 0, AuditFilter::TOKEN_SLOTS * 2);
+                $conds[] = '(' . implode(' OR ', array_fill(0, count($patterns), 'l.record_json REGEXP %s')) . ')';
+                array_push($args, ...$patterns);
+            }
         }
         if ($f->outcome !== '') {
             $from .= ' LEFT JOIN %i a ON a.audit_event_id = l.event_id';
@@ -314,5 +326,38 @@ final class AuditReader
         }
 
         return $column === $fromRecord;
+    }
+
+    /**
+     * A token as a regex fragment portable across MySQL 8 (ICU), MySQL 5.7 and
+     * MariaDB (PCRE), or null when it holds anything outside the charset real
+     * identity tokens use (letters, digits, `: _ . @ / -`). Only `.` is a
+     * metacharacter in that set, written as the `[.]` bracket class; the rest are
+     * literal outside brackets in every dialect.
+     */
+    private static function tokenRegex(string $token): ?string
+    {
+        if ($token === '' || preg_match('/^[A-Za-z0-9:_.@\/-]+$/D', $token) !== 1) {
+            return null;
+        }
+
+        return str_replace('.', '[.]', $token);
+    }
+
+    /**
+     * The anchored pattern for one token. `record_json` always begins
+     * `{"id":..,"ts":..,"correlation_id":..,"pack":..,"actor":{"token_id":..,"wp_user":..`
+     * (then, on newer rows, `"env_type":..,"env_mismatch":..`, then `"via":..` only when
+     * present). `$rx` comes from {@see tokenRegex()}.
+     */
+    private static function actorRegex(string $rx, bool $via, bool $prefix): string
+    {
+        $head = '^[{]"id":"[^"]*","ts":"[^"]*","correlation_id":"[^"]*","pack":"[^"]*","actor":[{]"token_id":';
+        if (!$via) {
+            return $head . '"' . $rx . ($prefix ? '' : '"');
+        }
+
+        return $head . '(null|"[^"]*"),"wp_user":(null|[0-9]+)(,"env_type":"[^"]*","env_mismatch":(true|false))?,"via":"'
+            . $rx . ($prefix ? '' : '"[}]');
     }
 }

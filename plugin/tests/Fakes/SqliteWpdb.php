@@ -50,6 +50,9 @@ final class SqliteWpdb extends wpdb
                 : implode($delim, array_slice($parts, $count));
         }, 3);
 
+        // MySQL's `x REGEXP pattern` (SQLite calls regexp(pattern, x)); PCRE reads the portable subset the plugin emits.
+        $this->pdo->sqliteCreateFunction('REGEXP', static fn (?string $pattern, ?string $value): int => preg_match('~' . str_replace('~', '\\~', (string) $pattern) . '~D', (string) $value) === 1 ? 1 : 0, 2);
+
         $this->pdo->exec('CREATE TABLE wp_belayline_approvals (
             id INTEGER PRIMARY KEY AUTOINCREMENT, approval_id TEXT, verb TEXT, args_hash TEXT, summary TEXT,
             correlation_id TEXT, audit_event_id TEXT, key_id TEXT, status TEXT, fingerprint TEXT,

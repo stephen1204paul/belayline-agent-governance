@@ -192,4 +192,54 @@ final class AuditReaderFilterTest extends TestCase
         $this->assertSame([], $ids(['token' => 'oauth:d7']), 'an exact token never matches a mere prefix of a via');
         $this->assertSame([], $ids(['token' => 'oauth:%']), '% is not a wildcard against via either');
     }
+
+    /** @return list<string> */
+    private function idsOn(SqliteWpdb $db, array $q): array
+    {
+        return array_map(
+            static fn (array $r): string => (string) $r['event_id'],
+            (new AuditReader($db))->filtered(AuditFilter::fromRequest($q), 50, 0, self::NOW)
+        );
+    }
+
+    public function testAnAgentCannotForgeAWhoMatchWithKeysInsideItsOwnInput(): void
+    {
+        $db = new SqliteWpdb();
+        $sink = new WpdbAuditSink($db);
+        $ts = gmdate('Y-m-d\TH:i:s\Z', self::NOW);
+        $add = static function (string $id, array $actor, array $input) use ($sink, $ts): void {
+            $sink->append(AuditRecord::execution($id, $ts, 'c' . $id, 'site-admin', $actor, 'core/get-site-info', 0, $input, 'success'));
+        };
+        $env = ['env_type' => 'production', 'env_mismatch' => false];
+        // Genuine rows.
+        $add('g-principal', ['token_id' => 'oauth:X', 'wp_user' => 1] + $env, []);
+        $add('g-via', ['token_id' => 'role:administrator', 'wp_user' => 1] + $env + ['via' => 'oauth:X'], []);
+        $add('g-old-shape', ['token_id' => 'oauth:X', 'wp_user' => 1], []);
+        $add('g-null-user', ['token_id' => 'role:administrator', 'wp_user' => null] + $env + ['via' => 'oauth:X'], []);
+        // Forged: the agent controls `input`, including object KEYS (only values are escaped).
+        $add('f-actor-key', ['token_id' => 'user:9', 'wp_user' => 9] + $env, ['actor' => ['token_id' => 'oauth:X']]);
+        $add('f-via-key', ['token_id' => 'user:9', 'wp_user' => 9] + $env, ['a' => 1, 'via' => 'oauth:X']);
+        $add('f-whole-actor', ['token_id' => 'user:9', 'wp_user' => 9] + $env, ['x' => ['actor' => ['token_id' => 'oauth:X', 'wp_user' => 1, 'via' => 'oauth:X']]]);
+        $add('f-pack-value', ['token_id' => 'user:9', 'wp_user' => 9] + $env, ['pack' => '","actor":{"token_id":"oauth:X"']);
+        $this->assertStringContainsString('"input":{"actor":{"token_id":"oauth:X"}}', (string) $db->get_var("SELECT record_json FROM wp_belayline_audit_log WHERE event_id = 'f-actor-key'"), 'the forged key really is stored unescaped');
+
+        $this->assertSame(['g-null-user', 'g-old-shape', 'g-via', 'g-principal'], $this->idsOn($db, ['token' => 'oauth:X']));
+        $this->assertSame(['g-null-user', 'g-old-shape', 'g-via', 'g-principal'], $this->idsOn($db, ['token_prefix' => 'oauth:']));
+        $this->assertSame([], $this->idsOn($db, ['token' => 'oauth:Y']));
+    }
+
+    public function testATokenOutsideTheSafeCharsetMatchesNothingAndStaysAParameter(): void
+    {
+        $db = new SqliteWpdb();
+        $reader = new AuditReader($db);
+        $reader->filtered(AuditFilter::fromRequest(['token' => 'oauth:x]|.*']), 50, 0, self::NOW);
+        $sql = (string) end($db->queries);
+        $this->assertStringContainsString('1 = 0', $sql);
+        $this->assertStringNotContainsString('REGEXP', $sql);
+
+        $reader->filtered(AuditFilter::fromRequest(['token' => 'oauth:a.b']), 50, 0, self::NOW);
+        $sql = (string) end($db->queries);
+        $this->assertStringContainsString('REGEXP', $sql);
+        $this->assertStringContainsString('oauth:a[.]b"', $sql, 'a dot is a bracket class, never a wildcard');
+    }
 }
