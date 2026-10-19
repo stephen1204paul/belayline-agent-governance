@@ -28,6 +28,16 @@ WooCommerce, FluentCart and SureCart modules that wire in automatically when tho
 active. None of them trusts a tool's own "read-only" or "safe" label; classification comes from
 the plugin's own policy map.
 
+**One Belayline menu, and a map of where calls go**
+
+Belayline now has its own top-level menu (it used to live under Tools) with five tabs:
+Overview, Pending, Activity, Packs and Settings. Old Tools links redirect to the right tab. The
+Overview opens with what needs you (approvals waiting, calls today, calls refused, whether the
+log is intact) and a map of the last 7 days: who is asking (AI apps, people, API keys), which
+plugin offered the ability, which pack's rules decided, and what happened. Click a box to open
+Activity filtered to it, or switch the map to a table. Plugins such as Site Agent can name
+their own identities on the map through the `belayline_map_who` filter.
+
 **Capability packs and tiers**
 
 Every governed ability maps to a tier: reversible (read), side-effecting (write), or
@@ -58,7 +68,11 @@ identity, the original arguments, or any token.
 **Hash-chained audit log**
 
 Every gate decision and executed action is appended to an append-only, hash-chained log under
-**Belayline → Activity**, with a tamper-evidence check that re-verifies the chain on load.
+**Belayline → Activity**, with a tamper-evidence check that re-verifies the chain on load. The
+list stays quick on large logs: at 100,000 rows the Activity screen loaded in about 0.6 seconds
+(1.6 on a cold first load) on a slow test laptop, down from 2.4 to 3.1 seconds. Rows are kept forever unless you set a retention period under
+**Belayline → Settings**; when old rows are removed a checkpoint keeps the tamper check working
+on what remains, and you can download any date range as JSON Lines first.
 
 **Core coverage**
 
@@ -153,8 +167,10 @@ rebinds the site from the settings page. Production sites (`wp_get_environment_t
 
 **Multisite**
 
-WordPress multisite is not supported. Activation is refused on a multisite install, network-wide
-or per site.
+Works on WordPress multisite, network-activated or per site. Each site is independent: its own
+tables, audit chain, approvals, packs and settings, created when the site is created and removed
+with it. There is no network-wide audit view. To keep refusing multisite, return false from the
+`belayline_allow_multisite` filter.
 
 == Installation ==
 
@@ -178,7 +194,15 @@ support is a self-contained module that loads only when WooCommerce is active.
 
 = Does it work on multisite? =
 
-No. Activation is refused on a multisite install, both network-wide and per site.
+Yes, from 0.5. Every site keeps its own audit log, approvals, packs and settings, and the log's
+tamper check runs per site. There is no network-wide audit view yet.
+
+= How big can the audit log get? =
+
+By default it is never pruned. On our test site, with 100,000 audit rows, the tamper check took about 1
+second and the Activity screen about 0.6 seconds warm (1.6 cold). If you would rather not keep it all, set a
+retention period under Belayline → Settings: older rows are removed daily, with a checkpoint left
+so the tamper check still works, and you can download the rows as JSON Lines before they go.
 
 = What about WooCommerce's own MCP endpoint? =
 
@@ -251,7 +275,7 @@ The same screen exports any date range as JSON Lines.
 == Upgrade Notice ==
 
 = 0.5.0 =
-Adds change history and undo, ability review for other plugins' abilities, an IP allowlist, and FluentCart and SureCart modules. Adds a change-history table; back up your database first.
+Adds a top-level Belayline menu with an Overview map, multisite support, audit retention with JSON Lines export, change history and undo, ability review for other plugins' abilities, an IP allowlist, and FluentCart and SureCart modules. Adds a change-history table and new indexes; back up your database first.
 
 = 0.4.5 =
 Renamed to Belayline Agent Governance, with a new slug, text domain and `belayline_` prefix for hooks, options and tables. Deactivate and delete the old plugin folder, then install this one.
@@ -276,6 +300,17 @@ runs.
 == Changelog ==
 
 = 0.5.0 =
+* A new top-level Belayline menu (it was under Tools) with Overview, Pending, Activity, Packs and
+  Settings tabs, and a map of where agent calls go on the Overview. Old Tools links redirect.
+  Plugins can name their own callers on the map with the `belayline_map_who` filter.
+* Multisite: network-activate or activate per site. Each site has its own tables, audit chain,
+  approvals and settings, and the audit lock is per site.
+* A faster Activity list on large logs: at 100,000 rows it loads in about 0.6 seconds (1.6 cold) instead of
+  2.4 (3.1 cold), using a new index (database schema update).
+* Calls are counted once each, and a call that ran after an approval records which approval it used.
+* Undo is for people: it works from a signed-in administrator's session and is refused to
+  application passwords and API keys.
+* Removed a notice that wrongly reported a grants-table conflict after reinstalling.
 * Pending approvals: the time a request stays open can be changed per request with the
   `belayline_pending_ttl_seconds` filter (default 1 hour, 60 seconds to 30 days), and a
   `belayline_approval_expired` action fires once when a request lapses unanswered.

@@ -6,6 +6,14 @@ here can change; the constraint that can't is the design principle: every
 addition must fail closed, and nothing a tool or agent self-reports may ever
 loosen a decision.
 
+## Shipped for 0.5
+
+A top-level Belayline menu with an Overview map, pending-approval TTL and an
+expiry hook, audit retention with a hash-chain checkpoint and JSON Lines export,
+change history and undo, ability review, an IP allowlist, FluentCart and
+SureCart modules, a faster Activity list on large logs, and multisite support
+(each site independent). See the changelog in `plugin/readme.txt`.
+
 ## Shipped for 0.2 (on main, unreleased)
 
 **Argument-aware caps (spend limits).** Packs can declare caps read from the
@@ -103,13 +111,13 @@ GitHub Actions, failing loudly when the tag does not match the plugin header.
   and directory review compliance.
 - **WP-CLI commands** — `wp belayline audit list`, `wp belayline audit verify`
   (hash-chain check), CSV export, approval management from the shell.
-- **Audit retention and export** — configurable retention windows, webhook or
-  syslog export for sites shipping logs to a SIEM.
+- **Streaming audit export** — webhook or syslog export for sites shipping logs
+  to a SIEM. (Retention windows and a JSON Lines download shipped in 0.5.)
 - **Anomaly response** — velocity heuristics on the audit stream (an agent
   suddenly enumerating customers, a burst of denials) that can alert or
   suspend a token's bindings until a human looks.
-- **Multisite** — per-site pack catalogs and bindings, network-level audit
-  view.
+- **Network-level audit view** for multisite. (Per-site install, packs,
+  bindings and audit chains shipped in 0.5.)
 - **MCP elicitation round-trip** — when mcp-adapter supports elicitation,
   an approval-required verdict could round-trip to the agent's client for an
   in-conversation human decision instead of parking in wp-admin.
