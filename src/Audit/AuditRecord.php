@@ -37,6 +37,7 @@ final class AuditRecord
         public readonly array $externalEffects,
         public readonly ?string $ip,
         public readonly ?string $changesSha256 = null,
+        public readonly ?string $approvalId = null,
     ) {
     }
 
@@ -110,6 +111,12 @@ final class AuditRecord
      *                                                                   ran ({@see \Belayline\Changes\ChangeSet}).
      *                                                                   Null = no capture window ran; a hash of an empty
      *                                                                   set = a window ran and saw no changes.
+     * @param ?string                                  $approvalId       The approval this run consumed (reserved), set
+     *                                                                   by the host from the server-side reservation and
+     *                                                                   NEVER from agent input. Recorded as a TOP-LEVEL
+     *                                                                   `approval_id` key, which is unambiguous because
+     *                                                                   everything the agent sent lives under `input`.
+     *                                                                   Null for a run that used no approval.
      */
     public static function execution(
         string $id,
@@ -124,6 +131,7 @@ final class AuditRecord
         array $externalEffects = [],
         ?string $ip = null,
         ?string $changesSha256 = null,
+        ?string $approvalId = null,
     ): self {
         return new self(
             $id,
@@ -142,6 +150,7 @@ final class AuditRecord
             $externalEffects,
             $ip,
             $changesSha256,
+            $approvalId !== null && $approvalId !== '' ? $approvalId : null,
         );
     }
 
@@ -175,6 +184,12 @@ final class AuditRecord
         // keeps the exact canonical bytes it always had.
         if ($this->changesSha256 !== null) {
             $record['changes_sha256'] = $this->changesSha256;
+        }
+
+        // Same rule: absent unless an approval authorised this run, so every
+        // earlier record keeps its exact bytes and hash.
+        if ($this->approvalId !== null) {
+            $record['approval_id'] = $this->approvalId;
         }
 
         return $record;

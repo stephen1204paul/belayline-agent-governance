@@ -140,13 +140,13 @@ function snapshotDatabase(): array
     return ['db' => $db, 'sink' => new WpdbAuditSink($db)];
 }
 
-function snapshotRow(WpdbAuditSink $sink, int $ts, string $decision, ?string $result, string $ability, ?string $token, string $pack, int &$seq, ?int $tier = 0, ?string $reason = null, string $event = '', bool $dryRun = false): string
+function snapshotRow(WpdbAuditSink $sink, int $ts, string $decision, ?string $result, string $ability, ?string $token, string $pack, int &$seq, ?int $tier = 0, ?string $reason = null, string $event = '', bool $dryRun = false, ?string $approvalId = null): string
 {
     $id = $event !== '' ? $event : 'evt_' . ++$seq;
     $stamp = gmdate('Y-m-d\TH:i:s\Z', $ts);
     $actor = ['token_id' => $token, 'wp_user' => $token !== null && str_starts_with($token, 'user:') ? (int) substr($token, 5) : null];
     $sink->append($result !== null
-        ? AuditRecord::execution($id, $stamp, 'corr_' . $seq, $pack, $actor, $ability, $tier, ['id' => mt_rand(10, 99)], $result, ip: '203.0.113.' . mt_rand(2, 40))
+        ? AuditRecord::execution($id, $stamp, 'corr_' . $seq, $pack, $actor, $ability, $tier, ['id' => mt_rand(10, 99)], $result, ip: '203.0.113.' . mt_rand(2, 40), approvalId: $approvalId)
         : AuditRecord::decision($id, $stamp, 'corr_' . $seq, $pack, $actor, $ability, $tier, ['id' => mt_rand(10, 99)], AuditDecision::from($decision), ip: '203.0.113.' . mt_rand(2, 40), dryRun: $dryRun, reason: $reason));
 
     return $id;
@@ -192,8 +192,8 @@ function snapshotSeed(SqliteWpdb $db, WpdbAuditSink $sink, int $now, bool $withP
             $spec = ['decision' => 'denied', 'result' => null, 'reason' => $roll % 2 ? 'not_in_pack' : 'denied_by_class'] + $spec;
         } elseif ($roll > 94 && $roll <= 96) {
             // A held request a person later approved; the agent's retry is its own `allowed` row below.
-            $spec = ['decision' => 'pending', 'result' => null, 'reason' => 'approval_required', 'approval' => 'consumed', 'tier' => 1] + $spec;
-            $specs[] = ['ts' => $ts + 600, 'decision' => 'allowed', 'result' => 'success', 'reason' => null, 'approval' => null, 'dry' => false] + $spec;
+            $spec = ['decision' => 'pending', 'result' => null, 'reason' => 'approval_required', 'approval' => 'consumed', 'tier' => 1, 'event' => 'evt_held' . $i] + $spec;
+            $specs[] = ['ts' => $ts + 600, 'decision' => 'allowed', 'result' => 'success', 'reason' => null, 'approval' => null, 'dry' => false, 'link' => 'apr_evt_held' . $i] + $spec;
         } elseif ($roll === 97) {
             $spec = ['decision' => 'pending', 'result' => null, 'reason' => 'approval_required', 'approval' => 'rejected', 'tier' => 1] + $spec;
         } elseif ($roll === 98) {
@@ -205,6 +205,17 @@ function snapshotSeed(SqliteWpdb $db, WpdbAuditSink $sink, int $now, bool $withP
             $spec = ['decision' => 'denied', 'result' => null, 'reason' => 'not_in_pack', 'dry' => true] + $spec;
         }
         $specs[] = $spec;
+    }
+    // Approved calls, so the Overview's Approved box is never empty. Each execution row names its approval.
+    //  - held, approved, ran                       -> 1 Approved
+    //  - held, approved, failed (rolled back)      -> 1 Failed, not also counted as a waiting-to-run Approved
+    //  - held, approved, failed, retried, ran      -> 1 Approved
+    foreach ([['a', ['success']], ['b', ['failure']], ['c', ['failure', 'success']]] as $n => [$tag, $runs]) {
+        $held = $now - (2 + $n) * $day - 7200;
+        $specs[] = ['ts' => $held, 'ability' => 'woocommerce/order-refund', 'token' => 'app:chatgpt-1', 'pack' => 'woo-default-agent', 'tier' => 2, 'decision' => 'pending', 'result' => null, 'reason' => 'approval_required', 'approval' => $runs === ['failure'] ? 'approved' : 'consumed', 'dry' => false, 'event' => 'evt_appr' . $tag];
+        foreach ($runs as $k => $result) {
+            $specs[] = ['ts' => $held + 900 + $k * 600, 'ability' => 'woocommerce/order-refund', 'token' => 'app:chatgpt-1', 'pack' => 'woo-default-agent', 'tier' => 2, 'decision' => 'allowed', 'result' => $result, 'reason' => null, 'approval' => null, 'dry' => false, 'link' => 'apr_evt_appr' . $tag];
+        }
     }
     $specs[] = ['ts' => $now - 3 * $day, 'ability' => 'belayline_pack_bindings', 'token' => 'user:1', 'pack' => 'admin', 'tier' => null, 'decision' => 'admin', 'result' => null, 'reason' => 'binding.changed', 'approval' => null, 'dry' => false];
 
@@ -221,7 +232,7 @@ function snapshotSeed(SqliteWpdb $db, WpdbAuditSink $sink, int $now, bool $withP
     usort($specs, static fn (array $a, array $b): int => $a['ts'] <=> $b['ts']);
     $seq = 0;
     foreach ($specs as $sp) {
-        $event = snapshotRow($sink, (int) $sp['ts'], (string) $sp['decision'], $sp['result'], (string) $sp['ability'], $sp['token'], (string) $sp['pack'], $seq, $sp['tier'], $sp['reason'], (string) ($sp['event'] ?? ''), (bool) $sp['dry']);
+        $event = snapshotRow($sink, (int) $sp['ts'], (string) $sp['decision'], $sp['result'], (string) $sp['ability'], $sp['token'], (string) $sp['pack'], $seq, $sp['tier'], $sp['reason'], (string) ($sp['event'] ?? ''), (bool) $sp['dry'], $sp['link'] ?? null);
         if ($sp['approval'] !== null) {
             $db->insert('wp_belayline_approvals', [
                 'approval_id' => 'apr_' . $event, 'verb' => $sp['ability'], 'args_hash' => md5($event), 'summary' => 'x', 'correlation_id' => 'corr_' . $event,

@@ -14,12 +14,18 @@ namespace Belayline\Plugin\Admin\Map;
  *   allowed + success (or no result)       Ran. An `allowed` row is the EXECUTION row;
  *                                          the gate writes no row for a plain allow.
  *   allowed + failure / error / other      Failed (an unknown result fails visible)
+ *   allowed + approval_id, success         Approved: the run an approval paid for. The execution
+ *                                          row names its approval (server-set, never from agent input)
+ *   allowed + approval_id, not success     Failed (the approval went back to `approved` on rollback)
+ *   allowed + approval_id, NOT the latest  not counted: a retry of the same approval is the same call,
+ *                                          so only the newest execution per approval id counts
  *   denied                                 Refused
  *   pending + its approval is `pending`    Waiting
  *   pending + approval `approved`/`in_flight`  Approved: a person said yes, the agent has not run it yet
  *   pending + approval `rejected`          Refused
- *   pending + approval `consumed`          not counted: the run that used the approval has its own
- *                                          `allowed` row, which is the call (counted as Ran)
+ *   pending + approval `consumed`          not counted: the run that used the approval is the call
+ *   pending + ANY execution row names its approval   not counted: that execution is the call (this also
+ *                                          covers a failed run, which returns the approval to `approved`)
  *   pending + approval expired, stale, voided or already swept   Expired
  *   denied/pending written in shadow mode (`dry_run`)            Would refuse: the call ran anyway
  *                                          (its execution row counts as Ran), so this box is an
@@ -29,9 +35,10 @@ namespace Belayline\Plugin\Admin\Map;
  *                                          pending row's approval status
  *
  * The link from a request to its approval is `belayline_approvals.audit_event_id`
- * = the pending row's `event_id`. The run that spends an approval is NOT linked
- * to it in the audit log (execution rows carry no approval id), which is why a
- * consumed approval is counted through the run, not the request.
+ * = the pending row's `event_id`. The link from a run to its approval is the audit
+ * row's `approval_id` column, a query aid mirroring the hashed record's top-level
+ * `approval_id` (chain verification cross-checks the two). Rows written before
+ * schema 9 have neither, and are classified exactly as they always were.
  */
 final class CallOutcome
 {
@@ -56,22 +63,45 @@ final class CallOutcome
      * The outcome of one audit row as a SQL expression: one of the outcome ids,
      * or '' for a row that is not a call. Aliases: `l` the audit log, `a` the
      * LEFT JOINed approvals table. Literals only, so it can sit in a prepared
-     * template. `dry_run` is read from its LAST occurrence in the record, which
-     * canonical field order puts after any agent-supplied input.
+     * template. It holds exactly {@see TABLE_PLACEHOLDERS} `%i` placeholders, in
+     * order, each taking the audit table's name: the "latest execution per
+     * approval" and "was it executed" tests look back into the audit log.
+     * `dry_run` is read from its LAST occurrence in the record, which canonical
+     * field order puts after any agent-supplied input; the approval link is read
+     * from the `approval_id` COLUMN, never parsed out of agent-reachable JSON.
      */
     public const SQL = "CASE"
-        . " WHEN l.decision = 'allowed' THEN (CASE WHEN l.result IS NULL OR l.result = '' OR l.result = 'success' THEN 'ran' ELSE 'failed' END)"
+        . " WHEN l.decision = 'allowed' THEN (CASE"
+        . " WHEN l.approval_id IS NOT NULL AND l.id <> (SELECT MAX(x.id) FROM %i x WHERE x.approval_id = l.approval_id AND x.decision = 'allowed') THEN ''"
+        . " WHEN l.approval_id IS NOT NULL THEN (CASE WHEN l.result IS NULL OR l.result = '' OR l.result = 'success' THEN 'approved' ELSE 'failed' END)"
+        . " WHEN l.result IS NULL OR l.result = '' OR l.result = 'success' THEN 'ran' ELSE 'failed' END)"
         . " WHEN l.decision IN ('denied', 'pending') AND SUBSTRING(SUBSTRING_INDEX(l.record_json, '\"dry_run\":', -1), 1, 5) = 'true,' THEN 'would'"
         . " WHEN l.decision = 'denied' THEN 'refused'"
+        . " WHEN l.decision = 'pending' AND a.approval_id IS NOT NULL AND EXISTS (SELECT 1 FROM %i y WHERE y.approval_id = a.approval_id AND y.decision = 'allowed') THEN ''"
         . " WHEN l.decision = 'pending' THEN (CASE a.status WHEN 'pending' THEN 'waiting' WHEN 'approved' THEN 'approved' WHEN 'in_flight' THEN 'approved'"
         . " WHEN 'rejected' THEN 'refused' WHEN 'consumed' THEN '' ELSE 'expired' END)"
         . " ELSE '' END";
 
+    /** How many `%i` (audit table name) placeholders {@see SQL} takes. */
+    public const TABLE_PLACEHOLDERS = 2;
+
+    /**
+     * The values for {@see SQL}'s table placeholders.
+     *
+     * @return list<string>
+     */
+    public static function tableArgs(string $auditTable): array
+    {
+        return array_fill(0, self::TABLE_PLACEHOLDERS, $auditTable);
+    }
+
     /** PHP twin of the executed-call part of {@see SQL}, for the single-row feed. */
-    public static function classify(string $decision, ?string $result): ?string
+    public static function classify(string $decision, ?string $result, ?string $approvalId = null): ?string
     {
         return match ($decision) {
-            'allowed' => ($result === null || $result === '' || $result === 'success') ? self::RAN : self::FAILED,
+            'allowed' => ($result === null || $result === '' || $result === 'success')
+                ? ($approvalId !== null && $approvalId !== '' ? self::APPROVED : self::RAN)
+                : self::FAILED,
             'denied', 'rejected' => self::REFUSED,
             'pending' => self::WAITING,
             'approved' => self::APPROVED,

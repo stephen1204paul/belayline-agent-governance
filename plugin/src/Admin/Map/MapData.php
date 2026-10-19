@@ -101,9 +101,7 @@ final class MapData
                 . "SUBSTRING_INDEX(l.ability, '/', 1) AS ns, l.pack AS pack, " . CallOutcome::SQL . ' AS outcome, COUNT(*) AS n '
                 . "FROM %i l LEFT JOIN %i a ON a.audit_event_id = l.event_id WHERE l.ts >= %s AND l.decision IN ('allowed', 'denied', 'pending') "
                 . "GROUP BY who, ns, pack, outcome HAVING outcome <> ''",
-                Schema::auditLogTable($this->db),
-                Schema::approvalsTable($this->db),
-                $since
+                ...[...CallOutcome::tableArgs(Schema::auditLogTable($this->db)), Schema::auditLogTable($this->db), Schema::approvalsTable($this->db), $since]
             ),
             ARRAY_A
         );
@@ -138,9 +136,7 @@ final class MapData
                 "SELECT SUBSTRING(l.ts, 1, 10) AS d, " . CallOutcome::SQL . ' AS outcome, COUNT(*) AS n '
                 . "FROM %i l LEFT JOIN %i a ON a.audit_event_id = l.event_id WHERE l.ts >= %s AND l.decision IN ('allowed', 'denied', 'pending') "
                 . "GROUP BY d, outcome HAVING outcome <> ''",
-                Schema::auditLogTable($this->db),
-                Schema::approvalsTable($this->db),
-                $since
+                ...[...CallOutcome::tableArgs(Schema::auditLogTable($this->db)), Schema::auditLogTable($this->db), Schema::approvalsTable($this->db), $since]
             ),
             ARRAY_A
         );

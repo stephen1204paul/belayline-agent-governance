@@ -72,8 +72,10 @@ final class WpdbAuditSink implements AuditSink
                     'record_json' => $json,
                     'prev_hash' => $prev,
                     'entry_hash' => $entryHash,
+                    // Query aid only; the same value is inside the hashed record_json.
+                    'approval_id' => $record->approvalId,
                 ],
-                ['%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%s'],
+                ['%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s'],
             );
         } finally {
             $this->unlock();

@@ -58,7 +58,7 @@ final class SqliteWpdb extends wpdb
         $this->pdo->exec('CREATE TABLE wp_belayline_audit_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT, event_id TEXT, ts TEXT, correlation_id TEXT, pack TEXT,
             ability TEXT, tier INTEGER, decision TEXT, result TEXT, wp_user INTEGER, ip TEXT,
-            record_json TEXT, prev_hash TEXT, entry_hash TEXT)');
+            record_json TEXT, prev_hash TEXT, entry_hash TEXT, approval_id TEXT)');
         $this->pdo->exec('CREATE INDEX wp_belayline_audit_log_ts ON wp_belayline_audit_log (ts)');
         $this->pdo->exec('CREATE TABLE wp_belayline_audit_checkpoint (
             id INTEGER PRIMARY KEY AUTOINCREMENT, created_ts TEXT, pruned_through_id INTEGER,

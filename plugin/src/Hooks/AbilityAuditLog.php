@@ -9,6 +9,7 @@ use Belayline\Audit\AuditSink;
 use Belayline\Audit\Redactor;
 use Belayline\Plugin\Changes\ChangeCapture;
 use Belayline\Policy\TierClassifier;
+use Belayline\Plugin\Support\ApprovalLink;
 use Belayline\Plugin\Support\ExecutionResult;
 use Belayline\Plugin\Support\PackResolver;
 use Belayline\Plugin\Support\RequestContext;
@@ -219,6 +220,7 @@ final class AbilityAuditLog
             externalEffects: self::effectsFor($tier),
             ip: RequestContext::ip(),
             changesSha256: $settled['changes_sha256'] ?? null,
+            approvalId: ApprovalLink::take($name),
         ));
     }
 

@@ -133,6 +133,7 @@ final class AuditReader
             $tokenOn,
             ...$slots,
             $f->outcome === '' ? 0 : 1,
+            ...CallOutcome::tableArgs($this->table()),
             $f->outcome,
         ];
     }
@@ -246,7 +247,7 @@ final class AuditReader
         do {
             $rows = $this->db->get_results(
                 $this->db->prepare(
-                    'SELECT id, prev_hash, record_json, entry_hash FROM %i WHERE id > %d ORDER BY id ASC LIMIT %d',
+                    'SELECT id, prev_hash, record_json, entry_hash, approval_id FROM %i WHERE id > %d ORDER BY id ASC LIMIT %d',
                     $table,
                     $afterId,
                     $limit
@@ -267,11 +268,41 @@ final class AuditReader
                 return false;
             }
 
+            // The indexed approval_id column is only a query aid: the hashed record
+            // is the truth, so a column that disagrees with it was edited.
+            foreach ($rows as $r) {
+                if (!self::approvalColumnMatchesRecord($r['approval_id'] ?? null, (string) $r['record_json'])) {
+                    return false;
+                }
+            }
+
             $last = $rows[count($rows) - 1];
             $anchor = (string) $last['entry_hash'];
             $afterId = (int) $last['id'];
         } while (count($rows) === $limit);
 
         return true;
+    }
+
+    /** Does the `approval_id` column equal the (hashed) record's top-level `approval_id`? Both absent counts as equal. */
+    private static function approvalColumnMatchesRecord(mixed $column, string $recordJson): bool
+    {
+        $column = is_string($column) && $column !== '' ? $column : null;
+
+        $fromRecord = null;
+        // Cheap precheck: a record without the key anywhere cannot carry one at the top level.
+        if (str_contains($recordJson, '"approval_id":')) {
+            $decoded = json_decode($recordJson, true);
+            if (!is_array($decoded)) {
+                return false;
+            }
+            $value = $decoded['approval_id'] ?? null;
+            if ($value !== null && !is_string($value)) {
+                return false;
+            }
+            $fromRecord = $value !== '' ? $value : null;
+        }
+
+        return $column === $fromRecord;
     }
 }

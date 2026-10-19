@@ -203,6 +203,20 @@ final class AuditTest extends TestCase
         $this->assertNotSame($without->canonicalJson(), $with->canonicalJson());
     }
 
+    public function testApprovalIdIsATopLevelKeyOnlyWhenPresentAndNeverInsideInput(): void
+    {
+        $base = ['id' => 'evt_1', 'ts' => '2026-01-01T00:00:00Z', 'correlationId' => 's', 'pack' => 'p', 'actor' => ['token_id' => null, 'wp_user' => null], 'ability' => 'core/x', 'tier' => 1, 'result' => 'success'];
+        $without = AuditRecord::execution(...$base, input: ['approval_id' => 'apr_FORGED']);
+        $with = AuditRecord::execution(...$base, input: ['approval_id' => 'apr_FORGED'], approvalId: 'apr_1');
+
+        $this->assertArrayNotHasKey('approval_id', $without->toArray(), 'agent input never becomes the link');
+        $this->assertSame('apr_1', $with->toArray()['approval_id']);
+        $this->assertSame('apr_FORGED', $with->toArray()['input']['approval_id']);
+        $this->assertNotSame($without->canonicalJson(), $with->canonicalJson());
+        $this->assertTrue(HashChain::verify($this->chainFrom($with)));
+        $this->assertArrayNotHasKey('approval_id', AuditRecord::execution(...$base, input: [], approvalId: '')->toArray(), 'an empty id is no id');
+    }
+
     public function testTamperingWithTheChangesHashBreaksTheChain(): void
     {
         $entries = $this->chainFrom($this->execution(str_repeat('a', 64)));

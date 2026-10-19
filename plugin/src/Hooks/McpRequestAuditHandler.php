@@ -10,6 +10,7 @@ use Belayline\Audit\AuditSink;
 use Belayline\Audit\Redactor;
 use Belayline\Policy\TierClassifier;
 use Belayline\Plugin\Changes\ChangeCapture;
+use Belayline\Plugin\Support\ApprovalLink;
 use Belayline\Plugin\Support\PackResolver;
 use Belayline\Plugin\Support\RequestContext;
 use WP\MCP\Infrastructure\Observability\Contracts\McpObservabilityHandlerInterface;
@@ -266,6 +267,7 @@ final class McpRequestAuditHandler implements McpObservabilityHandlerInterface
                 result: 'success',
                 ip: RequestContext::ip(),
                 changesSha256: $settled['changes_sha256'] ?? null,
+                approvalId: ApprovalLink::take($abilityName),
             ));
 
             return;
@@ -307,6 +309,7 @@ final class McpRequestAuditHandler implements McpObservabilityHandlerInterface
             result: $failureReason !== null ? ('error: ' . $failureReason) : 'error',
             ip: RequestContext::ip(),
             changesSha256: $settled['changes_sha256'] ?? null,
+            approvalId: ApprovalLink::take($abilityName),
         ));
     }
 

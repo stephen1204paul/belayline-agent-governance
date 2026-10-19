@@ -6,6 +6,7 @@ namespace Belayline\Plugin\Hooks;
 
 use Belayline\Approval\ApprovalStore;
 use Belayline\Plugin\Changes\ChangeCapture;
+use Belayline\Plugin\Support\ApprovalLink;
 use Belayline\Plugin\Support\ExecutionResult;
 use Belayline\Plugin\Verdict\GrantGate;
 use Belayline\Plugin\Support\PackResolver;
@@ -168,6 +169,10 @@ final class AbilityPermissionGate
             $verdict = $pipeline->judge($name, is_array($input) ? $input : [], $pack, $hints, VerdictMode::Claim);
             if ($verdict->reservedApprovalId !== null) {
                 $self->remember($name, $verdict->reservedApprovalId, $verdict->grantId);
+                // Only an ALLOWED call goes on to execute; its audit row names this approval.
+                if ($verdict->error() === null) {
+                    ApprovalLink::bind($name, $verdict->reservedApprovalId);
+                }
             }
 
             return $verdict->error() ?? true;

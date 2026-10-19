@@ -322,7 +322,7 @@ final class OverviewPage
         foreach ($feed as $r) {
             $decoded = json_decode((string) ($r['record_json'] ?? '{}'), true);
             $token = is_array($decoded) && isset($decoded['actor']['token_id']) && is_string($decoded['actor']['token_id']) ? $decoded['actor']['token_id'] : '';
-            $outcome = CallOutcome::classify((string) $r['decision'], isset($r['result']) ? (string) $r['result'] : null) ?? CallOutcome::RAN;
+            $outcome = CallOutcome::classify((string) $r['decision'], isset($r['result']) ? (string) $r['result'] : null, isset($r['approval_id']) ? (string) $r['approval_id'] : null) ?? CallOutcome::RAN;
             $verb = match ($outcome) {
                 CallOutcome::RAN => __('ran', 'belayline-agent-governance'),
                 CallOutcome::FAILED => __('tried and failed:', 'belayline-agent-governance'),

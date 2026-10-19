@@ -56,8 +56,13 @@ final class Schema
      * 8: the audit log gained `KEY ts (ts)`, so the Overview's 7-day aggregate
      *    ({@see \Belayline\Plugin\Admin\Map\MapData}) is a range scan, not a
      *    full scan. Index only: no column or row changes, the hash chain is untouched.
+     * 9: the audit log gained a nullable, indexed `approval_id VARCHAR(64)`: the
+     *    approval an execution row consumed, a query aid for the Overview map and
+     *    the Activity filter. The hashed `record_json` (top-level `approval_id`)
+     *    is the source of truth and chain verification cross-checks the two.
+     *    Rows written earlier keep NULL; none is rewritten, no hash changes.
      */
-    public const VERSION = '8';
+    public const VERSION = '9';
 
     public const VERSION_OPTION = 'belayline_schema_version';
 
@@ -178,10 +183,12 @@ final class Schema
                 record_json LONGTEXT NOT NULL,
                 prev_hash CHAR(64) NOT NULL,
                 entry_hash CHAR(64) NOT NULL,
+                approval_id VARCHAR(64) NULL,
                 PRIMARY KEY  (id),
                 KEY correlation_id (correlation_id),
                 KEY ability (ability),
-                KEY ts (ts)";
+                KEY ts (ts),
+                KEY approval_id (approval_id)";
     }
 
     /**

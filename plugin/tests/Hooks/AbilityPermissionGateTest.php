@@ -11,6 +11,7 @@ use Belayline\Packs\ArgumentCap;
 use Belayline\Packs\Pack;
 use Belayline\Plugin\Hooks\AbilityPermissionGate;
 use Belayline\Plugin\Identity\IdentityChain;
+use Belayline\Plugin\Support\ApprovalLink;
 use Belayline\Plugin\Support\DecisionRecorder;
 use Belayline\Plugin\Support\GrantRecorder;
 use Belayline\Plugin\Support\PackResolver;
@@ -315,6 +316,16 @@ final class AbilityPermissionGateTest extends TestCase
         $this->assertSame('in_flight', $approvals->rows[$id]['status']);
 
         return [$gate, $approvals, $id, $args];
+    }
+
+    public function testTheReservedApprovalIsLinkedToTheRunItAuthorisesAndOnlyThen(): void
+    {
+        ApprovalLink::reset();
+        [, , $id] = $this->reservedGrant();
+
+        $this->assertSame($id, ApprovalLink::take('woocommerce/orders-list'), 'the server-side reservation id, not anything in the args');
+        $this->assertNull(ApprovalLink::take('woocommerce/orders-list'), 'consumed once');
+        ApprovalLink::reset();
     }
 
     public function testOnExecutedFinalizesTheGrantWhenTheResultCarriesCodeAndMessageAsData(): void
