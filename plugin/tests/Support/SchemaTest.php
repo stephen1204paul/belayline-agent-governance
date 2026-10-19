@@ -219,15 +219,20 @@ final class SchemaTest extends TestCase
         )));
     }
 
-    /** A 0.4.5 site that already shows the false notice is cleared by the upgrade path. */
-    public function testUpgradeClearsAStaleConflictFlagLeftBy045(): void
+    /**
+     * A 0.4.5 site that already shows the false notice: 0.4.6 keeps schema 5, so
+     * the flag is only cleared on the next activation; until then nothing renders it.
+     */
+    public function testAStaleConflictFlagLeftBy045IsNeverShownAndActivationClearsIt(): void
     {
-        $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION] = '5';
         $GLOBALS['wpas_test_options'][Schema::GRANTS_RENAME_CONFLICT_OPTION] = true;
 
-        Schema::maybeUpgrade(new wpdb());
+        $this->assertFalse(method_exists(Schema::class, 'renderGrantsRenameConflictNotice'));
+        $main = (string) file_get_contents(dirname(__DIR__, 2) . '/belayline-agent-governance.php');
+        $this->assertStringNotContainsString('GrantsRenameConflict', $main);
 
-        $this->assertSame(Schema::VERSION, $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
+        Schema::install(new wpdb());
+
         $this->assertArrayNotHasKey(Schema::GRANTS_RENAME_CONFLICT_OPTION, $GLOBALS['wpas_test_options']);
     }
 

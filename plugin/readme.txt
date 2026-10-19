@@ -4,7 +4,7 @@ Tags: security, ai, mcp, audit-log, woocommerce
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.4.5
+Stable tag: 0.4.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -195,6 +195,9 @@ touched.
 
 == Upgrade Notice ==
 
+= 0.4.6 =
+Removes a false warning about an old and a new grants table. No action needed.
+
 = 0.4.5 =
 Renamed to Belayline Agent Governance, with a new slug, text domain and `belayline_` prefix for hooks, options and tables. Deactivate and delete the old plugin folder, then install this one.
 
@@ -216,6 +219,9 @@ your database before upgrading. There is no downgrade path back to a pre-0.4.0 b
 runs.
 
 == Changelog ==
+
+= 0.4.6 =
+* Fixed: reactivating or updating the plugin showed a false warning that an old and a new grants table both exist. Nothing was wrong with your data; the warning no longer appears.
 
 = 0.4.5 =
 * Renamed to Belayline Agent Governance: new slug and text domain `belayline-agent-governance`, and a `belayline_` prefix for hooks, options and tables.
