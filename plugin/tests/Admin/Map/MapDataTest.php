@@ -52,10 +52,13 @@ final class MapDataTest extends TestCase
     }
 
     /** One audit row through the real sink. */
-    private function row(string $decision, ?string $result, string $ability, ?string $token, string $pack = 'content', int $daysAgo = 0, array $input = [], ?string $approval = null, bool $dryRun = false): void
+    private function row(string $decision, ?string $result, string $ability, ?string $token, string $pack = 'content', int $daysAgo = 0, array $input = [], ?string $approval = null, bool $dryRun = false, ?string $via = null): void
     {
         $ts = gmdate('Y-m-d\TH:i:s\Z', self::NOW - $daysAgo * 86400 - 60);
-        $actor = ['token_id' => $token, 'wp_user' => 1];
+        $actor = ['token_id' => $token, 'wp_user' => 1, 'env_type' => 'production', 'env_mismatch' => false];
+        if ($via !== null) {
+            $actor['via'] = $via;
+        }
         $id = 'evt_' . ++$this->seq;
         $record = $result !== null
             ? AuditRecord::execution($id, $ts, 'corr_' . $this->seq, $pack, $actor, $ability, 0, $input, $result)
@@ -313,6 +316,34 @@ final class MapDataTest extends TestCase
 
         $this->assertSame(['ChatGPT'], array_column($map['lanes']['who'], 'label'));
         $this->assertSame(2, $map['lanes']['who'][0]['count']);
+    }
+
+    /** Regression: with no actor token, the first `"token_id":"` in the record was an agent's own input key. */
+    public function testARowWithNoTokenCannotBeClaimedByATokenIdKeyInAgentInput(): void
+    {
+        $this->row('allowed', 'success', 'core/get-site-info', null, 'content', 0, ['token_id' => 'app:uuid-gpt']);
+        $this->row('allowed', 'success', 'core/get-site-info', null, 'content', 0, ['actor' => ['token_id' => 'app:uuid-gpt']]);
+
+        $map = $this->map();
+
+        $this->assertSame(['Unknown caller'], array_column($map['lanes']['who'], 'label'));
+        $this->assertSame(2, $map['lanes']['who'][0]['count']);
+    }
+
+    public function testAnAiAppThatRodeABoundRoleIsDrawnAsTheApp(): void
+    {
+        add_filter('belayline_map_who', static fn ($named, string $token) => str_starts_with($token, 'oauth:') ? ['label' => 'Claude (connector)', 'sub' => 'AI app'] : $named, 10, 2);
+        $this->row('allowed', 'success', 'core/get-site-info', 'role:administrator', 'content', 0, [], null, false, 'oauth:abc123');
+
+        $this->assertSame(['Claude (connector)'], array_column($this->map()['lanes']['who'], 'label'));
+    }
+
+    public function testAViaKeyInAgentInputIsNotTheRowsAgentCredential(): void
+    {
+        add_filter('belayline_map_who', static fn ($named, string $token) => str_starts_with($token, 'oauth:') ? ['label' => 'Claude (connector)', 'sub' => 'AI app'] : $named, 10, 2);
+        $this->row('allowed', 'success', 'core/get-site-info', 'app:uuid-gpt', 'content', 0, ['a' => 1, 'via' => 'oauth:abc123']);
+
+        $this->assertSame(['ChatGPT'], array_column($this->map()['lanes']['who'], 'label'));
     }
 
     public function testLanesAreCappedAtSixWithTheTailFoldedIntoMore(): void

@@ -16,9 +16,8 @@ use wpdb;
  * Its result is cached per site in the `belayline_map_7d` transient for five
  * minutes AND is rebuilt as soon as the newest audit row id changes, so a new
  * audit row invalidates it without touching the audit write path. The `who`
- * column is read straight out of the stored record (`actor.token_id`, the first
- * occurrence, which the canonical field order puts before any agent-supplied
- * input).
+ * column is read straight out of the stored record's `actor` object: its `via`
+ * agent credential when present, else `token_id` (see {@see self::whoSql()}).
  *
  * Lane contract with the kit's `aui-map.js`: one tuple per distinct path,
  * `who,through,pack,outcome,count`, ids prefixed per lane (w-, t-, p-, o-) so
@@ -97,7 +96,7 @@ final class MapData
     {
         $rows = $this->db->get_results(
             $this->db->prepare(
-                "SELECT CASE WHEN INSTR(l.record_json, '\"token_id\":\"') > 0 THEN SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(l.record_json, '\"token_id\":\"', 2), '\"token_id\":\"', -1), '\"', 1) ELSE '' END AS who, "
+                'SELECT ' . self::whoSql() . ' AS who, '
                 . "SUBSTRING_INDEX(l.ability, '/', 1) AS ns, l.pack AS pack, " . CallOutcome::SQL . ' AS outcome, COUNT(*) AS n '
                 . "FROM %i l LEFT JOIN %i a ON a.audit_event_id = l.event_id WHERE l.ts >= %s AND l.decision IN ('allowed', 'denied', 'pending') "
                 . "GROUP BY who, ns, pack, outcome HAVING outcome <> ''",
@@ -122,6 +121,27 @@ final class MapData
         }
 
         return $out;
+    }
+
+    /**
+     * SQL for who made the call: the actor's `via` (the AI app or key that rode
+     * a bound role) when present, else its `token_id`, else ''. Only the real
+     * actor object is read: it is the first `"actor":{"token_id":` in the record
+     * (id, ts, correlation_id and pack before it are server-set) and ends at the
+     * first `},"ability":` after that, since a quote inside a JSON string is
+     * always escaped. Agent input comes later, so its keys can never be read as
+     * the caller, even on a row with no token.
+     */
+    /** @return literal-string */
+    private static function whoSql(): string
+    {
+        $head = '"actor":{"token_id":';
+        $actor = "SUBSTRING_INDEX(SUBSTRING(l.record_json, INSTR(l.record_json, '{$head}')), '},\"ability\":', 1)";
+        $via = "CASE WHEN INSTR({$actor}, ',\"via\":\"') > 0 THEN SUBSTRING_INDEX(SUBSTRING_INDEX({$actor}, ',\"via\":\"', -1), '\"', 1) ELSE '' END";
+        // 21 = the character right after $head (20 characters): `"` for a token, `n` for null.
+        $token = "CASE WHEN SUBSTRING({$actor}, 21, 1) = '\"' THEN SUBSTRING_INDEX(SUBSTRING({$actor}, 22), '\"', 1) ELSE '' END";
+
+        return "CASE WHEN INSTR(l.record_json, '{$head}') = 0 THEN '' WHEN {$via} <> '' THEN {$via} ELSE {$token} END";
     }
 
     /**
