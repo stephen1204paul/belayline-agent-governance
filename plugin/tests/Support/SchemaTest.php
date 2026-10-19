@@ -336,6 +336,7 @@ final class SchemaTest extends TestCase
     {
         // A live site: every SHOW TABLES LIKE probe finds its table.
         $db = new class () extends wpdb {
+            // phpcs:ignore PSR1.Methods.CamelCapsMethodName.NotCamelCaps -- overrides wpdb::get_var().
             public function get_var(?string $query = null): mixed
             {
                 parent::get_var($query);
