@@ -176,18 +176,44 @@ final class RequestContext
      * approval store and a grant store to do its job, neither of which this
      * static, dependency-free class should ever hold.
      *
-     * @return array{token_id: ?string, wp_user: ?int, env_type: string, env_mismatch: bool}
+     * `via` names the agent credential (an application password, OAuth AI
+     * app, WooCommerce key ...) when it is not the principal, so a call made
+     * by an unbound AI app that rode a bound role is never logged as the
+     * role alone. It is appended LAST and only when present, so every record
+     * without it keeps its exact canonical bytes and hash. Purely descriptive:
+     * no decision ever reads it.
+     *
+     * @return array{token_id: ?string, wp_user: ?int, env_type: string, env_mismatch: bool, via?: string}
      */
     public static function actor(): array
     {
         $user = function_exists('get_current_user_id') ? (int) get_current_user_id() : 0;
 
-        return [
+        $actor = [
             'token_id' => self::tokenId(),
             'wp_user' => $user > 0 ? $user : null,
             'env_type' => self::environmentType(),
             'env_mismatch' => self::environmentMismatch(),
         ];
+
+        $via = self::agentCredential();
+        if ($via !== null && $via !== $actor['token_id']) {
+            $actor['via'] = $via;
+        }
+
+        return $actor;
+    }
+
+    /** The first current token that is not a person's own session, or null. */
+    private static function agentCredential(): ?string
+    {
+        foreach (self::currentTokens() as $token) {
+            if (!UserRoleIdentity::isPersonToken($token)) {
+                return $token;
+            }
+        }
+
+        return null;
     }
 
     private static function environmentType(): string

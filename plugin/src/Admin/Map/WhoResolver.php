@@ -112,6 +112,25 @@ final class WhoResolver
     }
 
     /**
+     * Who made a call, for a row that may carry an agent credential (`via`)
+     * besides its principal: "Claude via Administrator" when the app was not
+     * itself bound and rode a bound role, otherwise just the principal's label.
+     */
+    public function actorLabel(string $token, string $via = ''): string
+    {
+        if ($via === '' || $via === $token) {
+            return $this->label($token);
+        }
+
+        return sprintf(
+            /* translators: 1: the AI app or key that made the call, 2: the role or credential whose pack applied */
+            __('%1$s via %2$s', 'belayline-agent-governance'),
+            $this->label($via),
+            $this->label($token)
+        );
+    }
+
+    /**
      * @param array<int, string> $wc
      * @return array{id: string, label: string, sub: string, tokens: list<string>}
      */

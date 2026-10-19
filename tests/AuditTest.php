@@ -193,6 +193,59 @@ final class AuditTest extends TestCase
         );
     }
 
+    public function testRecordsWithoutViaKeepTheirExactCanonicalBytesAndHash(): void
+    {
+        $rec = AuditRecord::execution(
+            id: 'evt_1',
+            ts: '2026-06-25T10:00:00Z',
+            correlationId: 'sess_test',
+            pack: 'default-agent',
+            actor: ['token_id' => 'role:administrator', 'wp_user' => 7, 'env_type' => 'production', 'env_mismatch' => false],
+            ability: 'core/update-post',
+            tier: 1,
+            input: [],
+            result: 'success',
+        );
+
+        $json = $rec->canonicalJson();
+        $this->assertSame('{"id":"evt_1","ts":"2026-06-25T10:00:00Z","correlation_id":"sess_test","pack":"default-agent","actor":{"token_id":"role:administrator","wp_user":7,"env_type":"production","env_mismatch":false},"ability":"core/update-post","tier":1,"input":[],"dry_run":false,"decision":"allowed","reason":null,"approval":null,"result":"success","external_effects":[],"ip":null}', $json);
+        $this->assertSame('dbd957255aed041fc3e4474448d924a300d0f537728c5af7db602735c839910a', HashChain::entryHash(HashChain::GENESIS, $json));
+    }
+
+    public function testARecordWithViaVerifiesAlongsideOlderRecords(): void
+    {
+        $actor = ['token_id' => 'role:administrator', 'wp_user' => 7, 'env_type' => 'production', 'env_mismatch' => false];
+        $mk = static fn (string $id, array $a): AuditRecord => AuditRecord::execution(
+            id: $id,
+            ts: '2026-06-25T10:00:00Z',
+            correlationId: 'sess_test',
+            pack: 'default-agent',
+            actor: $a,
+            ability: 'core/update-post',
+            tier: 1,
+            input: [],
+            result: 'success',
+        );
+        $old = $mk('evt_1', $actor);
+        $new = $mk('evt_2', $actor + ['via' => 'oauth:d7acc']);
+
+        $this->assertStringContainsString('"env_mismatch":false,"via":"oauth:d7acc"},"ability"', $new->canonicalJson());
+        $this->assertStringNotContainsString('via', $old->canonicalJson());
+
+        $entries = [];
+        $prev = HashChain::GENESIS;
+        foreach ([$old, $new] as $r) {
+            $json = $r->canonicalJson();
+            $hash = HashChain::entryHash($prev, $json);
+            $entries[] = ['prev_hash' => $prev, 'canonical_json' => $json, 'entry_hash' => $hash];
+            $prev = $hash;
+        }
+        $this->assertTrue(HashChain::verify($entries));
+
+        $entries[1]['canonical_json'] = str_replace('oauth:d7acc', 'oauth:other', $entries[1]['canonical_json']);
+        $this->assertFalse(HashChain::verify($entries), 'via is covered by the hash');
+    }
+
     public function testChangesHashIsPartOfTheCanonicalRecordOnlyWhenPresent(): void
     {
         $without = $this->execution(null);

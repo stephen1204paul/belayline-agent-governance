@@ -215,15 +215,27 @@ final class AuditLogPage
         echo '</form>';
     }
 
+    /** Without a resolver: the raw tokens, agent credential first. */
+    private static function rawActor(string $token, string $via): string
+    {
+        if ($via === '' || $via === $token) {
+            return $token !== '' ? $token : '—';
+        }
+
+        /* translators: 1: the credential that made the call, 2: the credential whose pack applied */
+        return sprintf(__('%1$s via %2$s', 'belayline-agent-governance'), $via, $token !== '' ? $token : '—');
+    }
+
     /** @param array<string, mixed> $r */
     private function renderRow(array $r): void
     {
         $decoded = json_decode((string) ($r['record_json'] ?? '{}'), true);
         $token = is_array($decoded) && isset($decoded['actor']['token_id']) ? (string) $decoded['actor']['token_id'] : '';
+        $via = is_array($decoded) && isset($decoded['actor']['via']) && is_string($decoded['actor']['via']) ? $decoded['actor']['via'] : '';
         $input = is_array($decoded) && isset($decoded['input']) ? (string) wp_json_encode($decoded['input']) : '';
         $reason = is_array($decoded) && isset($decoded['reason']) ? (string) $decoded['reason'] : '';
         $dryRun = is_array($decoded) && !empty($decoded['dry_run']);
-        $who = $this->who !== null ? $this->who->label($token) : ($token !== '' ? $token : '—');
+        $who = $this->who !== null ? $this->who->actorLabel($token, $via) : self::rawActor($token, $via);
 
         echo '<tr>';
         $stamp = str_replace(['T', 'Z'], [' ', ''], (string) $r['ts']);

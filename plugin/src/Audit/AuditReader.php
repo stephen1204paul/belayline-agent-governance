@@ -106,13 +106,19 @@ final class AuditReader
             $conds[] = 'l.ability LIKE %s';
             $args[] = $esc($f->through) . '/%';
         }
-        // A token appears in the stored record as `"actor":{"token_id":"<token>"`.
-        $patterns = array_map(static fn (string $t): string => '%"actor":{"token_id":"' . $esc($t) . '"%', $f->tokens);
+        // A token appears in the stored record as `"actor":{"token_id":"<token>"`, or as the
+        // agent credential `,"via":"<token>"}` (always the last actor key). Agent input can
+        // never forge either: it sits JSON-escaped inside `input`, where quotes are `\"`.
+        $patterns = [];
+        foreach ($f->tokens as $t) {
+            $patterns[] = '%"actor":{"token_id":"' . $esc($t) . '"%';
+            $patterns[] = '%,"via":"' . $esc($t) . '"}%';
+        }
         if ($f->tokenPrefix !== '') {
-            $patterns = ['%"actor":{"token_id":"' . $esc($f->tokenPrefix) . '%'];
+            $patterns = ['%"actor":{"token_id":"' . $esc($f->tokenPrefix) . '%', '%,"via":"' . $esc($f->tokenPrefix) . '%'];
         }
         if ($patterns !== []) {
-            $patterns = array_slice($patterns, 0, AuditFilter::TOKEN_SLOTS);
+            $patterns = array_slice($patterns, 0, AuditFilter::TOKEN_SLOTS * 2);
             $conds[] = '(' . implode(' OR ', array_fill(0, count($patterns), 'l.record_json LIKE %s')) . ')';
             array_push($args, ...$patterns);
         }

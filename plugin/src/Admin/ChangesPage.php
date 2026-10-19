@@ -126,8 +126,9 @@ final class ChangesPage
             $row = $audit[$eventId] ?? [];
             $record = json_decode((string) ($row['record_json'] ?? '{}'), true);
             $token = is_array($record) && isset($record['actor']['token_id']) ? (string) $record['actor']['token_id'] : '';
+            $via = is_array($record) && isset($record['actor']['via']) && is_string($record['actor']['via']) ? $record['actor']['via'] : '';
             $user = (string) ($row['wp_user'] ?? '');
-            $actor = $token !== '' ? ($this->who?->label($token) ?? $token) : ($user !== '' ? sprintf(/* translators: %s WordPress user id */ __('user #%s', 'belayline-agent-governance'), $user) : '—');
+            $actor = $token !== '' ? ($this->who?->actorLabel($token, $via) ?? $token) : ($user !== '' ? sprintf(/* translators: %s WordPress user id */ __('user #%s', 'belayline-agent-governance'), $user) : '—');
 
             echo '<div><div class="aui-row-flex"><div class="aui-grow"><div class="aui-item-name"><code class="aui-code">' . esc_html((string) ($row['ability'] ?? '—')) . '</code></div>';
             echo '<div class="aui-muted">' . esc_html(sprintf(/* translators: 1: actor 2: UTC time */ __('By %1$s at %2$s UTC', 'belayline-agent-governance'), $actor, str_replace(['T', 'Z'], [' ', ''], (string) ($row['ts'] ?? ($changes[0]->ts ?? '—'))))) . '</div></div>';

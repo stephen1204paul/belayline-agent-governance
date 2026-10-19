@@ -47,6 +47,23 @@ final class PersonalDataExporterTest extends TestCase
         $this->assertSame('core/read-post', $result['data'][0]['data'][1]['value']);
     }
 
+    public function testExportedFieldsCarryNeitherTheTokenIdNorTheViaCredential(): void
+    {
+        $rows = self::chain([['wp_user' => 5, 'ability' => 'core/read-post', 'input' => []]]);
+        $record = json_decode((string) $rows[0]['record_json'], true);
+        $record['actor']['token_id'] = 'role:administrator';
+        $record['actor']['via'] = 'oauth:d7acc';
+        $rows[0]['record_json'] = json_encode($record, JSON_UNESCAPED_SLASHES);
+        $db = new InMemoryAuditRowsWpdb();
+        $db->seed($rows);
+        $GLOBALS['wpas_test_users_by_email']['alice@example.com'] = 5;
+
+        $result = (new PersonalDataExporter(new PrivacyAuditReader($db)))->export('alice@example.com');
+
+        $this->assertStringNotContainsString('oauth:d7acc', (string) json_encode($result['data']), 'via is handled exactly like token_id: not part of the personal-data export');
+        $this->assertStringNotContainsString('role:administrator', (string) json_encode($result['data']));
+    }
+
     public function testUnknownEmailReturnsNoDataDoneTrue(): void
     {
         $db = new InMemoryAuditRowsWpdb();

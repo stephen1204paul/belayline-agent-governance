@@ -40,10 +40,13 @@ final class OverviewPageTest extends TestCase
         $GLOBALS['wpas_test_user_caps'] = [];
     }
 
-    private function add(string $decision, ?string $result, string $ability, string $token, string $pack = 'content', int $ago = 60): void
+    private function add(string $decision, ?string $result, string $ability, string $token, string $pack = 'content', int $ago = 60, ?string $via = null): void
     {
         $ts = gmdate('Y-m-d\TH:i:s\Z', self::NOW - $ago);
         $actor = ['token_id' => $token, 'wp_user' => 1];
+        if ($via !== null) {
+            $actor['via'] = $via;
+        }
         $this->sink->append($result !== null
             ? AuditRecord::execution('e' . uniqid(), $ts, 'c', $pack, $actor, $ability, 0, [], $result)
             : AuditRecord::decision('e' . uniqid(), $ts, 'c', $pack, $actor, $ability, 1, [], AuditDecision::from($decision)));
@@ -153,6 +156,17 @@ final class OverviewPageTest extends TestCase
         $this->assertStringContainsString('Claude ran core/get-site-info<time', $out);
         $this->assertStringContainsString('Stephen was refused: core/get-user-info<time', $out);
         $this->assertStringNotContainsString('belayline_shadow_packs', $out, 'settings changes are not agent calls');
+    }
+
+    public function testRailNamesTheViaCredentialFirst(): void
+    {
+        $this->add('allowed', 'success', 'core/get-site-info', 'role:administrator', 'content', 60, 'app:u1');
+
+        ob_start();
+        $this->page()->renderRail();
+        $out = (string) ob_get_clean();
+
+        $this->assertStringContainsString('Claude via Administrator ran core/get-site-info<time', $out);
     }
 
     public function testNothingRendersWithoutTheCapability(): void

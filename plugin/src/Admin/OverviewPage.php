@@ -324,6 +324,7 @@ final class OverviewPage
         foreach ($feed as $r) {
             $decoded = json_decode((string) ($r['record_json'] ?? '{}'), true);
             $token = is_array($decoded) && isset($decoded['actor']['token_id']) && is_string($decoded['actor']['token_id']) ? $decoded['actor']['token_id'] : '';
+            $via = is_array($decoded) && isset($decoded['actor']['via']) && is_string($decoded['actor']['via']) ? $decoded['actor']['via'] : '';
             $outcome = CallOutcome::classify((string) $r['decision'], isset($r['result']) ? (string) $r['result'] : null, isset($r['approval_id']) ? (string) $r['approval_id'] : null) ?? CallOutcome::RAN;
             $verb = match ($outcome) {
                 CallOutcome::RAN => __('ran', 'belayline-agent-governance'),
@@ -334,7 +335,7 @@ final class OverviewPage
             };
             $tone = CallOutcome::tone($outcome);
             echo '<li><span class="aui-dot' . ($tone !== '' ? ' aui-dot--' . esc_attr($tone) : '') . '"></span><div>'
-                . esc_html($this->who->describe($token)['label'] . ' ' . $verb . ' ' . AbilityLabel::text((string) $r['ability'])) . '<time datetime="'
+                . esc_html($this->who->actorLabel($token, $via) . ' ' . $verb . ' ' . AbilityLabel::text((string) $r['ability'])) . '<time datetime="'
                 . esc_attr((string) $r['ts']) . '">' . esc_html(Time::ago((string) $r['ts'], $now)) . '</time></div></li>';
         }
         echo '</ul><p class="belayline-more"><a href="' . esc_url(AdminUrls::activity(AdminUrls::CALLS)) . '">' . esc_html__('View all activity', 'belayline-agent-governance') . '</a></p></div></section>';

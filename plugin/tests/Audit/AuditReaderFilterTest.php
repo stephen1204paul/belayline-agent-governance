@@ -162,4 +162,34 @@ final class AuditReaderFilterTest extends TestCase
     {
         $this->assertSame(['commerce', 'content', 'site-readonly'], $this->reader->packs());
     }
+
+    public function testTheTokenFiltersAlsoMatchRowsWhoseViaCredentialIsThatToken(): void
+    {
+        $db = new SqliteWpdb();
+        $sink = new WpdbAuditSink($db);
+        $n = 0;
+        $cases = [
+            ['role:administrator', 'oauth:d7acc'],
+            ['role:administrator', null],
+            ['oauth:d7acc', null],
+            ['role:administrator', 'oauth:other'],
+        ];
+        foreach ($cases as [$token, $via]) {
+            ++$n;
+            $actor = ['token_id' => $token, 'wp_user' => 1, 'env_type' => 'production', 'env_mismatch' => false];
+            if ($via !== null) {
+                $actor['via'] = $via;
+            }
+            $sink->append(AuditRecord::execution('v' . $n, gmdate('Y-m-d\TH:i:s\Z', self::NOW), 'c' . $n, 'site-admin', $actor, 'core/get-site-info', 0, [], 'success'));
+        }
+        $ids = static fn (array $q): array => array_map(
+            static fn (array $r): string => (string) $r['event_id'],
+            (new AuditReader($db))->filtered(AuditFilter::fromRequest($q), 50, 0, self::NOW)
+        );
+
+        $this->assertSame(['v3', 'v1'], $ids(['token' => 'oauth:d7acc']), 'principal OR via');
+        $this->assertSame(['v4', 'v3', 'v1'], $ids(['token_prefix' => 'oauth:']));
+        $this->assertSame([], $ids(['token' => 'oauth:d7']), 'an exact token never matches a mere prefix of a via');
+        $this->assertSame([], $ids(['token' => 'oauth:%']), '% is not a wildcard against via either');
+    }
 }
