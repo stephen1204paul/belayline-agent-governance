@@ -61,8 +61,12 @@ final class Schema
      *    the Activity filter. The hashed `record_json` (top-level `approval_id`)
      *    is the source of truth and chain verification cross-checks the two.
      *    Rows written earlier keep NULL; none is rewritten, no hash changes.
+     * 10: the approvals table gained `KEY audit_event_id (audit_event_id)`, so the
+     *    audit-log-to-approval join (the Calls outcome filter, the Overview map) is an
+     *    index lookup, not a scan of the approvals table per audit row. Index only: no
+     *    column or row changes.
      */
-    public const VERSION = '9';
+    public const VERSION = '10';
 
     public const VERSION_OPTION = 'belayline_schema_version';
 
@@ -230,6 +234,7 @@ final class Schema
                 consumed_ts DATETIME NULL,
                 PRIMARY KEY  (id),
                 UNIQUE KEY approval_id (approval_id),
+                KEY audit_event_id (audit_event_id),
                 KEY status (status),
                 KEY verb_args (verb, args_hash),
                 KEY ref (key_id, verb, args_hash),

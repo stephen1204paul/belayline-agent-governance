@@ -49,29 +49,17 @@ final class AuditReader
     }
 
     /**
-     * The shared WHERE of {@see filtered()} and {@see countFiltered()}: a fixed
-     * template (every optional filter is `(%d = 0 OR ...)`), so no SQL is ever
-     * assembled from request input. The outcome expression mirrors
-     * {@see CallOutcome::SQL}.
-     */
-    private const FILTER_WHERE = " WHERE l.ts >= %s AND (%d = 0 OR l.pack = %s) AND (%d = 0 OR l.ability LIKE %s)"
-        . " AND (%d = 0 OR l.record_json LIKE %s OR l.record_json LIKE %s OR l.record_json LIKE %s OR l.record_json LIKE %s OR l.record_json LIKE %s)"
-        . " AND (%d = 0 OR " . CallOutcome::SQL . " = %s)";
-
-    /** The audit log joined to the approvals table, so an outcome filter sees how a held request ended. */
-    private const FILTER_FROM = ' FROM %i l LEFT JOIN %i a ON a.audit_event_id = l.event_id';
-
-    /**
      * Newest-first page of rows matching a filter.
      *
      * @return list<array<string, mixed>>
      */
     public function filtered(AuditFilter $f, int $limit, int $offset, int $now): array
     {
+        [$from, $where, $args] = $this->clauses($f, $now);
         $rows = $this->db->get_results(
             $this->db->prepare(
-                'SELECT l.*' . self::FILTER_FROM . self::FILTER_WHERE . ' ORDER BY l.id DESC LIMIT %d OFFSET %d',
-                ...[...[$this->table(), Schema::approvalsTable($this->db)], ...$this->filterArgs($f, $now), ...[$limit, $offset]]
+                'SELECT l.*' . $from . $where . ' ORDER BY l.id DESC LIMIT %d OFFSET %d',
+                ...[...$args, $limit, $offset]
             ),
             ARRAY_A
         );
@@ -81,12 +69,62 @@ final class AuditReader
 
     public function countFiltered(AuditFilter $f, int $now): int
     {
-        return (int) $this->db->get_var(
-            $this->db->prepare(
-                'SELECT COUNT(*)' . self::FILTER_FROM . self::FILTER_WHERE,
-                ...[...[$this->table(), Schema::approvalsTable($this->db)], ...$this->filterArgs($f, $now)]
-            )
-        );
+        [$from, $where, $args] = $this->clauses($f, $now);
+
+        return (int) $this->db->get_var($this->db->prepare('SELECT COUNT(*)' . $from . $where, ...$args));
+    }
+
+    /**
+     * The FROM, WHERE and placeholder values shared by {@see filtered()} and
+     * {@see countFiltered()}, built from the ACTIVE filters only: an empty filter
+     * has no WHERE at all, so `ORDER BY l.id DESC LIMIT` walks the primary key.
+     * Only fixed template fragments are concatenated; every value is a placeholder.
+     * The approvals table is joined only for the outcome filter (the one place the
+     * outcome expression, {@see CallOutcome::SQL}, reads `a.*`); the page itself
+     * only ever selects `l.*`.
+     *
+     * @return array{0: string, 1: string, 2: list<string|int>}
+     */
+    private function clauses(AuditFilter $f, int $now): array
+    {
+        $esc = fn (string $v): string => $this->db->esc_like($v);
+        $conds = [];
+        $args = [];
+        $table = $this->table();
+        $from = ' FROM %i l';
+        $fromArgs = [$table];
+
+        if ($f->days > 0) {
+            $conds[] = 'l.ts >= %s';
+            $args[] = gmdate('Y-m-d\TH:i:s\Z', $now - $f->days * 86400);
+        }
+        if ($f->pack !== '') {
+            $conds[] = 'l.pack = %s';
+            $args[] = $f->pack === '__none' ? '' : $f->pack;
+        }
+        if ($f->through !== '') {
+            $conds[] = 'l.ability LIKE %s';
+            $args[] = $esc($f->through) . '/%';
+        }
+        // A token appears in the stored record as `"actor":{"token_id":"<token>"`.
+        $patterns = array_map(static fn (string $t): string => '%"actor":{"token_id":"' . $esc($t) . '"%', $f->tokens);
+        if ($f->tokenPrefix !== '') {
+            $patterns = ['%"actor":{"token_id":"' . $esc($f->tokenPrefix) . '%'];
+        }
+        if ($patterns !== []) {
+            $patterns = array_slice($patterns, 0, AuditFilter::TOKEN_SLOTS);
+            $conds[] = '(' . implode(' OR ', array_fill(0, count($patterns), 'l.record_json LIKE %s')) . ')';
+            array_push($args, ...$patterns);
+        }
+        if ($f->outcome !== '') {
+            $from .= ' LEFT JOIN %i a ON a.audit_event_id = l.event_id';
+            $fromArgs[] = Schema::approvalsTable($this->db);
+            $conds[] = CallOutcome::SQL . ' = %s';
+            array_push($args, ...CallOutcome::tableArgs($table));
+            $args[] = $f->outcome;
+        }
+
+        return [$from, $conds === [] ? '' : ' WHERE ' . implode(' AND ', $conds), [...$fromArgs, ...$args]];
     }
 
     /**
@@ -102,40 +140,6 @@ final class AuditReader
             static fn (array $r): string => (string) ($r['pack'] ?? ''),
             is_array($rows) ? $rows : []
         ), static fn (string $p): bool => $p !== ''));
-    }
-
-    /**
-     * Placeholder values for {@see FILTER_WHERE}, in template order.
-     *
-     * @return list<string|int>
-     */
-    private function filterArgs(AuditFilter $f, int $now): array
-    {
-        $esc = fn (string $v): string => $this->db->esc_like($v);
-        $packValue = $f->pack === '__none' ? '' : $f->pack;
-        // A token appears in the stored record as `"actor":{"token_id":"<token>"`.
-        $patterns = array_map(static fn (string $t): string => '%"actor":{"token_id":"' . $esc($t) . '"%', $f->tokens);
-        if ($f->tokenPrefix !== '') {
-            $patterns = ['%"actor":{"token_id":"' . $esc($f->tokenPrefix) . '%'];
-        }
-        $tokenOn = $patterns === [] ? 0 : 1;
-        $slots = [];
-        for ($i = 0; $i < AuditFilter::TOKEN_SLOTS; $i++) {
-            $slots[] = $patterns[$i] ?? ($patterns[0] ?? '');
-        }
-
-        return [
-            $f->days > 0 ? gmdate('Y-m-d\TH:i:s\Z', $now - $f->days * 86400) : '',
-            $f->pack === '' ? 0 : 1,
-            $packValue,
-            $f->through === '' ? 0 : 1,
-            $esc($f->through) . '/%',
-            $tokenOn,
-            ...$slots,
-            $f->outcome === '' ? 0 : 1,
-            ...CallOutcome::tableArgs($this->table()),
-            $f->outcome,
-        ];
     }
 
     /**

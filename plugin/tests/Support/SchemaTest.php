@@ -147,7 +147,7 @@ final class SchemaTest extends TestCase
 
         Schema::maybeUpgrade(new wpdb());
 
-        $this->assertSame('9', $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
+        $this->assertSame('10', $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
         $this->assertStringContainsString('wp_belayline_audit_checkpoint', implode("\n", $GLOBALS['wpas_test_dbdelta_queries']));
         $this->assertArrayHasKey(AuditRetention::HOOK, $GLOBALS['wpas_test_cron']);
         $this->assertArrayNotHasKey(AuditRetention::OPTION, $GLOBALS['wpas_test_options'], 'upgrading never turns retention on');
@@ -159,7 +159,7 @@ final class SchemaTest extends TestCase
 
         Schema::maybeUpgrade(new wpdb());
 
-        $this->assertSame('9', $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
+        $this->assertSame('10', $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
         $audit = $GLOBALS['wpas_test_dbdelta_queries'][0];
         $this->assertStringContainsString('wp_belayline_audit_log', $audit);
         $this->assertStringContainsString('KEY ts (ts)', $audit, 'the 7-day map query is a range scan on ts');
@@ -171,11 +171,25 @@ final class SchemaTest extends TestCase
 
         Schema::maybeUpgrade(new wpdb());
 
-        $this->assertSame('9', $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
+        $this->assertSame('10', $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
         $audit = $GLOBALS['wpas_test_dbdelta_queries'][0];
         $this->assertStringContainsString('approval_id VARCHAR(64) NULL', $audit, 'nullable: rows written before v9 keep NULL');
         $this->assertStringContainsString('KEY approval_id (approval_id)', $audit);
         $this->assertStringContainsString('wp_belayline_audit_log', $audit);
+    }
+
+    public function testUpgradingFromVersionNineIndexesTheApprovalsAuditEventId(): void
+    {
+        $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION] = '9';
+
+        Schema::maybeUpgrade(new wpdb());
+
+        $this->assertSame('10', $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
+        $approvals = implode("\n", array_filter(
+            $GLOBALS['wpas_test_dbdelta_queries'],
+            static fn (string $q): bool => str_contains($q, 'wp_belayline_approvals')
+        ));
+        $this->assertStringContainsString('KEY audit_event_id (audit_event_id)', $approvals, 'the audit-to-approval join is an index lookup');
     }
 
     public function testTheCheckpointTableCarriesTheDocumentedColumns(): void
@@ -195,8 +209,8 @@ final class SchemaTest extends TestCase
 
         Schema::maybeUpgrade(new wpdb());
 
-        $this->assertSame('9', Schema::VERSION);
-        $this->assertSame('9', $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
+        $this->assertSame('10', Schema::VERSION);
+        $this->assertSame('10', $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
         $this->assertStringContainsString('wp_belayline_changes', implode("\n", $GLOBALS['wpas_test_dbdelta_queries']));
         $this->assertArrayHasKey(ChangePurge::HOOK, $GLOBALS['wpas_test_cron'], 'an upgrade never re-activates, so install() must schedule the purge');
     }

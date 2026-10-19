@@ -58,6 +58,48 @@ final class AuditReaderFilterTest extends TestCase
         $this->assertSame(7, $this->reader->countFiltered(new AuditFilter(), self::NOW));
     }
 
+    /** The last SELECT the reader sent to the database. */
+    private function lastSelect(): string
+    {
+        $selects = array_values(array_filter($this->db->queries, static fn (string $q): bool => str_starts_with($q, 'SELECT')));
+
+        return (string) end($selects);
+    }
+
+    public function testAnEmptyFilterReadsTheLogAloneWalkingThePrimaryKey(): void
+    {
+        $this->reader->filtered(new AuditFilter(), 50, 0, self::NOW);
+        $page = $this->lastSelect();
+        $this->reader->countFiltered(new AuditFilter(), self::NOW);
+        $count = $this->lastSelect();
+
+        foreach ([$page, $count] as $sql) {
+            $this->assertStringNotContainsString('JOIN', $sql);
+            $this->assertStringNotContainsString('l.ts', $sql, 'no timestamp predicate without a period filter');
+            $this->assertStringNotContainsString('WHERE', $sql);
+            $this->assertStringNotContainsString('0 = 0', $sql);
+        }
+        $this->assertStringContainsString('ORDER BY l.id DESC LIMIT 50 OFFSET 0', $page);
+    }
+
+    public function testOnlyTheOutcomeFilterJoinsApprovalsAndOnlyActiveFiltersAppear(): void
+    {
+        $this->reader->filtered(AuditFilter::fromRequest(['pack' => 'commerce']), 50, 0, self::NOW);
+        $sql = $this->lastSelect();
+        $this->assertStringNotContainsString('JOIN', $sql);
+        $this->assertStringContainsString('l.pack', $sql);
+        $this->assertStringNotContainsString('l.ability', $sql);
+        $this->assertStringNotContainsString('l.ts', $sql);
+
+        $this->reader->filtered(AuditFilter::fromRequest(['days' => '7']), 50, 0, self::NOW);
+        $this->assertStringContainsString('l.ts >=', $this->lastSelect());
+
+        $this->reader->filtered(AuditFilter::fromRequest(['outcome' => 'refused']), 50, 0, self::NOW);
+        $sql = $this->lastSelect();
+        $this->assertStringContainsString('LEFT JOIN', $sql);
+        $this->assertStringNotContainsString('l.ts', $sql);
+    }
+
     public function testEachOutcomeSelectsItsRows(): void
     {
         $this->assertSame(['e7', 'e6', 'e1'], $this->ids(['outcome' => 'ran']));
@@ -91,6 +133,16 @@ final class AuditReaderFilterTest extends TestCase
     public function testFiltersCombine(): void
     {
         $this->assertSame(['e2'], $this->ids(['pack' => 'commerce', 'outcome' => 'failed', 'token' => 'app:aaa']));
+    }
+
+    public function testEveryFilterTogetherAndCountsMatchThePage(): void
+    {
+        $q = ['days' => '7', 'pack' => 'commerce', 'through' => 'woocommerce', 'token' => 'app:aaa', 'outcome' => 'ran'];
+        $this->assertSame(['e1'], $this->ids($q));
+        $this->assertSame(1, $this->reader->countFiltered(AuditFilter::fromRequest($q), self::NOW));
+        foreach ([[], ['pack' => 'commerce'], ['outcome' => 'ran'], ['days' => '7'], ['token_prefix' => 'user:'], ['through' => 'core', 'outcome' => 'refused']] as $query) {
+            $this->assertSame(count($this->ids($query)), $this->reader->countFiltered(AuditFilter::fromRequest($query), self::NOW));
+        }
     }
 
     public function testLikeWildcardsInInputAreLiteral(): void
