@@ -79,9 +79,9 @@ final class ChangesPage
         $runs = array_slice($runs, 0, self::PER_PAGE);
 
         if ($runs === []) {
-            echo '<section class="aui-card"><div class="aui-empty"><span class="aui-tile">' . Icons::svg('undo', 'aui-i--lg') . '</span><h2 class="aui-card-t">' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
+            echo wp_kses('<section class="aui-card"><div class="aui-empty"><span class="aui-tile">' . Icons::svg('undo', 'aui-i--lg') . '</span><h2 class="aui-card-t">'
                 . esc_html__('No changes recorded yet', 'belayline-agent-governance') . '</h2><p>'
-                . esc_html__('When an agent changes your content or settings, each change is listed here with a way to undo it.', 'belayline-agent-governance') . '</p></div></section>';
+                . esc_html__('When an agent changes your content or settings, each change is listed here with a way to undo it.', 'belayline-agent-governance') . '</p></div></section>', Html::allowed());
 
             return;
         }
@@ -119,7 +119,7 @@ final class ChangesPage
     private function renderRun(string $run, array $events, array $audit): void
     {
         echo '<section class="aui-card"><div class="aui-card-h"><div><h2 class="aui-card-t">' . esc_html__('Run', 'belayline-agent-governance') . ' <code class="aui-code">' . esc_html($run) . '</code></h2></div>';
-        echo '<span class="aui-end">' . $this->undoLink(UndoScope::correlation($run), __('Undo this run', 'belayline-agent-governance'), 'secondary') . '</span></div>'; // phpcs:ignore WordPress.Security.EscapeOutput -- undoLink() escapes.
+        echo wp_kses('<span class="aui-end">' . $this->undoLink(UndoScope::correlation($run), __('Undo this run', 'belayline-agent-governance'), 'secondary') . '</span></div>', Html::allowed());
         echo '<div class="aui-card-b belayline-stack">';
 
         foreach ($events as $eventId => $changes) {
@@ -131,7 +131,7 @@ final class ChangesPage
 
             echo '<div><div class="aui-row-flex"><div class="aui-grow"><div class="aui-item-name"><code class="aui-code">' . esc_html((string) ($row['ability'] ?? '—')) . '</code></div>';
             echo '<div class="aui-muted">' . esc_html(sprintf(/* translators: 1: actor 2: UTC time */ __('By %1$s at %2$s UTC', 'belayline-agent-governance'), $actor, str_replace(['T', 'Z'], [' ', ''], (string) ($row['ts'] ?? ($changes[0]->ts ?? '—'))))) . '</div></div>';
-            echo $this->undoLink(UndoScope::event($eventId), __('Undo this event', 'belayline-agent-governance'), 'ghost') . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput -- undoLink() escapes.
+            echo wp_kses($this->undoLink(UndoScope::event($eventId), __('Undo this event', 'belayline-agent-governance'), 'ghost') . '</div>', Html::allowed());
 
             echo '<div class="aui-table-wrap" tabindex="0" role="region" aria-label="' . esc_attr(sprintf(/* translators: %s: ability name */ __('Changes made by %s', 'belayline-agent-governance'), (string) ($row['ability'] ?? $eventId)) . ' (' . substr($eventId, -6) . ')') . '"><table class="aui-table"><thead><tr>';
             foreach ([__('Object', 'belayline-agent-governance'), __('Action', 'belayline-agent-governance'), __('What changed', 'belayline-agent-governance'), __('Can be undone', 'belayline-agent-governance'), ''] as $h) {
@@ -156,12 +156,12 @@ final class ChangesPage
         }
         echo '</td>';
         echo '<td>' . esc_html($change->action->value) . '</td>';
-        echo '<td>' . self::diffTable(FieldDiff::for($change)) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- diffTable() escapes every value.
+        echo wp_kses('<td>' . self::diffTable(FieldDiff::for($change)) . '</td>', Html::allowed());
         if ($refusal === null) {
-            echo '<td>' . Html::badge('ok', __('Yes', 'belayline-agent-governance')) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- Html::badge() escapes.
-            echo '<td><div class="aui-actions">' . $this->undoLink(UndoScope::change($change->id), __('Undo this change', 'belayline-agent-governance'), 'ghost') . '</div></td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- undoLink() escapes.
+            echo wp_kses('<td>' . Html::badge('ok', __('Yes', 'belayline-agent-governance')) . '</td>', Html::allowed());
+            echo wp_kses('<td><div class="aui-actions">' . $this->undoLink(UndoScope::change($change->id), __('Undo this change', 'belayline-agent-governance'), 'ghost') . '</div></td>', Html::allowed());
         } else {
-            echo '<td>' . Html::badge('', __('No', 'belayline-agent-governance')) . ' <span class="aui-muted">' . esc_html(ChangeReasonLabels::label($refusal)) . '</span></td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- Html::badge() escapes.
+            echo wp_kses('<td>' . Html::badge('', __('No', 'belayline-agent-governance')) . ' <span class="aui-muted">' . esc_html(ChangeReasonLabels::label($refusal)) . '</span></td>', Html::allowed());
             echo '<td></td>';
         }
         echo '</tr>';
@@ -195,7 +195,7 @@ final class ChangesPage
             $count[UndoItem::FAILED]
         )) . '</p>';
         if ($count[UndoItem::FAILED] > 0) {
-            echo Html::notice('warning', __('Part of this has changed since the agent ran.', 'belayline-agent-governance'), __('Confirming will undo what it can, newest first, and stop at the first problem. There is no force option.', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
+            echo wp_kses(Html::notice('warning', __('Part of this has changed since the agent ran.', 'belayline-agent-governance'), __('Confirming will undo what it can, newest first, and stop at the first problem. There is no force option.', 'belayline-agent-governance')), Html::allowed());
         }
 
         echo '</div><div class="aui-table-wrap"><table class="aui-table"><thead><tr>';
@@ -207,21 +207,21 @@ final class ChangesPage
             echo '<tr><td class="aui-mono">' . esc_html($item->objectType . ' #' . $item->objectId) . '</td>';
             echo '<td>' . esc_html(self::outcomeLabel($item)) . '</td><td>';
             if ($item->drift !== []) {
-                echo self::threeWay($item->drift); // phpcs:ignore WordPress.Security.EscapeOutput -- threeWay() escapes every value.
+                echo wp_kses(self::threeWay($item->drift), Html::allowed());
             } elseif ($item->status === UndoItem::RESTORABLE && isset($changes[$item->changeId])) {
                 // Restoring writes the recorded "before" back over "after".
                 $rows = array_map(
                     static fn (array $d): array => ['field' => $d['field'], 'before' => $d['after'], 'after' => $d['before']],
                     FieldDiff::for($changes[$item->changeId])
                 );
-                echo self::diffTable($rows); // phpcs:ignore WordPress.Security.EscapeOutput -- diffTable() escapes every value.
+                echo wp_kses(self::diffTable($rows), Html::allowed());
             }
             echo '</td></tr>';
         }
         echo '</tbody></table></div><div class="aui-card-f">';
 
         if ($count[UndoItem::RESTORABLE] > 0) {
-            echo Html::postForm(self::UNDO, self::UNDO, '<input type="hidden" name="scope" value="' . esc_attr($scope->kind) . '"><input type="hidden" name="scope_id" value="' . esc_attr($scope->id) . '">', 'class="belayline-inline"'); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
+            echo wp_kses(Html::postForm(self::UNDO, self::UNDO, '<input type="hidden" name="scope" value="' . esc_attr($scope->kind) . '"><input type="hidden" name="scope_id" value="' . esc_attr($scope->id) . '">', 'class="belayline-inline"'), Html::allowed());
             echo '<button type="submit" class="aui-btn aui-btn--primary">' . esc_html__('Confirm undo', 'belayline-agent-governance') . '</button></form>';
         }
         $this->backLink();
@@ -356,13 +356,13 @@ final class ChangesPage
         };
         $icon = ['success' => 'check', 'warning' => 'warning', 'error' => 'x'][$tone];
 
-        echo '<div class="aui-notice aui-notice--' . esc_attr($tone) . '" role="' . ($tone === 'error' ? 'alert' : 'status') . '">' . Icons::svg($icon) . '<div><strong>' . esc_html(match ($status) { // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
+        echo wp_kses('<div class="aui-notice aui-notice--' . esc_attr($tone) . '" role="' . ($tone === 'error' ? 'alert' : 'status') . '">' . Icons::svg($icon) . '<div><strong>' . esc_html(match ($status) {
             UndoResult::COMPLETE => __('Undo complete.', 'belayline-agent-governance'),
             UndoResult::PARTIAL => __('Undo stopped part-way.', 'belayline-agent-governance'),
             UndoResult::FORBIDDEN => __('Undo not allowed.', 'belayline-agent-governance'),
             UndoResult::EMPTY => __('Nothing to undo: no recorded changes in that scope.', 'belayline-agent-governance'),
             default => __('Nothing was restored.', 'belayline-agent-governance'),
-        }) . '</strong>';
+        }) . '</strong>', Html::allowed());
         if (!empty($flash['reason'])) {
             echo ' ' . esc_html(ChangeReasonLabels::label((string) $flash['reason']));
         }
@@ -388,7 +388,7 @@ final class ChangesPage
                     echo ' (' . esc_html((string) $row['message']) . ')';
                 }
                 if (!empty($row['drift']) && is_array($row['drift'])) {
-                    echo self::threeWay(array_values($row['drift'])); // phpcs:ignore WordPress.Security.EscapeOutput -- threeWay() escapes every value.
+                    echo wp_kses(self::threeWay(array_values($row['drift'])), Html::allowed());
                 }
                 echo '</li>';
             }

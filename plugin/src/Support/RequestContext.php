@@ -126,18 +126,15 @@ final class RequestContext
     public static function withCorrelation(string $id, callable $fn)
     {
         if ($id === '') {
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- a developer-facing exception message, never echoed to a site visitor or admin screen.
-            throw new CorrelationConflict('A correlation id must be a non-empty, host-derived string.');
+            throw new CorrelationConflict(esc_html('A correlation id must be a non-empty, host-derived string.'));
         }
 
         if (self::$correlation !== null && self::$correlation !== $id) {
-            // phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- a developer-facing exception message, never echoed to a site visitor or admin screen.
             throw new CorrelationConflict(sprintf(
                 'Correlation id "%s" is already in effect for this process; refusing to switch to "%s".',
-                self::$correlation,
-                $id,
+                esc_html(self::$correlation),
+                esc_html($id),
             ));
-            // phpcs:enable WordPress.Security.EscapeOutput.ExceptionNotEscaped
         }
 
         $previous = self::$correlation;

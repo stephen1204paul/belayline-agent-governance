@@ -37,7 +37,7 @@ final class SettingsPage
 
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only flash.
         if (isset($_GET['belayline_saved']) && $_GET['belayline_saved'] === 'retention') {
-            echo Html::notice('success', __('Saved.', 'belayline-agent-governance'), __('The retention period is updated. The next daily cleanup uses it.', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
+            echo wp_kses(Html::notice('success', __('Saved.', 'belayline-agent-governance'), __('The retention period is updated. The next daily cleanup uses it.', 'belayline-agent-governance')), Html::allowed());
         }
 
         $this->packs->renderEnvironmentCard();

@@ -854,6 +854,11 @@ if (!function_exists('wp_kses')) {
      */
     function wp_kses(string $string, array $allowed_html = []): string
     {
+        if (($logFile = getenv('BELAYLINE_KSES_LOG')) !== false && $logFile !== '') {
+            // Opt-in: record every input so it can be replayed through core's real kses.
+            file_put_contents($logFile, base64_encode($string) . "\n", FILE_APPEND);
+        }
+
         $allowed_tags = array_keys($allowed_html);
         $url_attributes = ['href', 'src', 'action', 'formaction', 'xlink:href', 'background', 'cite', 'longdesc'];
 
@@ -868,37 +873,43 @@ if (!function_exists('wp_kses')) {
                 if ($closing) {
                     return '</' . $tag . '>';
                 }
-                $attrs = $allowed_html[$tag] ?? [];
+                // Like core: walk the attributes in SOURCE order, keep the allowed ones,
+                // lower-case names, normalise to double quotes, space before a self-close.
+                $attrs = array_change_key_case($allowed_html[$tag] ?? [], CASE_LOWER);
                 $kept = '';
-                foreach ($attrs as $attr => $enabled) {
-                    if (!$enabled) {
+                preg_match_all('/([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*("[^"]*"|\'[^\']*\'|[^\s"\'>\/]+))?/', $m[2], $found, PREG_SET_ORDER);
+                foreach ($found as $am) {
+                    $attr_name = strtolower($am[1]);
+                    if (empty($attrs[$attr_name])) {
                         continue;
                     }
-                    $attr_name = (string) $attr;
-                    if (!preg_match('/\b' . preg_quote($attr_name, '/') . '\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', $m[2], $am)) {
+                    if (!isset($am[2])) {
+                        $kept .= ' ' . $attr_name; // Boolean attribute.
                         continue;
                     }
-                    $raw = $am[1];
-                    $quote = '"';
+                    $raw = $am[2];
                     if (strlen($raw) >= 2 && ($raw[0] === '"' || $raw[0] === "'") && $raw[-1] === $raw[0]) {
-                        $quote = $raw[0];
                         $raw = substr($raw, 1, -1);
                     }
-                    if (
-                        in_array(strtolower($attr_name), $url_attributes, true)
-                        && !wpas_test_kses_protocol_ok($raw)
-                    ) {
+                    if (in_array($attr_name, $url_attributes, true) && !wpas_test_kses_protocol_ok($raw)) {
                         continue; // Bad protocol: drop the attribute entirely.
                     }
-                    $kept .= ' ' . strtolower($attr_name) . '=' . $quote . $raw . $quote;
+                    $kept .= ' ' . $attr_name . '="' . $raw . '"';
                 }
 
-                return '<' . $tag . $kept . '>';
+                return '<' . $tag . $kept . (preg_match('/\/\s*$/', $m[2]) ? ' /' : '') . '>';
             },
             $string
         );
 
         return is_string($result) ? $result : $string;
+    }
+}
+
+if (!function_exists('wp_print_inline_script_tag')) {
+    function wp_print_inline_script_tag(string $data, array $attributes = []): void
+    {
+        echo '<script>' . $data . "</script>\n";
     }
 }
 

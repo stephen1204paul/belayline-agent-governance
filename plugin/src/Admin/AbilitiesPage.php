@@ -150,8 +150,8 @@ final class AbilitiesPage
             . '</p></div></div>';
 
         if ($groups === []) {
-            echo '<div class="aui-empty"><span class="aui-tile">' . Icons::svg('plug', 'aui-i--lg') . '</span><h3 class="aui-card-t">' . esc_html__('Nothing to review', 'belayline-agent-governance') . '</h3><p>' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
-                . esc_html__('No other plugin offers abilities that Belayline does not already cover.', 'belayline-agent-governance') . '</p></div></section>';
+            echo wp_kses('<div class="aui-empty"><span class="aui-tile">' . Icons::svg('plug', 'aui-i--lg') . '</span><h3 class="aui-card-t">' . esc_html__('Nothing to review', 'belayline-agent-governance') . '</h3><p>'
+                . esc_html__('No other plugin offers abilities that Belayline does not already cover.', 'belayline-agent-governance') . '</p></div></section>', Html::allowed());
 
             return;
         }
@@ -176,10 +176,10 @@ final class AbilitiesPage
     {
         // phpcs:disable WordPress.Security.NonceVerification.Recommended -- read-only flash flags.
         if (isset($_GET['belayline_saved']) && $_GET['belayline_saved'] === 'abilities') {
-            echo Html::notice('success', __('Review saved.', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
+            echo wp_kses(Html::notice('success', __('Review saved.', 'belayline-agent-governance')), Html::allowed());
         }
         if (isset($_GET['belayline_confirm'])) {
-            echo Html::notice('error', __('Nothing was saved.', 'belayline-agent-governance'), __('Tick the box to confirm that reviewing one ability puts its whole group under review.', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
+            echo wp_kses(Html::notice('error', __('Nothing was saved.', 'belayline-agent-governance'), __('Tick the box to confirm that reviewing one ability puts its whole group under review.', 'belayline-agent-governance')), Html::allowed());
         }
         // phpcs:enable WordPress.Security.NonceVerification.Recommended
     }
@@ -201,14 +201,14 @@ final class AbilitiesPage
             $rows .= $this->renderRow($ability, $entries[$ability['name']] ?? null, $selected);
         }
 
-        echo Html::postForm(self::SAVE, self::SAVE, '<input type="hidden" name="namespace" value="' . esc_attr($ns) . '">', 'class="belayline-groupform"'); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
-        echo '<div class="aui-group"><div class="aui-group-h"><button type="button" class="aui-group-toggle" aria-expanded="' . ($open ? 'true' : 'false') . '" aria-controls="' . esc_attr($id) . '">'
-            . '<span class="aui-group-name">' . esc_html($ns) . '</span>' . ($governed ? ' ' . Html::badge('ok', __('Under review', 'belayline-agent-governance')) : '') // phpcs:ignore WordPress.Security.EscapeOutput -- Html::badge() escapes.
-            . '<span class="aui-leader"></span>' . Tiers::metaSpan(count($abilities), $counts, true) // phpcs:ignore WordPress.Security.EscapeOutput -- metaSpan() escapes.
-            . Icons::svg('caret-down') . '</button></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
+        echo wp_kses(Html::postForm(self::SAVE, self::SAVE, '<input type="hidden" name="namespace" value="' . esc_attr($ns) . '">', 'class="belayline-groupform"'), Html::allowed());
+        echo wp_kses('<div class="aui-group"><div class="aui-group-h"><button type="button" class="aui-group-toggle" aria-expanded="' . ($open ? 'true' : 'false') . '" aria-controls="' . esc_attr($id) . '">'
+            . '<span class="aui-group-name">' . esc_html($ns) . '</span>' . ($governed ? ' ' . Html::badge('ok', __('Under review', 'belayline-agent-governance')) : '')
+            . '<span class="aui-leader"></span>' . Tiers::metaSpan(count($abilities), $counts, true)
+            . Icons::svg('caret-down') . '</button></div>', Html::allowed());
         echo '<div class="aui-group-b" id="' . esc_attr($id) . '"' . ($open ? '' : ' hidden') . '>';
 
-        echo $rows; // phpcs:ignore WordPress.Security.EscapeOutput -- each row is built from esc_* helpers in renderRow().
+        echo wp_kses($rows, Html::allowed());
 
         echo '<div class="aui-card-b belayline-stack"><div class="aui-field"><label class="aui-label" for="' . esc_attr($id) . '-bulk">' . esc_html__('Or set every ability in this group to', 'belayline-agent-governance') . '</label>';
         echo '<select class="aui-select belayline-narrow" id="' . esc_attr($id) . '-bulk" name="bulk"><option value="">' . esc_html__('Keep the choices above', 'belayline-agent-governance') . '</option>';
@@ -217,7 +217,7 @@ final class AbilitiesPage
         }
         echo '<option value="' . esc_attr(self::CLEAR) . '">' . esc_html(Tiers::label(Tiers::NONE)) . '</option></select></div>';
 
-        echo Html::notice('warning', __('Reviewing one ability puts the whole group under review.', 'belayline-agent-governance'), __('Anything in it you leave as Not reviewed will then be refused instead of running unchecked.', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
+        echo wp_kses(Html::notice('warning', __('Reviewing one ability puts the whole group under review.', 'belayline-agent-governance'), __('Anything in it you leave as Not reviewed will then be refused instead of running unchecked.', 'belayline-agent-governance')), Html::allowed());
         if (!$governed) {
             echo '<label class="belayline-check"><input type="checkbox" name="confirm" value="1"> ' . esc_html__('I understand: this group goes under review and anything not reviewed is refused.', 'belayline-agent-governance') . '</label>';
         }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Belayline\Plugin\Admin;
 
+use Belayline\Plugin\Admin\Ui\Html;
 use Belayline\Plugin\Admin\Ui\Icons;
 use Belayline\Plugin\Admin\Ui\Shell;
 use Belayline\Plugin\Audit\WpdbApprovalStore;
@@ -233,9 +234,9 @@ final class AdminApp
     /** Shown for a tab whose store is missing (the no-database path): governed calls fail closed there too. */
     private function unavailable(): void
     {
-        echo '<section class="aui-card"><div class="aui-empty"><span class="aui-tile aui-tile--bad">' . Icons::svg('warning', 'aui-i--lg') . '</span><h2 class="aui-card-t">' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
+        echo wp_kses('<section class="aui-card"><div class="aui-empty"><span class="aui-tile aui-tile--bad">' . Icons::svg('warning', 'aui-i--lg') . '</span><h2 class="aui-card-t">'
             . esc_html__('This screen is not available', 'belayline-agent-governance') . '</h2><p>'
             . esc_html__('Belayline could not reach its database tables, so there is nothing to show here. Agent calls that need them are refused until this is fixed.', 'belayline-agent-governance')
-            . '</p></div></section>';
+            . '</p></div></section>', Html::allowed());
     }
 }

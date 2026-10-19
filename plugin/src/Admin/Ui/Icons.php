@@ -29,6 +29,12 @@ final class Icons
         $file = self::kitDir() . '/icons.svg';
         $svg = is_readable($file) ? file_get_contents($file) : false;
 
-        return is_string($svg) ? $svg : '';
+        if (!is_string($svg)) {
+            return '';
+        }
+
+        // The vendored file opens with a usage comment that itself contains an `<svg>` example;
+        // markup sanitisers cannot be trusted to leave that alone, and it has no effect on screen.
+        return (string) preg_replace('/<!--.*?-->\s*/s', '', $svg);
     }
 }

@@ -103,7 +103,9 @@ final class OverviewPage
         $yesterday = count($series) > 1 ? $series[count($series) - 2] : 0;
 
         echo '<div class="aui-stat aui-stat--spark"><span class="aui-label-caps">' . esc_html__('Calls today', 'belayline-agent-governance') . '</span>';
-        echo '<div class="aui-stat-row"><div class="aui-stat-v">' . esc_html((string) $today) . '</div>' . self::sparkline($series) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput -- numbers only, built in sparkline().
+        echo '<div class="aui-stat-row"><div class="aui-stat-v">' . esc_html((string) $today) . '</div>';
+        self::sparkline($series);
+        echo '</div>';
         if ($yesterday > 0) {
             $pct = (int) round(($today - $yesterday) / $yesterday * 100);
             echo '<span class="aui-delta' . ($pct < 0 ? ' aui-delta--down' : '') . '">' . esc_html(sprintf(
@@ -125,16 +127,16 @@ final class OverviewPage
     private function statRefused(array $days): void
     {
         $refused = $days === [] ? 0 : $days[count($days) - 1]['refused'];
-        echo '<div class="aui-stat aui-stat--inline"><span class="aui-tile aui-tile--bad">' . Icons::svg('x', 'aui-i--lg') . '</span><div><div class="aui-stat-v">' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
-            . esc_html((string) $refused) . '</div><div class="aui-stat-l">' . esc_html__('Refused today', 'belayline-agent-governance') . '</div></div></div>';
+        echo wp_kses('<div class="aui-stat aui-stat--inline"><span class="aui-tile aui-tile--bad">' . Icons::svg('x', 'aui-i--lg') . '</span><div><div class="aui-stat-v">'
+            . esc_html((string) $refused) . '</div><div class="aui-stat-l">' . esc_html__('Refused today', 'belayline-agent-governance') . '</div></div></div>', Html::allowed());
     }
 
     /** @param array{ok: bool, at: int, total: int} $chain */
     private function statChain(array $chain, int $now): void
     {
         $ok = $chain['ok'];
-        echo '<div class="aui-stat aui-stat--status' . ($ok ? '' : ' is-bad') . '"><div class="aui-stat-head">' . Icons::svg('shield', 'aui-i--lg') // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
-            . esc_html($ok ? __('Log intact', 'belayline-agent-governance') : __('Log altered', 'belayline-agent-governance')) . '</div>';
+        echo wp_kses('<div class="aui-stat aui-stat--status' . ($ok ? '' : ' is-bad') . '"><div class="aui-stat-head">' . Icons::svg('shield', 'aui-i--lg')
+            . esc_html($ok ? __('Log intact', 'belayline-agent-governance') : __('Log altered', 'belayline-agent-governance')) . '</div>', Html::allowed());
         echo '<div class="aui-stat-l">';
         if ($ok) {
             echo esc_html__('Verified', 'belayline-agent-governance') . ' <span class="aui-mono">' . esc_html($this->agoText($now - $chain['at'])) . '</span>';
@@ -154,10 +156,10 @@ final class OverviewPage
     }
 
     /** @param list<int> $series */
-    private static function sparkline(array $series): string
+    private static function sparkline(array $series): void
     {
         if (count($series) < 2) {
-            return '';
+            return;
         }
         $max = max($series);
         $min = min($series);
@@ -170,7 +172,7 @@ final class OverviewPage
             $last = [round($x, 1), round($y, 1)];
         }
 
-        return '<svg class="aui-spark" viewBox="0 0 96 32" aria-hidden="true"><polyline points="' . esc_attr(implode(' ', $pts)) . '"/><circle cx="'
+        echo '<svg class="aui-spark" viewBox="0 0 96 32" aria-hidden="true"><polyline points="' . esc_attr(implode(' ', $pts)) . '"/><circle cx="'
             . esc_attr((string) $last[0]) . '" cy="' . esc_attr((string) $last[1]) . '" r="2.5"/></svg>';
     }
 
@@ -191,17 +193,17 @@ final class OverviewPage
         ));
         echo '</p></div>';
         if ($total > 0) {
-            echo '<button type="button" class="aui-switch aui-end" aria-pressed="false" data-aui-ui data-aui-views="belayline-map-table-view,belayline-map-view"><span class="aui-switch-track"></span>'
-                . Icons::svg('table') . esc_html__('Show as table', 'belayline-agent-governance') // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
+            echo wp_kses('<button type="button" class="aui-switch aui-end" aria-pressed="false" data-aui-ui data-aui-views="belayline-map-table-view,belayline-map-view"><span class="aui-switch-track"></span>'
+                . Icons::svg('table') . esc_html__('Show as table', 'belayline-agent-governance')
                 . '<span class="aui-switch-state" data-on="' . esc_attr__('On', 'belayline-agent-governance') . '" data-off="' . esc_attr__('Off', 'belayline-agent-governance') . '">'
-                . esc_html__('Off', 'belayline-agent-governance') . '</span></button>';
+                . esc_html__('Off', 'belayline-agent-governance') . '</span></button>', Html::allowed());
         }
         echo '</div><div class="aui-card-b">';
 
         if ($total === 0) {
-            echo '<div class="aui-empty aui-empty--dashed"><span class="aui-tile">' . Icons::svg('flow', 'aui-i--lg') . '</span><h3 class="aui-card-t">' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
+            echo wp_kses('<div class="aui-empty aui-empty--dashed"><span class="aui-tile">' . Icons::svg('flow', 'aui-i--lg') . '</span><h3 class="aui-card-t">'
                 . esc_html__('No agent calls yet', 'belayline-agent-governance') . '</h3><p>'
-                . esc_html__('Connect an AI app or start a Site Agent run to see traffic here.', 'belayline-agent-governance') . '</p></div></div></section>';
+                . esc_html__('Connect an AI app or start a Site Agent run to see traffic here.', 'belayline-agent-governance') . '</p></div></div></section>', Html::allowed());
 
             return;
         }
@@ -256,9 +258,9 @@ final class OverviewPage
         $filter = $node['filter'] !== null
             ? ' data-filter-key="' . esc_attr($node['filter']['key']) . '" data-filter-value="' . esc_attr($node['filter']['value']) . '"'
             : '';
-        echo '<button type="button" class="aui-node" data-node="' . esc_attr($node['id']) . '" data-count="' . esc_attr((string) $node['count']) . '"' . $filter . '>' // phpcs:ignore WordPress.Security.EscapeOutput -- every value escaped above.
-            . $dot . ($node['sub'] !== '' ? '<span>' . $label . '</span>' : $label) // phpcs:ignore WordPress.Security.EscapeOutput -- escaped above.
-            . '<span class="aui-num">' . esc_html((string) $node['count']) . '</span></button>';
+        echo wp_kses('<button type="button" class="aui-node" data-node="' . esc_attr($node['id']) . '" data-count="' . esc_attr((string) $node['count']) . '"' . $filter . '>'
+            . $dot . ($node['sub'] !== '' ? '<span>' . $label . '</span>' : $label)
+            . '<span class="aui-num">' . esc_html((string) $node['count']) . '</span></button>', Html::allowed());
     }
 
     /** @param list<array<string, mixed>> $pending */
@@ -282,15 +284,15 @@ final class OverviewPage
         $events = $this->reader->forEvents(array_values(array_filter(array_map(static fn (array $r): string => (string) ($r['audit_event_id'] ?? ''), $shown))));
         foreach ($shown as $r) {
             $who = $this->who->describe((string) ($r['key_id'] ?? ''));
-            echo '<li class="aui-item belayline-flush"><span class="aui-tile aui-tile--sm">' . Icons::svg('robot') . '</span><div class="aui-grow"><div class="aui-item-name">' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
-                . esc_html($who['label']) . ': ' . PendingActionsPage::summaryHtml((string) ($r['summary'] ?? '')) . '</div><div class="aui-muted">' // phpcs:ignore WordPress.Security.EscapeOutput -- summaryHtml() escapes by provenance.
+            echo wp_kses('<li class="aui-item belayline-flush"><span class="aui-tile aui-tile--sm">' . Icons::svg('robot') . '</span><div class="aui-grow"><div class="aui-item-name">'
+                . esc_html($who['label']) . ': ' . PendingActionsPage::summaryHtml((string) ($r['summary'] ?? '')) . '</div><div class="aui-muted">'
                 . esc_html(PendingActionsPage::heldReason($events[(string) ($r['audit_event_id'] ?? '')] ?? null)) . '</div></div><div class="belayline-wait-meta"><span class="aui-mono aui-muted belayline-nowrap">'
                 . esc_html(sprintf(
                     /* translators: %s: "in 6 d 23 h" */
                     __('expires %s', 'belayline-agent-governance'),
                     Time::until((string) ($r['pending_expires_ts'] ?? ''), $now)
                 )) . '</span><a class="aui-btn aui-btn--secondary aui-btn--sm" href="'
-                . esc_url(AdminUrls::tab(AdminUrls::PENDING, [], 'approval-' . (string) ($r['approval_id'] ?? ''))) . '">' . esc_html__('Review', 'belayline-agent-governance') . '</a></div></li>';
+                . esc_url(AdminUrls::tab(AdminUrls::PENDING, [], 'approval-' . (string) ($r['approval_id'] ?? ''))) . '">' . esc_html__('Review', 'belayline-agent-governance') . '</a></div></li>', Html::allowed());
         }
         echo '</ul></section>';
     }

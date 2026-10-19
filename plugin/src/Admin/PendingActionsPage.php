@@ -77,11 +77,11 @@ final class PendingActionsPage
         $this->maybeShowStaleNotice();
 
         if (!$rows) {
-            echo '<section class="aui-card"><div class="aui-empty"><span class="aui-tile aui-tile--ok">' . Icons::svg('check', 'aui-i--lg') . '</span><h2 class="aui-card-t">' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
+            echo wp_kses('<section class="aui-card"><div class="aui-empty"><span class="aui-tile aui-tile--ok">' . Icons::svg('check', 'aui-i--lg') . '</span><h2 class="aui-card-t">'
                 . esc_html__('Nothing is waiting', 'belayline-agent-governance') . '</h2><p>'
                 . esc_html__('When an agent asks to do something that needs your approval, it shows up here and we email you.', 'belayline-agent-governance')
                 . '</p><a class="aui-btn aui-btn--secondary" href="' . esc_url(AdminUrls::tab(AdminUrls::PACKS)) . '">'
-                . esc_html__('Choose what needs approval', 'belayline-agent-governance') . '</a></div></section>';
+                . esc_html__('Choose what needs approval', 'belayline-agent-governance') . '</a></div></section>', Html::allowed());
 
             return;
         }
@@ -111,14 +111,13 @@ final class PendingActionsPage
         $titleId = 'approval-' . $approvalId;
 
         echo '<article class="aui-card aui-approval" id="' . esc_attr($titleId) . '" data-aui-item aria-labelledby="' . esc_attr($titleId . '-s') . '">';
-        echo '<div class="aui-approval-h"><span class="aui-tile aui-tile--sm">' . Icons::svg('robot') . '</span><div class="aui-grow"><div class="aui-item-name">' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
+        echo wp_kses('<div class="aui-approval-h"><span class="aui-tile aui-tile--sm">' . Icons::svg('robot') . '</span><div class="aui-grow"><div class="aui-item-name">'
             . esc_html($who['label']) . ($who['sub'] !== '' ? ' <span class="aui-muted">&middot; ' . esc_html($who['sub']) . '</span>' : '') . '</div></div>'
-            . Html::badge('warn', __('Waiting', 'belayline-agent-governance'), 'clock') . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts (Html helpers and esc_* calls).
-        // phpcs:ignore WordPress.Security.EscapeOutput -- summaryHtml() escapes or wp_kses-es by provenance.
-        echo '<h2 class="aui-approval-sum" id="' . esc_attr($titleId . '-s') . '">' . self::summaryHtml((string) ($r['summary'] ?? '')) . '</h2>';
-        echo $this->why($event); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts (Html helpers and esc_* calls).
+            . Html::badge('warn', __('Waiting', 'belayline-agent-governance'), 'clock') . '</div>', Html::allowed());
+        echo '<h2 class="aui-approval-sum" id="' . esc_attr($titleId . '-s') . '">' . wp_kses(self::summaryHtml((string) ($r['summary'] ?? '')), Html::allowed()) . '</h2>';
+        echo wp_kses($this->why($event), Html::allowed());
 
-        echo '<dl class="aui-kv"><dt>' . esc_html__('Ability', 'belayline-agent-governance') . '</dt><dd>' . AbilityLabel::html((string) ($r['verb'] ?? '')) . '</dd>'; // phpcs:ignore WordPress.Security.EscapeOutput -- AbilityLabel::html() escapes.
+        echo wp_kses('<dl class="aui-kv"><dt>' . esc_html__('Ability', 'belayline-agent-governance') . '</dt><dd>' . AbilityLabel::html((string) ($r['verb'] ?? '')) . '</dd>', Html::allowed());
         echo '<dt>' . esc_html__('Asked at', 'belayline-agent-governance') . '</dt><dd class="aui-mono">' . esc_html((string) ($r['created_ts'] ?? '')) . ' UTC</dd>';
         echo '<dt>' . esc_html__('Expires', 'belayline-agent-governance') . '</dt><dd class="aui-mono">' . esc_html(Time::until((string) ($r['pending_expires_ts'] ?? ''), $now)) . '</dd>';
         if ($unchecked) {
@@ -126,8 +125,8 @@ final class PendingActionsPage
         }
         echo '<dt>' . esc_html__('Request id', 'belayline-agent-governance') . '</dt><dd class="aui-mono">' . esc_html($approvalId) . '</dd></dl>';
 
-        echo '<div class="aui-approval-f">' . $this->actionButton($approvalId, self::APPROVE, 'primary', __('Approve', 'belayline-agent-governance')) // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers below.
-            . $this->actionButton($approvalId, self::REJECT, 'secondary', __('Deny', 'belayline-agent-governance')) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers below.
+        echo wp_kses('<div class="aui-approval-f">' . $this->actionButton($approvalId, self::APPROVE, 'primary', __('Approve', 'belayline-agent-governance'))
+            . $this->actionButton($approvalId, self::REJECT, 'secondary', __('Deny', 'belayline-agent-governance')) . '</div>', Html::allowed());
         echo '</article>';
     }
 
@@ -166,7 +165,7 @@ final class PendingActionsPage
     {
         echo '<section class="aui-card"><div class="aui-card-h"><div><h2 class="aui-card-t">' . esc_html__('Notifications', 'belayline-agent-governance') . '</h2><p class="aui-card-d">'
             . esc_html__('Each new waiting action sends an email with a link to this tab. If you add a webhook address, we also send a short message with identifiers only. No call details leave your site.', 'belayline-agent-governance') . '</p></div></div>';
-        echo Html::postForm(self::NOTIFY, self::NOTIFY, Html::backTo(AdminUrls::PENDING)); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
+        echo wp_kses(Html::postForm(self::NOTIFY, self::NOTIFY, Html::backTo(AdminUrls::PENDING)), Html::allowed());
         echo '<div class="aui-card-b belayline-stack">';
         printf(
             '<div class="aui-field"><label class="aui-label" for="belayline_notify_email">%s</label><input class="aui-input" type="email" id="belayline_notify_email" name="belayline_notify_email" value="%s" placeholder="%s"></div>',
@@ -243,7 +242,7 @@ final class PendingActionsPage
         }
         delete_transient(self::STALE_FLASH . $user);
 
-        echo Html::notice('warning', __('This request is out of date.', 'belayline-agent-governance'), __('What it targets changed after it was filed, so it cannot be approved as it is. If it is still needed, ask the agent to try again.', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
+        echo wp_kses(Html::notice('warning', __('This request is out of date.', 'belayline-agent-governance'), __('What it targets changed after it was filed, so it cannot be approved as it is. If it is still needed, ask the agent to try again.', 'belayline-agent-governance')), Html::allowed());
     }
 
     private function maybeShowMintedToken(): void
@@ -255,11 +254,11 @@ final class PendingActionsPage
         }
         delete_transient(self::FLASH . $user);
 
-        echo '<div class="aui-notice aui-notice--success" role="status">' . Icons::svg('check') . '<div><strong>' . esc_html__('Approved.', 'belayline-agent-governance') . '</strong> ' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
+        echo wp_kses('<div class="aui-notice aui-notice--success" role="status">' . Icons::svg('check') . '<div><strong>' . esc_html__('Approved.', 'belayline-agent-governance') . '</strong> '
             . esc_html(sprintf(/* translators: %s approval id */ __('Request %s is now approved. The same AI app can simply try the exact same call again and it will run, no code needed.', 'belayline-agent-governance'), (string) $flash['approval_id']))
             . '<p>' . esc_html__('To let someone else run it, give them this one-time code as the _approval argument:', 'belayline-agent-governance')
             . '</p><p><code class="aui-code belayline-select">' . esc_html((string) $flash['token']) . '</code></p><p>'
-            . esc_html__('It works once, for 15 minutes, for that exact action only. It is shown now and never stored.', 'belayline-agent-governance') . '</p></div></div>';
+            . esc_html__('It works once, for 15 minutes, for that exact action only. It is shown now and never stored.', 'belayline-agent-governance') . '</p></div></div>', Html::allowed());
     }
 
     /**

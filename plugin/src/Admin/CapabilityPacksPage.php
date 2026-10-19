@@ -106,7 +106,7 @@ final class CapabilityPacksPage
         echo '<p class="aui-page-intro">' . esc_html__('Packs decide what each agent may do. Anything not in a pack is refused. Choose how each ability behaves, and which roles, people and keys use which pack.', 'belayline-agent-governance') . '</p>';
 
         if (isset($_GET['belayline_saved']) && $_GET['belayline_saved'] === '1') { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only flash.
-            echo Html::notice('success', __('Saved.', 'belayline-agent-governance'), __('The change applies on the next agent call.', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
+            echo wp_kses(Html::notice('success', __('Saved.', 'belayline-agent-governance'), __('The change applies on the next agent call.', 'belayline-agent-governance')), Html::allowed());
         }
 
         $this->renderCatalog($registry->names());
@@ -144,7 +144,7 @@ final class CapabilityPacksPage
         echo '<ul class="aui-feed">';
         foreach ($bindings as $token => $pack) {
             $icon = str_starts_with((string) $token, 'user:') || str_starts_with((string) $token, 'role:') ? 'user' : 'key';
-            echo '<li>' . Icons::svg($icon) . '<div>' . esc_html($labels[(string) $token] ?? (string) $token) . '<time>' . esc_html(PackLabel::of($pack)) . '</time></div></li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
+            echo wp_kses('<li>' . Icons::svg($icon) . '<div>' . esc_html($labels[(string) $token] ?? (string) $token) . '<time>' . esc_html(PackLabel::of($pack)) . '</time></div></li>', Html::allowed());
         }
         echo '</ul><p class="aui-help">' . esc_html(sprintf(
             /* translators: %s: pack name */
@@ -200,8 +200,8 @@ final class CapabilityPacksPage
         EnvironmentLabel::render($this->shadow);
 
         if ($this->environment !== null && $this->environment->isMismatched()) {
-            echo Html::notice('error', __('This site\'s address changed.', 'belayline-agent-governance'), __("Watch-only windows, grants and approvals that were granted but not yet used have been voided for good. Confirm the new address to carry on.", 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
-            echo Html::postForm(self::REBIND, self::REBIND, Html::backTo(AdminUrls::SETTINGS)); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
+            echo wp_kses(Html::notice('error', __('This site\'s address changed.', 'belayline-agent-governance'), __("Watch-only windows, grants and approvals that were granted but not yet used have been voided for good. Confirm the new address to carry on.", 'belayline-agent-governance')), Html::allowed());
+            echo wp_kses(Html::postForm(self::REBIND, self::REBIND, Html::backTo(AdminUrls::SETTINGS)), Html::allowed());
             echo '<button type="submit" class="aui-btn aui-btn--primary">' . esc_html__('Use this address', 'belayline-agent-governance') . '</button></form>';
         }
         echo '</div></section>';
@@ -229,16 +229,16 @@ final class CapabilityPacksPage
     {
         $flash = isset($_GET['belayline_ip']) && is_scalar($_GET['belayline_ip']) ? sanitize_key((string) wp_unslash($_GET['belayline_ip'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only flash.
         if ($flash === 'saved') {
-            echo Html::notice('success', __('Saved.', 'belayline-agent-governance'), __('The address list is in effect.', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
+            echo wp_kses(Html::notice('success', __('Saved.', 'belayline-agent-governance'), __('The address list is in effect.', 'belayline-agent-governance')), Html::allowed());
         } elseif ($flash === 'warn') {
-            echo Html::notice('warning', __('Saved, but the list does not include the address you are using now.', 'belayline-agent-governance'), __('Your browser session is never checked against it, so you are not locked out. AI apps calling from that address would be refused.', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
+            echo wp_kses(Html::notice('warning', __('Saved, but the list does not include the address you are using now.', 'belayline-agent-governance'), __('Your browser session is never checked against it, so you are not locked out. AI apps calling from that address would be refused.', 'belayline-agent-governance')), Html::allowed());
         } elseif ($flash === 'invalid') {
-            echo Html::notice('error', __('Nothing was saved.', 'belayline-agent-governance'), __('Every line must be an IPv4 or IPv6 address, or a range such as 203.0.113.0/24.', 'belayline-agent-governance')); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
+            echo wp_kses(Html::notice('error', __('Nothing was saved.', 'belayline-agent-governance'), __('Every line must be an IPv4 or IPv6 address, or a range such as 203.0.113.0/24.', 'belayline-agent-governance')), Html::allowed());
         }
 
         echo '<section class="aui-card"><div class="aui-card-h"><div><h2 class="aui-card-t">' . esc_html__('Allowed addresses', 'belayline-agent-governance') . '</h2><p class="aui-card-d">'
             . esc_html__('When you list addresses, calls from application passwords and WooCommerce API keys are refused unless they come from one of them. Logged-in browser sessions are never checked. Leave it empty to allow every address.', 'belayline-agent-governance') . '</p></div></div>';
-        echo Html::postForm(self::IP, self::IP, Html::backTo(AdminUrls::SETTINGS)); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
+        echo wp_kses(Html::postForm(self::IP, self::IP, Html::backTo(AdminUrls::SETTINGS)), Html::allowed());
         echo '<div class="aui-card-b belayline-stack">';
         echo '<div class="aui-field"><label class="aui-label" for="belayline_ip_allowlist">' . esc_html__('Allowed addresses and ranges, one per line', 'belayline-agent-governance') . '</label>';
         echo '<textarea class="aui-textarea aui-mono" id="belayline_ip_allowlist" name="ip_allowlist" rows="5">' . esc_textarea(implode("\n", $this->ip->entries())) . '</textarea></div>';
@@ -419,15 +419,15 @@ final class CapabilityPacksPage
         echo '<section class="aui-card" data-aui-filterbox aria-labelledby="belayline-packs-t"><div class="aui-card-h"><div><h2 class="aui-card-t" id="belayline-packs-t">'
             . esc_html__('Packs', 'belayline-agent-governance') . '</h2><p class="aui-card-d">'
             . esc_html__('Each pack lists what an agent bound to it can do on this site, and what it needs your approval for.', 'belayline-agent-governance') . '</p></div></div>';
-        echo '<div class="aui-toolbar"><div class="aui-search">' . Icons::svg('magnifying-glass') . '<input class="aui-input" type="search" placeholder="' . esc_attr__('Search abilities', 'belayline-agent-governance') // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
-            . '" aria-label="' . esc_attr__('Search abilities', 'belayline-agent-governance') . '" data-aui-search></div>';
+        echo wp_kses('<div class="aui-toolbar"><div class="aui-search">' . Icons::svg('magnifying-glass') . '<input class="aui-input" type="search" placeholder="' . esc_attr__('Search abilities', 'belayline-agent-governance')
+            . '" aria-label="' . esc_attr__('Search abilities', 'belayline-agent-governance') . '" data-aui-search></div>', Html::allowed());
         echo '<div class="aui-seg" role="group" aria-label="' . esc_attr__('Show', 'belayline-agent-governance') . '" data-aui-filter>';
         foreach ([['all', __('All', 'belayline-agent-governance')], [Tiers::FREE, Tiers::label(Tiers::FREE)], [Tiers::APPROVAL, Tiers::label(Tiers::APPROVAL)], [Tiers::ALWAYS, Tiers::label(Tiers::ALWAYS)]] as [$value, $label]) {
             echo '<button type="button" aria-pressed="' . ($value === 'all' ? 'true' : 'false') . '" data-value="' . esc_attr($value) . '">' . esc_html($label) . '</button>';
         }
         echo '</div></div>';
 
-        echo Html::postForm(self::SHADOW, self::SHADOW); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
+        echo wp_kses(Html::postForm(self::SHADOW, self::SHADOW), Html::allowed());
         echo '<div class="aui-groups">';
         foreach ($names as $name) {
             $pack = $registry->get($name);
@@ -460,7 +460,7 @@ final class CapabilityPacksPage
         echo '</div></form>';
         // The "Renew" buttons submit these (HTML forms cannot nest inside the shadow form).
         foreach ($renew as $name) {
-            echo Html::postForm(self::RENEW_SHADOW, self::RENEW_SHADOW, '<input type="hidden" name="pack" value="' . esc_attr($name) . '">', 'id="belayline-renew-' . esc_attr(sanitize_key($name)) . '"') . '</form>'; // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
+            echo wp_kses(Html::postForm(self::RENEW_SHADOW, self::RENEW_SHADOW, '<input type="hidden" name="pack" value="' . esc_attr($name) . '">', 'id="belayline-renew-' . esc_attr(sanitize_key($name)) . '"') . '</form>', Html::allowed());
         }
         echo '</section>';
     }
@@ -479,13 +479,13 @@ final class CapabilityPacksPage
         echo '<div class="aui-group"><div class="aui-group-h"><button type="button" class="aui-group-toggle" aria-expanded="' . ($open ? 'true' : 'false') . '" aria-controls="' . esc_attr($id) . '">'
             . '<span class="aui-group-name">' . esc_html(PackLabel::of($pack->name)) . ' <code class="aui-code aui-muted">' . esc_html($pack->name) . '</code></span>';
         if ($storedExpiry !== null || $effectiveExpiry !== null) {
-            echo ' ' . Html::badge('warn', __('Watch only', 'belayline-agent-governance'), 'clock'); // phpcs:ignore WordPress.Security.EscapeOutput -- Html::badge() escapes.
+            echo wp_kses(' ' . Html::badge('warn', __('Watch only', 'belayline-agent-governance'), 'clock'), Html::allowed());
         }
         echo '<span class="aui-leader"></span>';
         if ($view !== null) {
-            echo Tiers::metaSpan($total, $counts, false); // phpcs:ignore WordPress.Security.EscapeOutput -- metaSpan() escapes.
+            echo wp_kses(Tiers::metaSpan($total, $counts, false), Html::allowed());
         }
-        echo Icons::svg('caret-down') . '</button></div><div class="aui-group-b" id="' . esc_attr($id) . '"' . ($open ? '' : ' hidden') . '>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
+        echo wp_kses(Icons::svg('caret-down') . '</button></div><div class="aui-group-b" id="' . esc_attr($id) . '"' . ($open ? '' : ' hidden') . '>', Html::allowed());
 
         if ($view !== null) {
             $shown = array_slice($view['rows'], 0, self::PACK_ROWS);
@@ -494,7 +494,7 @@ final class CapabilityPacksPage
                 if ($row['label'] !== $row['name']) {
                     echo ' <code>' . esc_html($row['name']) . '</code>';
                 }
-                echo '</div></div>' . Tiers::badge($row['tier']) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput -- Tiers::badge() escapes.
+                echo wp_kses('</div></div>' . Tiers::badge($row['tier']) . '</div>', Html::allowed());
             }
             $extra = count($view['rows']) - count($shown);
             if ($extra > 0 || $view['refused'] > 0 || $shown === []) {
@@ -514,14 +514,14 @@ final class CapabilityPacksPage
             }
         }
 
-        echo '<div class="aui-card-b belayline-stack">' . $this->packRules($pack); // phpcs:ignore WordPress.Security.EscapeOutput -- packRules() escapes.
+        echo wp_kses('<div class="aui-card-b belayline-stack">' . $this->packRules($pack), Html::allowed());
         printf(
             '<label class="belayline-check"><input type="checkbox" name="shadow[]" value="%s"%s> <span><strong>%s</strong> %s%s</span></label>',
             esc_attr($pack->name),
             checked($storedExpiry !== null, true, false),
             esc_html__('Watch only (shadow mode).', 'belayline-agent-governance'),
             esc_html__('Record what would happen and block nothing.', 'belayline-agent-governance'),
-            $this->expiryNote($storedExpiry, $effectiveExpiry), // phpcs:ignore WordPress.Security.EscapeOutput -- esc_html in helper.
+            wp_kses($this->expiryNote($storedExpiry, $effectiveExpiry), Html::allowed()),
         );
         if ($isProduction && $storedExpiry === null) {
             printf(
@@ -532,7 +532,7 @@ final class CapabilityPacksPage
             );
         }
         if ($isProduction && $storedExpiry !== null) {
-            echo $this->renewShadowButton($pack->name); // phpcs:ignore WordPress.Security.EscapeOutput -- esc_* in helper.
+            echo wp_kses($this->renewShadowButton($pack->name), Html::allowed());
         }
         echo '</div></div></div>';
     }
@@ -717,23 +717,23 @@ final class CapabilityPacksPage
         ));
 
         if ($providers === []) {
-            echo '<div class="aui-empty"><span class="aui-tile">' . Icons::svg('key', 'aui-i--lg') . '</span><h3 class="aui-card-t">' . esc_html__('Nothing to bind yet', 'belayline-agent-governance') . '</h3><p>' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
-                . esc_html__('Roles, people, application passwords and API keys show up here as soon as there are any.', 'belayline-agent-governance') . '</p></div></section>';
+            echo wp_kses('<div class="aui-empty"><span class="aui-tile">' . Icons::svg('key', 'aui-i--lg') . '</span><h3 class="aui-card-t">' . esc_html__('Nothing to bind yet', 'belayline-agent-governance') . '</h3><p>'
+                . esc_html__('Roles, people, application passwords and API keys show up here as soon as there are any.', 'belayline-agent-governance') . '</p></div></section>', Html::allowed());
 
             return;
         }
 
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" data-aui-form>';
         echo '<input type="hidden" name="action" value="' . esc_attr(self::SAVE) . '">';
-        echo wp_nonce_field(self::SAVE, '_wpnonce', true, false); // phpcs:ignore WordPress.Security.EscapeOutput -- wp_nonce_field returns safe markup.
+        echo wp_kses(wp_nonce_field(self::SAVE, '_wpnonce', true, false), Html::allowed());
 
         if ($prefill !== null) {
-            echo '<div class="aui-card-b">' . Html::notice('info', __('Site Agent asked to use a pack.', 'belayline-agent-governance'), sprintf( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts (Html helpers and esc_* calls).
+            echo wp_kses('<div class="aui-card-b">' . Html::notice('info', __('Site Agent asked to use a pack.', 'belayline-agent-governance'), sprintf(
                 /* translators: 1: role or user display name, 2: capability pack name */
-                __('It would like %1$s to use the %2$s pack. Check the highlighted row and save.', 'belayline-agent-governance'), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts (Html helpers and esc_* calls).
-                $prefill['label'], // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts (Html helpers and esc_* calls).
-                $prefill['pack'] // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts (Html helpers and esc_* calls).
-            )) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
+                __('It would like %1$s to use the %2$s pack. Check the highlighted row and save.', 'belayline-agent-governance'),
+                $prefill['label'],
+                $prefill['pack']
+            )) . '</div>', Html::allowed());
         }
 
         foreach ($providers as $provider) {
@@ -746,7 +746,7 @@ final class CapabilityPacksPage
         echo '</form></section>';
 
         if ($prefill !== null) {
-            echo '<script>document.getElementById("' . self::PREFILL_ROW . '")?.scrollIntoView({block:"center"});</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- static constant.
+            wp_print_inline_script_tag('document.getElementById(' . wp_json_encode(self::PREFILL_ROW) . ')?.scrollIntoView({block:"center"});');
         }
     }
 
@@ -776,10 +776,12 @@ final class CapabilityPacksPage
             }
             echo $asked
                 ? '<tr id="' . esc_attr(self::PREFILL_ROW) . '" class="is-highlight">'
-                : '<tr>'; // phpcs:ignore WordPress.Security.EscapeOutput -- static markup plus esc_attr'd constant.
+                : '<tr>';
             $selectId = 'belayline-bind-' . substr(md5($token), 0, 10);
             echo '<td><label for="' . esc_attr($selectId) . '">' . esc_html($description !== '' ? $description : $token) . '</label> <code class="aui-code aui-muted">' . esc_html($token) . '</code></td>';
-            echo '<td>' . $this->packSelect($selectId, $token, $names, $default, $current) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput -- esc_* in helper.
+            echo '<td>';
+            $this->packSelect($selectId, $token, $names, $default, $current);
+            echo '</td>';
             echo '</tr>';
         }
 
@@ -789,16 +791,14 @@ final class CapabilityPacksPage
     /**
      * @param list<string> $names
      */
-    private function packSelect(string $id, string $subject, array $names, string $default, string $current): string
+    private function packSelect(string $id, string $subject, array $names, string $default, string $current): void
     {
-        $out = '<select class="aui-select" id="' . esc_attr($id) . '" name="bindings[' . esc_attr($subject) . ']">';
-        $out .= '<option value="">' . esc_html(sprintf(/* translators: %s default pack name */ __('Default (%s)', 'belayline-agent-governance'), PackLabel::of($default))) . '</option>';
+        echo '<select class="aui-select" id="' . esc_attr($id) . '" name="bindings[' . esc_attr($subject) . ']">';
+        echo '<option value="">' . esc_html(sprintf(/* translators: %s default pack name */ __('Default (%s)', 'belayline-agent-governance'), PackLabel::of($default))) . '</option>';
         foreach ($names as $name) {
-            $out .= '<option value="' . esc_attr($name) . '"' . selected($current, $name, false) . '>' . esc_html(PackLabel::of($name)) . '</option>';
+            echo '<option value="' . esc_attr($name) . '"' . selected($current, $name, false) . '>' . esc_html(PackLabel::of($name)) . '</option>';
         }
-        $out .= '</select>';
-
-        return $out;
+        echo '</select>';
     }
 
     public function save(): void
