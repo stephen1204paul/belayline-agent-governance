@@ -77,7 +77,7 @@ final class PendingActionsPage
         $this->maybeShowStaleNotice();
 
         if (!$rows) {
-            echo '<section class="aui-card"><div class="aui-empty"><span class="aui-tile aui-tile--ok">' . Icons::svg('check', 'aui-i--lg') . '</span><h2 class="aui-card-t">'
+            echo '<section class="aui-card"><div class="aui-empty"><span class="aui-tile aui-tile--ok">' . Icons::svg('check', 'aui-i--lg') . '</span><h2 class="aui-card-t">' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
                 . esc_html__('Nothing is waiting', 'belayline-agent-governance') . '</h2><p>'
                 . esc_html__('When an agent asks to do something that needs your approval, it shows up here and we email you.', 'belayline-agent-governance')
                 . '</p><a class="aui-btn aui-btn--secondary" href="' . esc_url(AdminUrls::tab(AdminUrls::PACKS)) . '">'
@@ -111,12 +111,12 @@ final class PendingActionsPage
         $titleId = 'approval-' . $approvalId;
 
         echo '<article class="aui-card aui-approval" id="' . esc_attr($titleId) . '" data-aui-item aria-labelledby="' . esc_attr($titleId . '-s') . '">';
-        echo '<div class="aui-approval-h"><span class="aui-tile aui-tile--sm">' . Icons::svg('robot') . '</span><div class="aui-grow"><div class="aui-item-name">'
+        echo '<div class="aui-approval-h"><span class="aui-tile aui-tile--sm">' . Icons::svg('robot') . '</span><div class="aui-grow"><div class="aui-item-name">' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
             . esc_html($who['label']) . ($who['sub'] !== '' ? ' <span class="aui-muted">&middot; ' . esc_html($who['sub']) . '</span>' : '') . '</div></div>'
-            . Html::badge('warn', __('Waiting', 'belayline-agent-governance'), 'clock') . '</div>';
+            . Html::badge('warn', __('Waiting', 'belayline-agent-governance'), 'clock') . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts (Html helpers and esc_* calls).
         // phpcs:ignore WordPress.Security.EscapeOutput -- summaryHtml() escapes or wp_kses-es by provenance.
         echo '<h2 class="aui-approval-sum" id="' . esc_attr($titleId . '-s') . '">' . self::summaryHtml((string) ($r['summary'] ?? '')) . '</h2>';
-        echo $this->why($event);
+        echo $this->why($event); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts (Html helpers and esc_* calls).
 
         echo '<dl class="aui-kv"><dt>' . esc_html__('Ability', 'belayline-agent-governance') . '</dt><dd>' . AbilityLabel::html((string) ($r['verb'] ?? '')) . '</dd>'; // phpcs:ignore WordPress.Security.EscapeOutput -- AbilityLabel::html() escapes.
         echo '<dt>' . esc_html__('Asked at', 'belayline-agent-governance') . '</dt><dd class="aui-mono">' . esc_html((string) ($r['created_ts'] ?? '')) . ' UTC</dd>';
@@ -255,7 +255,7 @@ final class PendingActionsPage
         }
         delete_transient(self::FLASH . $user);
 
-        echo '<div class="aui-notice aui-notice--success" role="status">' . Icons::svg('check') . '<div><strong>' . esc_html__('Approved.', 'belayline-agent-governance') . '</strong> '
+        echo '<div class="aui-notice aui-notice--success" role="status">' . Icons::svg('check') . '<div><strong>' . esc_html__('Approved.', 'belayline-agent-governance') . '</strong> ' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
             . esc_html(sprintf(/* translators: %s approval id */ __('Request %s is now approved. The same AI app can simply try the exact same call again and it will run, no code needed.', 'belayline-agent-governance'), (string) $flash['approval_id']))
             . '<p>' . esc_html__('To let someone else run it, give them this one-time code as the _approval argument:', 'belayline-agent-governance')
             . '</p><p><code class="aui-code belayline-select">' . esc_html((string) $flash['token']) . '</code></p><p>'

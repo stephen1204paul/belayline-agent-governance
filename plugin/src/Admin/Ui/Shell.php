@@ -78,7 +78,7 @@ final class Shell
 
     private function header(string $tab): void
     {
-        echo '<header class="aui-header"><div class="aui-brand"><span class="aui-mark">' . Icons::svg('shield', 'aui-i--lg') . '</span><h1>'
+        echo '<header class="aui-header"><div class="aui-brand"><span class="aui-mark">' . Icons::svg('shield', 'aui-i--lg') . '</span><h1>' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
             . esc_html__('Belayline', 'belayline-agent-governance') . '</h1></div>';
         echo '<nav class="aui-nav" aria-label="' . esc_attr__('Belayline', 'belayline-agent-governance') . '">';
         $pending = $this->approvals?->pendingCount() ?? 0;
@@ -106,7 +106,7 @@ final class Shell
         if (!$this->pause->isPaused()) {
             echo '<div><h2 class="aui-card-t">' . esc_html__('Emergency stop', 'belayline-agent-governance') . '</h2><p class="aui-card-d">'
                 . esc_html__('Pause every agent on this site right now. Waiting actions stay in the queue and nothing is deleted.', 'belayline-agent-governance') . '</p></div>';
-            echo '<button type="button" class="aui-btn aui-btn--danger" data-aui-open="' . esc_attr(self::STOP_DIALOG) . '">' . Icons::svg('pause')
+            echo '<button type="button" class="aui-btn aui-btn--danger" data-aui-open="' . esc_attr(self::STOP_DIALOG) . '">' . Icons::svg('pause') // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
                 . esc_html__('Pause all agent actions', 'belayline-agent-governance') . '</button>';
             echo '</div></section>';
 
@@ -133,7 +133,7 @@ final class Shell
         echo '</p></div>';
         if ($state !== null) {
             echo Html::postForm(CapabilityPacksPage::RESUME, CapabilityPacksPage::RESUME, Html::backTo($tab)); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
-            echo '<button type="submit" class="aui-btn aui-btn--primary">' . Icons::svg('play') . esc_html__('Resume agent actions', 'belayline-agent-governance') . '</button></form>';
+            echo '<button type="submit" class="aui-btn aui-btn--primary">' . Icons::svg('play') . esc_html__('Resume agent actions', 'belayline-agent-governance') . '</button></form>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
         }
         echo '</div></section>';
     }

@@ -144,7 +144,7 @@ final class CapabilityPacksPage
         echo '<ul class="aui-feed">';
         foreach ($bindings as $token => $pack) {
             $icon = str_starts_with((string) $token, 'user:') || str_starts_with((string) $token, 'role:') ? 'user' : 'key';
-            echo '<li>' . Icons::svg($icon) . '<div>' . esc_html($labels[(string) $token] ?? (string) $token) . '<time>' . esc_html(PackLabel::of($pack)) . '</time></div></li>';
+            echo '<li>' . Icons::svg($icon) . '<div>' . esc_html($labels[(string) $token] ?? (string) $token) . '<time>' . esc_html(PackLabel::of($pack)) . '</time></div></li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
         }
         echo '</ul><p class="aui-help">' . esc_html(sprintf(
             /* translators: %s: pack name */
@@ -384,7 +384,7 @@ final class CapabilityPacksPage
     private static function backUrl(): string
     {
         // phpcs:ignore WordPress.Security.NonceVerification.Missing -- only called after check_admin_referer(); the value is reduced to a known tab name.
-        return AdminUrls::tab(AdminUrls::safeTab(isset($_POST['belayline_tab']) ? wp_unslash($_POST['belayline_tab']) : null));
+        return AdminUrls::tab(AdminUrls::safeTab(isset($_POST['belayline_tab']) ? sanitize_text_field(wp_unslash((string) $_POST['belayline_tab'])) : null));
     }
 
     /**
@@ -419,7 +419,7 @@ final class CapabilityPacksPage
         echo '<section class="aui-card" data-aui-filterbox aria-labelledby="belayline-packs-t"><div class="aui-card-h"><div><h2 class="aui-card-t" id="belayline-packs-t">'
             . esc_html__('Packs', 'belayline-agent-governance') . '</h2><p class="aui-card-d">'
             . esc_html__('Each pack lists what an agent bound to it can do on this site, and what it needs your approval for.', 'belayline-agent-governance') . '</p></div></div>';
-        echo '<div class="aui-toolbar"><div class="aui-search">' . Icons::svg('magnifying-glass') . '<input class="aui-input" type="search" placeholder="' . esc_attr__('Search abilities', 'belayline-agent-governance')
+        echo '<div class="aui-toolbar"><div class="aui-search">' . Icons::svg('magnifying-glass') . '<input class="aui-input" type="search" placeholder="' . esc_attr__('Search abilities', 'belayline-agent-governance') // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
             . '" aria-label="' . esc_attr__('Search abilities', 'belayline-agent-governance') . '" data-aui-search></div>';
         echo '<div class="aui-seg" role="group" aria-label="' . esc_attr__('Show', 'belayline-agent-governance') . '" data-aui-filter>';
         foreach ([['all', __('All', 'belayline-agent-governance')], [Tiers::FREE, Tiers::label(Tiers::FREE)], [Tiers::APPROVAL, Tiers::label(Tiers::APPROVAL)], [Tiers::ALWAYS, Tiers::label(Tiers::ALWAYS)]] as [$value, $label]) {
@@ -485,7 +485,7 @@ final class CapabilityPacksPage
         if ($view !== null) {
             echo Tiers::metaSpan($total, $counts, false); // phpcs:ignore WordPress.Security.EscapeOutput -- metaSpan() escapes.
         }
-        echo Icons::svg('caret-down') . '</button></div><div class="aui-group-b" id="' . esc_attr($id) . '"' . ($open ? '' : ' hidden') . '>';
+        echo Icons::svg('caret-down') . '</button></div><div class="aui-group-b" id="' . esc_attr($id) . '"' . ($open ? '' : ' hidden') . '>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
 
         if ($view !== null) {
             $shown = array_slice($view['rows'], 0, self::PACK_ROWS);
@@ -717,7 +717,7 @@ final class CapabilityPacksPage
         ));
 
         if ($providers === []) {
-            echo '<div class="aui-empty"><span class="aui-tile">' . Icons::svg('key', 'aui-i--lg') . '</span><h3 class="aui-card-t">' . esc_html__('Nothing to bind yet', 'belayline-agent-governance') . '</h3><p>'
+            echo '<div class="aui-empty"><span class="aui-tile">' . Icons::svg('key', 'aui-i--lg') . '</span><h3 class="aui-card-t">' . esc_html__('Nothing to bind yet', 'belayline-agent-governance') . '</h3><p>' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
                 . esc_html__('Roles, people, application passwords and API keys show up here as soon as there are any.', 'belayline-agent-governance') . '</p></div></section>';
 
             return;
@@ -728,11 +728,11 @@ final class CapabilityPacksPage
         echo wp_nonce_field(self::SAVE, '_wpnonce', true, false); // phpcs:ignore WordPress.Security.EscapeOutput -- wp_nonce_field returns safe markup.
 
         if ($prefill !== null) {
-            echo '<div class="aui-card-b">' . Html::notice('info', __('Site Agent asked to use a pack.', 'belayline-agent-governance'), sprintf(
+            echo '<div class="aui-card-b">' . Html::notice('info', __('Site Agent asked to use a pack.', 'belayline-agent-governance'), sprintf( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts (Html helpers and esc_* calls).
                 /* translators: 1: role or user display name, 2: capability pack name */
-                __('It would like %1$s to use the %2$s pack. Check the highlighted row and save.', 'belayline-agent-governance'),
-                $prefill['label'],
-                $prefill['pack']
+                __('It would like %1$s to use the %2$s pack. Check the highlighted row and save.', 'belayline-agent-governance'), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts (Html helpers and esc_* calls).
+                $prefill['label'], // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts (Html helpers and esc_* calls).
+                $prefill['pack'] // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts (Html helpers and esc_* calls).
             )) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput -- Html::notice() escapes.
         }
 

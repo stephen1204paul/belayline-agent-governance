@@ -83,7 +83,7 @@ final class AuditLogPage
         $this->renderFilters($filter);
 
         if (!$rows) {
-            echo '<div class="aui-empty"><span class="aui-tile">' . Icons::svg('file-text', 'aui-i--lg') . '</span><h3 class="aui-card-t">'
+            echo '<div class="aui-empty"><span class="aui-tile">' . Icons::svg('file-text', 'aui-i--lg') . '</span><h3 class="aui-card-t">' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
                 . esc_html($filter->isEmpty() ? __('No activity yet', 'belayline-agent-governance') : __('Nothing matches these filters', 'belayline-agent-governance')) . '</h3><p>'
                 . esc_html($filter->isEmpty()
                     ? __('Every call an agent makes will be listed here.', 'belayline-agent-governance')
@@ -121,7 +121,7 @@ final class AuditLogPage
                 __('%s ago', 'belayline-agent-governance'),
                 Time::span($now - $status['at'])
             );
-            echo '<div class="aui-notice aui-notice--success" role="status">' . Icons::svg('check') . '<div><strong>' . esc_html__('Log intact.', 'belayline-agent-governance') . '</strong> '
+            echo '<div class="aui-notice aui-notice--success" role="status">' . Icons::svg('check') . '<div><strong>' . esc_html__('Log intact.', 'belayline-agent-governance') . '</strong> ' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
                 . esc_html(sprintf(
                     /* translators: 1: number of entries, 2: when it was last checked ("3 min ago") */
                     _n('%1$d entry, no tampering found. Checked %2$s.', '%1$d entries, no tampering found. Checked %2$s.', $status['total'], 'belayline-agent-governance'),
@@ -134,7 +134,7 @@ final class AuditLogPage
             }
             echo '</div></div>';
         } else {
-            echo '<div class="aui-notice aui-notice--error" role="alert">' . Icons::svg('x') . '<div><strong>' . esc_html__('The log was altered.', 'belayline-agent-governance') . '</strong> '
+            echo '<div class="aui-notice aui-notice--error" role="alert">' . Icons::svg('x') . '<div><strong>' . esc_html__('The log was altered.', 'belayline-agent-governance') . '</strong> ' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
                 . esc_html__('A record was changed or deleted, so the chain no longer checks out. Export it now and investigate.', 'belayline-agent-governance') . '</div></div>';
         }
 
@@ -282,7 +282,7 @@ final class AuditLogPage
             . esc_html__('Take a copy of the log, for your records or another system. Export before you shorten the retention period in Settings.', 'belayline-agent-governance') . '</p></div></div><div class="aui-card-b belayline-stack">';
 
         echo Html::postForm(self::EXPORT_ACTION, self::EXPORT_ACTION, '', 'class="aui-row-flex"'); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
-        echo '<button type="submit" class="aui-btn aui-btn--secondary">' . Icons::svg('file-text') . esc_html__('Export everything as CSV', 'belayline-agent-governance') . '</button></form>';
+        echo '<button type="submit" class="aui-btn aui-btn--secondary">' . Icons::svg('file-text') . esc_html__('Export everything as CSV', 'belayline-agent-governance') . '</button></form>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
 
         echo Html::postForm(self::EXPORT_JSONL_ACTION, self::EXPORT_JSONL_ACTION, '', 'class="aui-toolbar belayline-range"'); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_* helpers.
         printf(
@@ -291,7 +291,7 @@ final class AuditLogPage
             esc_html__('From (UTC)', 'belayline-agent-governance'),
             esc_html__('To (UTC)', 'belayline-agent-governance'),
         );
-        echo '<button type="submit" class="aui-btn aui-btn--secondary">' . Icons::svg('file-text') . esc_html__('Download JSON Lines', 'belayline-agent-governance') . '</button></form>';
+        echo '<button type="submit" class="aui-btn aui-btn--secondary">' . Icons::svg('file-text') . esc_html__('Download JSON Lines', 'belayline-agent-governance') . '</button></form>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
         echo '<p class="aui-help">' . esc_html__('One JSON entry per line, oldest first. Leave a date empty for no limit.', 'belayline-agent-governance') . '</p>';
         echo '</div></section>';
     }
@@ -332,8 +332,8 @@ final class AuditLogPage
         printf(
             '<div class="aui-card-b"><div class="aui-field"><label class="aui-label" for="belayline_audit_retention_days">%s</label><input class="aui-input belayline-narrow" type="number" min="0" max="%d" id="belayline_audit_retention_days" name="belayline_audit_retention_days" value="%d"><p class="aui-help">%s <a href="%s">%s</a></p></div></div>',
             esc_html__('Keep activity for this many days (0 keeps everything)', 'belayline-agent-governance'),
-            AuditRetention::MAX_DAYS,
-            AuditRetention::days(),
+            AuditRetention::MAX_DAYS, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts (Html helpers and esc_* calls).
+            AuditRetention::days(), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts (Html helpers and esc_* calls).
             esc_html__('Export first if you may need older entries.', 'belayline-agent-governance'),
             esc_url(AdminUrls::activity(AdminUrls::CALLS)),
             esc_html__('Go to Export', 'belayline-agent-governance'),
@@ -382,7 +382,7 @@ final class AuditLogPage
         }
         check_admin_referer(self::RETENTION_ACTION);
 
-        $days = AuditRetention::sanitizeDays(isset($_POST['belayline_audit_retention_days']) ? wp_unslash($_POST['belayline_audit_retention_days']) : 0);
+        $days = AuditRetention::sanitizeDays(isset($_POST['belayline_audit_retention_days']) ? sanitize_text_field(wp_unslash((string) $_POST['belayline_audit_retention_days'])) : 0);
         update_option(AuditRetention::OPTION, $days, false);
     }
 

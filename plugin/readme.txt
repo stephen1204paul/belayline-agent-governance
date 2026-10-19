@@ -275,7 +275,7 @@ The same screen exports any date range as JSON Lines.
 == Upgrade Notice ==
 
 = 0.5.0 =
-Adds a top-level Belayline menu with an Overview map, multisite support, audit retention with JSON Lines export, change history and undo, ability review for other plugins' abilities, an IP allowlist, and FluentCart and SureCart modules. Adds a change-history table and new indexes; back up your database first.
+New Belayline menu with an Overview map, multisite, audit retention and export, undo, ability review, an IP allowlist, and FluentCart and SureCart modules. Adds a table and indexes; back up your database first.
 
 = 0.4.5 =
 Renamed to Belayline Agent Governance, with a new slug, text domain and `belayline_` prefix for hooks, options and tables. Deactivate and delete the old plugin folder, then install this one.

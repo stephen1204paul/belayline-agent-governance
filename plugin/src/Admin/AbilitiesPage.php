@@ -150,7 +150,7 @@ final class AbilitiesPage
             . '</p></div></div>';
 
         if ($groups === []) {
-            echo '<div class="aui-empty"><span class="aui-tile">' . Icons::svg('plug', 'aui-i--lg') . '</span><h3 class="aui-card-t">' . esc_html__('Nothing to review', 'belayline-agent-governance') . '</h3><p>'
+            echo '<div class="aui-empty"><span class="aui-tile">' . Icons::svg('plug', 'aui-i--lg') . '</span><h3 class="aui-card-t">' . esc_html__('Nothing to review', 'belayline-agent-governance') . '</h3><p>' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
                 . esc_html__('No other plugin offers abilities that Belayline does not already cover.', 'belayline-agent-governance') . '</p></div></section>';
 
             return;
@@ -205,7 +205,7 @@ final class AbilitiesPage
         echo '<div class="aui-group"><div class="aui-group-h"><button type="button" class="aui-group-toggle" aria-expanded="' . ($open ? 'true' : 'false') . '" aria-controls="' . esc_attr($id) . '">'
             . '<span class="aui-group-name">' . esc_html($ns) . '</span>' . ($governed ? ' ' . Html::badge('ok', __('Under review', 'belayline-agent-governance')) : '') // phpcs:ignore WordPress.Security.EscapeOutput -- Html::badge() escapes.
             . '<span class="aui-leader"></span>' . Tiers::metaSpan(count($abilities), $counts, true) // phpcs:ignore WordPress.Security.EscapeOutput -- metaSpan() escapes.
-            . Icons::svg('caret-down') . '</button></div>';
+            . Icons::svg('caret-down') . '</button></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
         echo '<div class="aui-group-b" id="' . esc_attr($id) . '"' . ($open ? '' : ' hidden') . '>';
 
         echo $rows; // phpcs:ignore WordPress.Security.EscapeOutput -- each row is built from esc_* helpers in renderRow().

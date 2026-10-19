@@ -125,7 +125,7 @@ final class OverviewPage
     private function statRefused(array $days): void
     {
         $refused = $days === [] ? 0 : $days[count($days) - 1]['refused'];
-        echo '<div class="aui-stat aui-stat--inline"><span class="aui-tile aui-tile--bad">' . Icons::svg('x', 'aui-i--lg') . '</span><div><div class="aui-stat-v">'
+        echo '<div class="aui-stat aui-stat--inline"><span class="aui-tile aui-tile--bad">' . Icons::svg('x', 'aui-i--lg') . '</span><div><div class="aui-stat-v">' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
             . esc_html((string) $refused) . '</div><div class="aui-stat-l">' . esc_html__('Refused today', 'belayline-agent-governance') . '</div></div></div>';
     }
 
@@ -133,7 +133,7 @@ final class OverviewPage
     private function statChain(array $chain, int $now): void
     {
         $ok = $chain['ok'];
-        echo '<div class="aui-stat aui-stat--status' . ($ok ? '' : ' is-bad') . '"><div class="aui-stat-head">' . Icons::svg('shield', 'aui-i--lg')
+        echo '<div class="aui-stat aui-stat--status' . ($ok ? '' : ' is-bad') . '"><div class="aui-stat-head">' . Icons::svg('shield', 'aui-i--lg') // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
             . esc_html($ok ? __('Log intact', 'belayline-agent-governance') : __('Log altered', 'belayline-agent-governance')) . '</div>';
         echo '<div class="aui-stat-l">';
         if ($ok) {
@@ -192,14 +192,14 @@ final class OverviewPage
         echo '</p></div>';
         if ($total > 0) {
             echo '<button type="button" class="aui-switch aui-end" aria-pressed="false" data-aui-ui data-aui-views="belayline-map-table-view,belayline-map-view"><span class="aui-switch-track"></span>'
-                . Icons::svg('table') . esc_html__('Show as table', 'belayline-agent-governance')
+                . Icons::svg('table') . esc_html__('Show as table', 'belayline-agent-governance') // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
                 . '<span class="aui-switch-state" data-on="' . esc_attr__('On', 'belayline-agent-governance') . '" data-off="' . esc_attr__('Off', 'belayline-agent-governance') . '">'
                 . esc_html__('Off', 'belayline-agent-governance') . '</span></button>';
         }
         echo '</div><div class="aui-card-b">';
 
         if ($total === 0) {
-            echo '<div class="aui-empty aui-empty--dashed"><span class="aui-tile">' . Icons::svg('flow', 'aui-i--lg') . '</span><h3 class="aui-card-t">'
+            echo '<div class="aui-empty aui-empty--dashed"><span class="aui-tile">' . Icons::svg('flow', 'aui-i--lg') . '</span><h3 class="aui-card-t">' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
                 . esc_html__('No agent calls yet', 'belayline-agent-governance') . '</h3><p>'
                 . esc_html__('Connect an AI app or start a Site Agent run to see traffic here.', 'belayline-agent-governance') . '</p></div></div></section>';
 
@@ -282,7 +282,7 @@ final class OverviewPage
         $events = $this->reader->forEvents(array_values(array_filter(array_map(static fn (array $r): string => (string) ($r['audit_event_id'] ?? ''), $shown))));
         foreach ($shown as $r) {
             $who = $this->who->describe((string) ($r['key_id'] ?? ''));
-            echo '<li class="aui-item belayline-flush"><span class="aui-tile aui-tile--sm">' . Icons::svg('robot') . '</span><div class="aui-grow"><div class="aui-item-name">'
+            echo '<li class="aui-item belayline-flush"><span class="aui-tile aui-tile--sm">' . Icons::svg('robot') . '</span><div class="aui-grow"><div class="aui-item-name">' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
                 . esc_html($who['label']) . ': ' . PendingActionsPage::summaryHtml((string) ($r['summary'] ?? '')) . '</div><div class="aui-muted">' // phpcs:ignore WordPress.Security.EscapeOutput -- summaryHtml() escapes by provenance.
                 . esc_html(PendingActionsPage::heldReason($events[(string) ($r['audit_event_id'] ?? '')] ?? null)) . '</div></div><div class="belayline-wait-meta"><span class="aui-mono aui-muted belayline-nowrap">'
                 . esc_html(sprintf(

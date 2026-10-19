@@ -79,7 +79,7 @@ final class ChangesPage
         $runs = array_slice($runs, 0, self::PER_PAGE);
 
         if ($runs === []) {
-            echo '<section class="aui-card"><div class="aui-empty"><span class="aui-tile">' . Icons::svg('undo', 'aui-i--lg') . '</span><h2 class="aui-card-t">'
+            echo '<section class="aui-card"><div class="aui-empty"><span class="aui-tile">' . Icons::svg('undo', 'aui-i--lg') . '</span><h2 class="aui-card-t">' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
                 . esc_html__('No changes recorded yet', 'belayline-agent-governance') . '</h2><p>'
                 . esc_html__('When an agent changes your content or settings, each change is listed here with a way to undo it.', 'belayline-agent-governance') . '</p></div></section>';
 
@@ -356,7 +356,7 @@ final class ChangesPage
         };
         $icon = ['success' => 'check', 'warning' => 'warning', 'error' => 'x'][$tone];
 
-        echo '<div class="aui-notice aui-notice--' . esc_attr($tone) . '" role="' . ($tone === 'error' ? 'alert' : 'status') . '">' . Icons::svg($icon) . '<div><strong>' . esc_html(match ($status) {
+        echo '<div class="aui-notice aui-notice--' . esc_attr($tone) . '" role="' . ($tone === 'error' ? 'alert' : 'status') . '">' . Icons::svg($icon) . '<div><strong>' . esc_html(match ($status) { // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
             UndoResult::COMPLETE => __('Undo complete.', 'belayline-agent-governance'),
             UndoResult::PARTIAL => __('Undo stopped part-way.', 'belayline-agent-governance'),
             UndoResult::FORBIDDEN => __('Undo not allowed.', 'belayline-agent-governance'),

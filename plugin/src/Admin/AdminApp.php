@@ -233,7 +233,7 @@ final class AdminApp
     /** Shown for a tab whose store is missing (the no-database path): governed calls fail closed there too. */
     private function unavailable(): void
     {
-        echo '<section class="aui-card"><div class="aui-empty"><span class="aui-tile aui-tile--bad">' . Icons::svg('warning', 'aui-i--lg') . '</span><h2 class="aui-card-t">'
+        echo '<section class="aui-card"><div class="aui-empty"><span class="aui-tile aui-tile--bad">' . Icons::svg('warning', 'aui-i--lg') . '</span><h2 class="aui-card-t">' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Icons::svg() escapes its own parts.
             . esc_html__('This screen is not available', 'belayline-agent-governance') . '</h2><p>'
             . esc_html__('Belayline could not reach its database tables, so there is nothing to show here. Agent calls that need them are refused until this is fixed.', 'belayline-agent-governance')
             . '</p></div></section>';

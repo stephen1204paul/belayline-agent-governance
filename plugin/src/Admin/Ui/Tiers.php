@@ -68,12 +68,19 @@ final class Tiers
     public static function templates(): array
     {
         return [
+            /* translators: %d: number of abilities */
             'one' => __('%d ability', 'belayline-agent-governance'),
+            /* translators: %d: number of abilities */
             'many' => __('%d abilities', 'belayline-agent-governance'),
+            /* translators: %d: number of abilities */
             self::FREE => __('%d run freely', 'belayline-agent-governance'),
+            /* translators: %d: number of abilities */
             self::APPROVAL => __('%d need approval', 'belayline-agent-governance'),
+            /* translators: %d: number of abilities */
             self::ALWAYS => __('%d always ask', 'belayline-agent-governance'),
+            /* translators: %d: number of abilities */
             self::BLOCKED => __('%d blocked', 'belayline-agent-governance'),
+            /* translators: %d: number of abilities */
             self::NONE => __('%d not reviewed', 'belayline-agent-governance'),
         ];
     }
