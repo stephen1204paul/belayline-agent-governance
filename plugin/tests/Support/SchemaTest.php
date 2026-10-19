@@ -176,7 +176,7 @@ final class SchemaTest extends TestCase
         $this->assertSame(['support-agent'], $GLOBALS['wpas_test_options'][ShadowMode::OPTION]);
     }
 
-    // --- version 4: fingerprint columns + grants table rename -------------
+    // --- version 4: fingerprint columns; grants table name --------------------
 
     public function testApprovalsGainTheFingerprintColumns(): void
     {
@@ -187,119 +187,59 @@ final class SchemaTest extends TestCase
         $this->assertStringContainsString('fingerprint_kind VARCHAR(10) NULL', $approvals);
     }
 
-    public function testAFreshInstallCreatesTheGrantsTableUnderItsNewNameDirectly(): void
+    public function testAFreshInstallCreatesTheGrantsTable(): void
     {
-        $db = new wpdb();
-        // No legacy table on a fresh install: both existence probes miss.
-        $db->varReturnQueue = [null];
-
-        Schema::install($db);
+        Schema::install(new wpdb());
 
         $this->assertStringContainsString('wp_belayline_grants', $GLOBALS['wpas_test_dbdelta_queries'][2]);
-        $this->assertSame([], self::renameQueries($db), 'a fresh install has nothing to RENAME');
-        $this->assertFalse($GLOBALS['wpas_test_options'][Schema::GRANTS_RENAME_CONFLICT_OPTION] ?? false);
+        $this->assertArrayNotHasKey(Schema::GRANTS_RENAME_CONFLICT_OPTION, $GLOBALS['wpas_test_options']);
     }
 
-    /** @return list<string> */
-    private static function renameQueries(wpdb $db): array
+    /** Regression: 0.4.5 flagged a false "old and new grants tables both exist" conflict on every reinstall. */
+    public function testInstallingTwiceOnASiteThatAlreadyHasTheGrantsTableSetsNoConflictFlag(): void
     {
-        return array_values(array_filter(
+        // A live site: every SHOW TABLES LIKE probe finds its table.
+        $db = new class () extends wpdb {
+            public function get_var(?string $query = null): mixed
+            {
+                parent::get_var($query);
+
+                return preg_match("/SHOW TABLES LIKE '([^']+)'/", (string) $query, $m) === 1 ? $m[1] : null;
+            }
+        };
+
+        Schema::install($db);
+        Schema::install($db);
+
+        $this->assertArrayNotHasKey(Schema::GRANTS_RENAME_CONFLICT_OPTION, $GLOBALS['wpas_test_options']);
+        $this->assertSame([], array_values(array_filter(
             $db->queries,
             static fn (string $query): bool => str_starts_with($query, 'RENAME TABLE')
-        ));
+        )));
     }
 
-    public function testUpgradingFromVersionThreeRenamesTheLegacyGrantsTable(): void
+    /** A 0.4.5 site that already shows the false notice is cleared by the upgrade path. */
+    public function testUpgradeClearsAStaleConflictFlagLeftBy045(): void
     {
-        $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION] = '3';
-        $db = new wpdb();
-        // Legacy table found (SHOW TABLES LIKE echoes the name back); the new
-        // name isn't there yet.
-        $db->varReturnQueue = ['wp_belayline_grants', null];
+        $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION] = '5';
+        $GLOBALS['wpas_test_options'][Schema::GRANTS_RENAME_CONFLICT_OPTION] = true;
 
-        Schema::maybeUpgrade($db);
+        Schema::maybeUpgrade(new wpdb());
 
-        $this->assertSame(
-            ['RENAME TABLE wp_belayline_grants TO wp_belayline_grants'],
-            self::renameQueries($db)
-        );
         $this->assertSame(Schema::VERSION, $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
         $this->assertArrayNotHasKey(Schema::GRANTS_RENAME_CONFLICT_OPTION, $GLOBALS['wpas_test_options']);
     }
 
-    public function testRunningTheUpgradeASecondTimeIsANoOp(): void
+    /** Static guard: a "legacy" table name equal to a current one is the 0.4.5 bug. */
+    public function testNoLegacyTableConstantEqualsACurrentTableName(): void
     {
-        // First run: legacy present, renames it. Second run (Schema::install()
-        // directly, bypassing the version short-circuit so the rename probe
-        // itself is exercised again): the legacy table is gone, so there's
-        // nothing left to RENAME and no error.
-        $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION] = '3';
-        $db = new wpdb();
-        $db->varReturnQueue = ['wp_belayline_grants', null];
-        Schema::maybeUpgrade($db);
+        $constants = (new \ReflectionClass(Schema::class))->getConstants();
+        $current = array_filter($constants, static fn ($v, $k) => str_ends_with($k, '_TABLE') && !str_starts_with($k, 'LEGACY_'), ARRAY_FILTER_USE_BOTH);
+        $legacy = array_filter($constants, static fn ($v, $k) => str_starts_with($k, 'LEGACY_') && str_ends_with($k, '_TABLE'), ARRAY_FILTER_USE_BOTH);
 
-        $this->assertSame(Schema::VERSION, $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
-
-        $db->varReturnQueue = [null];
-        $db->queries = [];
-        Schema::install($db);
-
-        $this->assertSame([], self::renameQueries($db), 'nothing left to RENAME once already migrated');
-        $this->assertSame(Schema::VERSION, $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION]);
-    }
-
-    public function testBothGrantsTablesPresentLeavesBothAndFlagsForAnAdmin(): void
-    {
-        // A crashed earlier rename: both the legacy and the new table exist.
-        $GLOBALS['wpas_test_options'][Schema::VERSION_OPTION] = '3';
-        $db = new wpdb();
-        $db->varReturnQueue = ['wp_belayline_grants', 'wp_belayline_grants'];
-
-        Schema::maybeUpgrade($db);
-
-        $this->assertSame([], self::renameQueries($db), 'neither table is touched when both exist');
-        $this->assertTrue($GLOBALS['wpas_test_options'][Schema::GRANTS_RENAME_CONFLICT_OPTION]);
-        // dbDelta still receives (and so maintains) the NEW table's name.
-        $this->assertStringContainsString('wp_belayline_grants', $GLOBALS['wpas_test_dbdelta_queries'][2]);
-    }
-
-    public function testTheConflictFlagClearsOnceTheLegacyTableIsGone(): void
-    {
-        $GLOBALS['wpas_test_options'][Schema::GRANTS_RENAME_CONFLICT_OPTION] = true;
-        $db = new wpdb();
-        $db->varReturnQueue = [null];
-
-        Schema::install($db);
-
-        $this->assertArrayNotHasKey(Schema::GRANTS_RENAME_CONFLICT_OPTION, $GLOBALS['wpas_test_options']);
-    }
-
-    public function testTheConflictNoticeRendersOnlyWhenTheFlagIsSet(): void
-    {
-        $GLOBALS['wpas_test_user_caps']['manage_options'] = true;
-
-        ob_start();
-        Schema::renderGrantsRenameConflictNotice();
-        $this->assertSame('', ob_get_clean());
-
-        $GLOBALS['wpas_test_options'][Schema::GRANTS_RENAME_CONFLICT_OPTION] = true;
-
-        ob_start();
-        Schema::renderGrantsRenameConflictNotice();
-        $notice = ob_get_clean();
-
-        $this->assertStringContainsString('notice-warning', $notice);
-        $this->assertStringContainsString('belayline_grants', $notice);
-    }
-
-    public function testTheConflictNoticeIsHiddenFromUsersWithoutManageOptions(): void
-    {
-        $GLOBALS['wpas_test_options'][Schema::GRANTS_RENAME_CONFLICT_OPTION] = true;
-        $GLOBALS['wpas_test_user_caps']['manage_options'] = false;
-
-        ob_start();
-        Schema::renderGrantsRenameConflictNotice();
-
-        $this->assertSame('', ob_get_clean());
+        $this->assertNotSame([], $current);
+        foreach ($legacy as $name => $value) {
+            $this->assertNotContains($value, $current, "Schema::{$name} equals a current table name");
+        }
     }
 }

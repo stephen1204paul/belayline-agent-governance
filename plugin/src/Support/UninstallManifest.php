@@ -80,10 +80,8 @@ final class UninstallManifest
     /**
      * The plugin's four current custom tables (base names, without the
      * `$wpdb` prefix; the rate/quota/tripwire counters live in
-     * {@see Schema::COUNTERS_TABLE}, not transients) plus the pre-v4 grants
-     * table name a crashed upgrade can leave behind
-     * ({@see Schema::renameLegacyGrantsTable()}) — an opted-in uninstall
-     * drops all five if present.
+     * {@see Schema::COUNTERS_TABLE}, not transients) — an opted-in uninstall
+     * drops all of them if present.
      *
      * @var list<string>
      */
@@ -92,6 +90,5 @@ final class UninstallManifest
         Schema::APPROVALS_TABLE,
         Schema::GRANTS_TABLE,
         Schema::COUNTERS_TABLE,
-        Schema::LEGACY_GRANTS_TABLE,
     ];
 }
