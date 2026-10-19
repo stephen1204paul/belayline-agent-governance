@@ -37,8 +37,7 @@ final class Schema
      *
      * 3: `belayline_shadow_packs` became pack name => expiry ({@see ShadowMode}).
      * 4: approvals gained `fingerprint`/`fingerprint_kind` (AS-6); the grants
-     *    table was renamed `belayline_grants` => `belayline_grants`
-     *    ({@see grantsTable()}, {@see renameLegacyGrantsTable()}). Still
+     *    table was added ({@see grantsTable()}). Still
      *    unreleased at the time `probe_args TEXT NULL` was added (security
      *    fix: the approve-time re-probe now re-runs against the probe's own
      *    captured {@see \Belayline\Plugin\Approval\StateProbe::targetArgs()}
@@ -71,20 +70,11 @@ final class Schema
     public const VERSION_OPTION = 'belayline_schema_version';
 
     /**
-     * Legacy grants table name, pre-v4. Named here, in
-     * {@see renameLegacyGrantsTable()}, and by the opted-in uninstall path
-     * ({@see \Belayline\Plugin\Support\UninstallManifest}), which
-     * must also drop it when a crashed v4 upgrade left it behind — every
-     * other reference in the plugin goes through {@see grantsTable()}.
-     */
-    public const LEGACY_GRANTS_TABLE = 'belayline_grants';
-
-    /**
-     * Set (never autoloaded) when {@see renameLegacyGrantsTable()} finds BOTH
-     * the legacy and the current grants table present (a crashed earlier
-     * rename): the current table is used and the legacy one is left alone
-     * rather than guessed at. {@see renderGrantsRenameConflictNotice()} shows
-     * an admin notice until an operator resolves it by hand.
+     * Retired flag. 0.4.5 compared a "legacy" grants table name that was
+     * identical to the current one, so it set this on any reinstall and showed
+     * a false "old and new grants tables both exist" notice. No code reads it
+     * now; {@see install()} deletes it so affected sites are cleared on
+     * upgrade, and the opted-in uninstall still lists it.
      */
     public const GRANTS_RENAME_CONFLICT_OPTION = 'belayline_grants_rename_conflict';
 
@@ -324,10 +314,8 @@ final class Schema
     {
         self::ensureDbDelta();
 
-        // MUST run before dbDelta(): dbDelta only ever creates or ALTERs the
-        // table it's told about (belayline_grants); it has no idea a
-        // differently-named table already holds the data.
-        self::renameLegacyGrantsTable($db);
+        // Clear the false 0.4.5 grants-table conflict flag (see the constant).
+        delete_option(self::GRANTS_RENAME_CONFLICT_OPTION);
 
         $charset = $db->get_charset_collate();
         dbDelta([
@@ -378,69 +366,6 @@ final class Schema
         $host = SiteBinding::normalize(function_exists('home_url') ? (string) home_url() : '');
         update_option(EnvironmentGuard::OPTION, $host, false);
         (new AdminChangeRecorder(new WpdbAuditSink($db)))->environmentBound($host);
-    }
-
-    /**
-     * Pre-v4 installs named the grants table `{prefix}belayline_grants`;
-     * v4 renamed it to `{prefix}belayline_grants` ({@see grantsTable()}) so only
-     * `Schema.php` ever names it, matching every other table (§3.6 item 4).
-     * Runs unconditionally (idempotent, shape-checked): a fresh install has
-     * no legacy table and no-ops immediately.
-     */
-    private static function renameLegacyGrantsTable(wpdb $db): void
-    {
-        $legacy = $db->prefix . self::LEGACY_GRANTS_TABLE;
-        $current = self::grantsTable($db);
-
-        if (!self::tableExists($db, $legacy)) {
-            // Nothing to migrate. Also resolves a previously flagged conflict
-            // (below): once the legacy table is gone (an admin dropped it by
-            // hand), the notice has nothing left to warn about.
-            delete_option(self::GRANTS_RENAME_CONFLICT_OPTION);
-
-            return;
-        }
-
-        if (self::tableExists($db, $current)) {
-            // Both tables present: a crashed earlier rename. Leave both, use
-            // the new one (dbDelta creates/maintains it right after this
-            // call returns) and flag it for a human rather than guess which
-            // table is authoritative.
-            update_option(self::GRANTS_RENAME_CONFLICT_OPTION, true, false);
-
-            return;
-        }
-
-        $db->query('RENAME TABLE ' . $legacy . ' TO ' . $current);
-    }
-
-    private static function tableExists(wpdb $db, string $table): bool
-    {
-        return $db->get_var($db->prepare('SHOW TABLES LIKE %s', $table)) === $table;
-    }
-
-    /**
-     * Admin notice for the {@see GRANTS_RENAME_CONFLICT_OPTION} flag. Wired
-     * unconditionally (see `belayline-agent-governance.php`); a no-op render when the flag
-     * isn't set, matching the `CapabilityPacksPage::pausedNotice()` pattern.
-     */
-    public static function renderGrantsRenameConflictNotice(): void
-    {
-        if (!current_user_can('manage_options')) {
-            return;
-        }
-
-        if (!get_option(self::GRANTS_RENAME_CONFLICT_OPTION, false)) {
-            return;
-        }
-
-        printf(
-            '<div class="notice notice-warning"><p>%s</p></div>',
-            esc_html__(
-                'Belayline Agent Governance found both the old (belayline_grants) and new (belayline_grants) grants tables during an upgrade, which means an earlier upgrade did not finish. It is using the new table. Once you have confirmed no grants were lost, an administrator can drop the old table to clear this notice.',
-                'belayline-agent-governance'
-            )
-        );
     }
 
     /** Cheap version check; reinstalls only when the stored option is behind {@see VERSION}. */
