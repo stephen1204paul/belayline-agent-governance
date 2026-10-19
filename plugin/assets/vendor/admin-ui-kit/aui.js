@@ -79,7 +79,7 @@
   }
 
   w.AUI = {
-    version: '0.2.1',
+    version: '0.2.3',
     init: function (root) {
       root = root || d;
       $$('.aui-seg[data-name]', root).forEach(syncSeg);
@@ -89,7 +89,7 @@
       root.__aui = 1;
       root.addEventListener('click', function (e) {
         var t = e.target, b, f;
-        if ((b = t.closest('[aria-expanded][aria-controls]'))) {
+        if ((b = t.closest('[aria-expanded][aria-controls]')) && !b.hasAttribute('data-aui-manual')) {
           var o = b.getAttribute('aria-expanded') !== 'true', p = d.getElementById(b.getAttribute('aria-controls'));
           b.setAttribute('aria-expanded', o); if (p) p.hidden = !o; emit(b, 'aui:toggle', { open: o });
         } else if ((b = t.closest('[role=tab]'))) tab(b);
