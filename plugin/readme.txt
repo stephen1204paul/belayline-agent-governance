@@ -288,6 +288,9 @@ The same screen exports any date range as JSON Lines.
 = 0.5.0 =
 New Belayline menu with an Overview map, multisite, audit retention and export, undo, ability review, an IP allowlist, and FluentCart and SureCart modules. Adds a table and indexes; back up your database first.
 
+= 0.4.6 =
+Removes a false warning about an old and a new grants table. No action needed.
+
 = 0.4.5 =
 Renamed to Belayline Agent Governance, with a new slug, text domain and `belayline_` prefix for hooks, options and tables. Deactivate and delete the old plugin folder, then install this one.
 
@@ -351,6 +354,9 @@ runs.
   audit log, not only calls through mcp-adapter's default server.
 * Public PHP API for change history and undo (`belayline()->changes()`), and for ability
   review status, so other plugins can show an agent's changes.
+
+= 0.4.6 =
+* Fixed: reactivating or updating the plugin showed a false warning that an old and a new grants table both exist. Nothing was wrong with your data; the warning no longer appears.
 
 = 0.4.5 =
 * Renamed to Belayline Agent Governance: new slug and text domain `belayline-agent-governance`, and a `belayline_` prefix for hooks, options and tables.
